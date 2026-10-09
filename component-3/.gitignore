@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration (keep the example file tracked)
+.env
+!.env.example
+
+# Generated application workspaces
+generated-workspaces/
+runtime/workspaces/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
