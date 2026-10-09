@@ -1,0 +1,239 @@
+{
+  "fixture_notice": "SIMULATED scenarios derived from valid_input_package.json; not approved C1/C2 contracts or authentic approval evidence.",
+  "scenarios": [
+    {
+      "name": "missing_requirement_id",
+      "mutations": [
+        {
+          "operation": "remove",
+          "path": ["c1", "requirements", 0, "requirement_id"]
+        }
+      ],
+      "expected_status": 422,
+      "expected_code": "MISSING_REQUIRED_FIELD",
+      "expected_field": "c1.requirements.0.requirement_id"
+    },
+    {
+      "name": "duplicate_requirement_ids",
+      "mutations": [
+        {
+          "operation": "append",
+          "path": ["c1", "requirements"],
+          "value": {
+            "requirement_id": "REQ-001",
+            "title": "Duplicate simulated requirement",
+            "status": "APPROVED"
+          }
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "DUPLICATE_REQUIREMENT_ID",
+      "expected_field": "c1.requirements.2.requirement_id"
+    },
+    {
+      "name": "draft_c1_requirement",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c1", "requirements", 0, "status"],
+          "value": "DRAFT"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C1_REQUIREMENT_NOT_APPROVED",
+      "expected_field": "c1.requirements.0.status"
+    },
+    {
+      "name": "rejected_c1_requirement",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c1", "requirements", 0, "status"],
+          "value": "REJECTED"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C1_REQUIREMENT_NOT_APPROVED",
+      "expected_field": "c1.requirements.0.status"
+    },
+    {
+      "name": "draft_c1_package",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c1", "approval_status"],
+          "value": "DRAFT"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C1_PACKAGE_NOT_APPROVED",
+      "expected_field": "c1.approval_status"
+    },
+    {
+      "name": "missing_approval_provenance",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c1", "approval_provenance_ref"],
+          "value": "   "
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "MISSING_APPROVAL_PROVENANCE",
+      "expected_field": "c1.approval_provenance_ref"
+    },
+    {
+      "name": "project_id_mismatch",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "project_id"],
+          "value": "PROJECT-OTHER-001"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "PROJECT_ID_MISMATCH",
+      "expected_field": "c2.project_id"
+    },
+    {
+      "name": "srs_version_mismatch",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "source_srs_version"],
+          "value": "SRS-0.9"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "SRS_VERSION_MISMATCH",
+      "expected_field": "c2.source_srs_version"
+    },
+    {
+      "name": "c2_failed_validation",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "validation_state"],
+          "value": "FAILED"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C2_VALIDATION_NOT_PASSED",
+      "expected_field": "c2.validation_state"
+    },
+    {
+      "name": "c2_needs_human_review",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "validation_state"],
+          "value": "NEEDS_HUMAN_REVIEW"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C2_VALIDATION_NOT_PASSED",
+      "expected_field": "c2.validation_state"
+    },
+    {
+      "name": "c2_release_not_validated",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "release_status"],
+          "value": "DRAFT"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "C2_RELEASE_NOT_VALIDATED",
+      "expected_field": "c2.release_status"
+    },
+    {
+      "name": "unknown_requirement_reference",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "requirement_uml_anchors", 0, "requirement_id"],
+          "value": "REQ-UNKNOWN"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "UNKNOWN_REQUIREMENT_REFERENCE",
+      "expected_field": "c2.requirement_uml_anchors.0.requirement_id"
+    },
+    {
+      "name": "unknown_uml_reference",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "requirement_uml_anchors", 0, "uml_id"],
+          "value": "UML-UNKNOWN"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "UNKNOWN_UML_REFERENCE",
+      "expected_field": "c2.requirement_uml_anchors.0.uml_id"
+    },
+    {
+      "name": "missing_c1_validation_report",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c1", "validation_report_ref"],
+          "value": "   "
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "MISSING_VALIDATION_REPORT",
+      "expected_field": "c1.validation_report_ref"
+    },
+    {
+      "name": "missing_c2_validation_report",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "validation_report_ref"],
+          "value": "   "
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "MISSING_VALIDATION_REPORT",
+      "expected_field": "c2.validation_report_ref"
+    },
+    {
+      "name": "unsupported_contract_version",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["contract_version"],
+          "value": "9.9"
+        },
+        {
+          "operation": "set",
+          "path": ["c1", "contract_version"],
+          "value": "9.9"
+        },
+        {
+          "operation": "set",
+          "path": ["c2", "contract_version"],
+          "value": "9.9"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "UNSUPPORTED_CONTRACT_VERSION",
+      "expected_field": "contract_version"
+    },
+    {
+      "name": "contract_version_mismatch",
+      "mutations": [
+        {
+          "operation": "set",
+          "path": ["c2", "contract_version"],
+          "value": "9.9"
+        }
+      ],
+      "expected_status": 409,
+      "expected_code": "CONTRACT_VERSION_MISMATCH",
+      "expected_field": "c2.contract_version"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-INTELISE-001",
+    "srs_version": "SRS-1.0",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "SIMULATED-C1-APPROVAL-001",
+    "validation_report_ref": "SIMULATED-C1-VALIDATION-001",
+    "requirements": [
+      {
+        "requirement_id": "REQ-001",
+        "title": "Generate a traceable application",
+        "status": "APPROVED"
+      },
+      {
+        "requirement_id": "REQ-002",
+        "title": "Preserve requirement-to-design anchors",
+        "status": "APPROVED"
+      }
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-INTELISE-001",
+    "source_srs_version": "SRS-1.0",
+    "uml_version": "UML-1.0",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "SIMULATED-C2-VALIDATION-001",
+    "uml_elements": [
+      {
+        "uml_id": "UML-CLASS-001",
+        "element_type": "CLASS",
+        "name": "TraceabilityRecord"
+      },
+      {
+        "uml_id": "UML-SEQUENCE-001",
+        "element_type": "SEQUENCE",
+        "name": "GenerationFlow"
+      }
+    ],
+    "ui_artifacts": [
+      {
+        "ui_id": "UI-WIREFRAME-001",
+        "artifact_type": "WIREFRAME",
+        "source_ref": "simulated://c2/wireframes/generation-dashboard"
+      }
+    ],
+    "requirement_uml_anchors": [
+      {
+        "anchor_id": "ANCHOR-001",
+        "requirement_id": "REQ-001",
+        "uml_id": "UML-SEQUENCE-001"
+      },
+      {
+        "anchor_id": "ANCHOR-002",
+        "requirement_id": "REQ-002",
+        "uml_id": "UML-CLASS-001"
+      }
+    ]
+  }
+}
