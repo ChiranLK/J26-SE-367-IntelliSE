@@ -12,6 +12,7 @@ dependencies = [
     "fastapi>=0.115,<1.0",
     "pydantic-settings>=2.6,<3.0",
     "uvicorn>=0.32,<1.0",
+    "pymongo>=4.13,<5.0",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +27,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+markers = ["integration: requires TEST_MONGODB_URI and uses a unique disposable database"]

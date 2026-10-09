@@ -12,7 +12,7 @@ HEALTH_PATH = "/api/v1/component-1/health"
 
 @pytest.fixture
 def client():
-    settings = Settings(_env_file=None, cors_origins=["http://localhost:5173"])
+    settings = Settings(_env_file=None, mongodb_uri=None, cors_origins=["http://localhost:5173"])
     with TestClient(create_app(settings)) as test_client:
         yield test_client
 
