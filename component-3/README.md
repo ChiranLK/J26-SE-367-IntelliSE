@@ -1,11 +1,11 @@
 # InteliSE Component 3
 
 Component 3 is the Intelligent Development and Deployment Assistant for
-traceable software generation. This foundation contains only the FastAPI
-service shell, environment-based configuration, a health endpoint, and tests.
+traceable software generation. The service currently provides its FastAPI
+foundation and deterministic validation of provisional C1/C2 input packages.
 
-Generation, traceability, scoped regeneration, deployment, and integrations
-with Components 1, 2, and 4 are intentionally outside this foundation task.
+Generation, traceability persistence, scoped regeneration, deployment, and
+real integrations with Components 1, 2, and 4 remain future work.
 
 ## Requirements
 
@@ -56,6 +56,31 @@ The service endpoints are then available at:
 
 The health endpoint reports only the API process state. It does not contact
 Ollama or claim that local inference is ready.
+
+## Test provisional C1/C2 validation
+
+The endpoint is available in Swagger UI under `input-validation`:
+
+```text
+POST /api/v1/validate-input
+```
+
+From another PowerShell session, submit the explicitly simulated valid fixture:
+
+```powershell
+Set-Location .\component-3
+$body = Get-Content -Raw .\tests\fixtures\simulated\valid_input_package.json
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/api/v1/validate-input `
+  -ContentType application/json `
+  -Body $body
+```
+
+The C1/C2 schemas are provisional assumptions documented in
+`contracts/README.md`. Reference fields are retained as opaque provenance;
+their presence does not prove authentic client approval or upstream
+validation.
 
 ## Configuration
 
