@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     )
     mongodb_timeout_ms: int = Field(default=2000, ge=100, le=10000)
 
+    anthropic_api_key: SecretStr | None = None
+    llm_model: str = Field(default="", max_length=200)
+    llm_timeout_seconds: float = Field(default=60, ge=1, le=180)
+    llm_max_tokens: int = Field(default=8192, ge=256, le=16384)
+    llm_response_max_bytes: int = Field(default=262144, ge=1024, le=1048576)
+    extraction_max_characters: int = Field(default=30000, ge=1, le=100000)
+
     @field_validator("cors_origins")
     @classmethod
     def validate_origins(cls, origins: list[str]) -> list[str]:

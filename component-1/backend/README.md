@@ -3,18 +3,19 @@
 Component 01 is the AI-Powered Intelligent Requirement Engineering Agent for
 Agile Software Development in the IntelliSE fourth-year research project.
 The proposed 50% prototype deadline is October 18, 2026. This directory provides
-the backend foundation only; it does not represent the completed prototype.
+the backend foundation and source-grounded requirement candidate extraction;
+it does not represent the completed prototype.
 
 ## Current behavior
 
 FastAPI serves an availability response, project creation/list/retrieval,
-interactive API documentation, and configurable development CORS origins.
+source-grounded extraction runs, interactive API documentation, and configurable development CORS origins.
 Projects and their original client discussions are persisted in MongoDB.
 The health endpoint works
 without MongoDB, an LLM API key, downloaded models, or any external service.
 It confirms application availability only, not database or AI readiness.
 
-Requirement extraction, FR/NFR classification, quality
+FR/NFR classification, quality
 validation, RAG, LangGraph, audio processing, and SRS generation remain future
 work. No frontend or research results are included.
 
@@ -256,8 +257,8 @@ requests return **503** when MongoDB is unavailable:
 {"detail":"Project persistence is unavailable. Check MongoDB configuration and availability."}
 ```
 
-There is no authentication, AI processing, extraction, classification,
-quality validation, or artifact generation in these endpoints.
+There is no authentication. Project create/list/get endpoints do not invoke AI.
+Extraction is available through the separate endpoints below.
 
 ## Isolated integration tests
 
@@ -321,3 +322,98 @@ Do not export unrelated system or other-component packages into the lock.
   health or unit test alone does not establish real persistence.
 
 No shared repository files or other components are required to run this service.
+
+## Source-grounded requirement extraction
+
+Configure `C1_ANTHROPIC_API_KEY` and `C1_LLM_MODEL` in the local ignored `.env`,
+then restart. No model is selected by default. Use a model supporting JSON outputs
+in your Anthropic account. The adapter uses HTTPS `POST https://api.anthropic.com/v1/messages`
+with `anthropic-version: 2023-06-01` and `output_config.format` JSON Schema.
+See [Anthropic structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs).
+`httpx` is now a runtime dependency; its existing lock pin is unchanged.
+There is no existing provider integration in this repository to reuse.
+The saved discussion is sent to Anthropic as JSON data in a user message; the
+separate system prompt directs extraction and treats embedded instructions as untrusted.
+No tools, agent execution, retries, or fake fallback results are provided.
+
+```sh
+curl --fail-with-body -i -X POST \
+  http://127.0.0.1:8001/api/v1/component-1/projects/REPLACE_WITH_PROJECT_ID/extractions
+curl --fail-with-body -i \
+  http://127.0.0.1:8001/api/v1/component-1/projects/REPLACE_WITH_PROJECT_ID/extractions/latest
+```
+
+POST reads the project's saved original discussion and returns **201** only
+when the entire result has validated and MongoDB acknowledged the new run.
+It takes no extraction text from the request. GET latest returns **200** without
+requiring provider credentials. Each run contains `run_id`, `project_id`,
+`source_discussion_hash` (SHA-256 of unchanged UTF-8 discussion), `created_at`
+(UTC, millisecond precision), `model_identifier` (configured requested model),
+`prompt_version` (`c1-atomic-evidence-v1`), and `candidates`.
+
+Candidate fields are `requirement_id` (server-generated UUID), `requirement_text`,
+`evidence` (one or more `{quote, start, end}` spans), nullable `actor`/`action`,
+and `review_status: "unreviewed"`. Actor/action must be exact substrings of
+supporting evidence or null. Offsets count Unicode code points as Python does,
+not UTF-8 bytes or JavaScript UTF-16 units; start is inclusive and end exclusive.
+Each quote must equal `discussion_text[start:end]`, with whitespace, CRLF and
+Unicode retained exactly. There is no fuzzy matching or offset repair.
+An invalid candidate rejects the complete run; valid empty `candidates: []`
+is saved as a successful extraction.
+
+The prompt asks for individual atomic obligations, preserving permissions,
+prohibitions, conditions and constraints, while excluding greetings and meeting
+scheduling. It prohibits invented business rules. Exact evidence matching proves
+traceability only. Atomicity, completeness, and semantic preservation require
+human review; the backend does not certify those properties or classify FR/NFR.
+LLMs can produce wrong offsets, omit rules, or change meaning. Failed output
+is rejected rather than repaired or represented as an empty success.
+
+### Limits and errors
+
+| Setting / field | Default and bounds |
+| --- | --- |
+| `C1_EXTRACTION_MAX_CHARACTERS` | 30,000 characters; configurable 1–100,000; oversized saved discussions return 413, never truncated |
+| `C1_LLM_TIMEOUT_SECONDS` | 60 seconds; configurable 1–180; bounds the whole provider operation |
+| `C1_LLM_MAX_TOKENS` | 8,192 output tokens; configurable 256–16,384 |
+| `C1_LLM_RESPONSE_MAX_BYTES` | 262,144 decoded response bytes; configurable 1,024–1,048,576 |
+| Candidates per run | 0–100 |
+| Requirement text | 1–2,000 characters; must not be blank |
+| Evidence per candidate | 1–8 spans; each quote 1–4,000 characters |
+| Actor / action | null or nonblank source substrings, maximum 200 / 500 characters |
+
+Local strict Pydantic validation enforces all output constraints, including those
+removed from the provider's supported JSON Schema subset. Input is bounded in
+characters, not tokens: a model context rejection returns a provider failure.
+A token-limit stop, refusal, invalid JSON/schema (including missing or malformed
+provider content blocks), oversized provider response,
+or failed evidence validation returns **502**, with no new run saved.
+Provider/network/authentication/model configuration failures return **503**;
+provider timeouts return **504**. MongoDB outages and write/index failures return
+**503**, following the existing sanitized persistence error handler. Malformed
+project IDs return **422**; missing projects and missing latest runs return **404**.
+No credentials, full discussions, provider error bodies, or driver details are
+logged by application code or returned in error details.
+
+Runs are append-only documents in `extraction_runs`, with majority writes,
+a unique `run_id` index, and a `(project_id, created_at, _id)` latest-run index.
+Latest is ordered by creation timestamp then Mongo ObjectId. Concurrent requests
+may complete in a different order. The project and any manually edited requirement
+records are never updated. There is no deduplication: repeating POST creates
+another run. On an ambiguous database/network write failure a document may have
+reached MongoDB even though the API returns 503; there is no automatic retry or
+idempotency token. Failed validation never issues an insert.
+
+### Verification and research limits
+
+`python -m pytest` includes API/schema/evidence tests, multi-span and Unicode
+checks, permission/negation fixture preservation, empty results, separate-run
+persistence, timestamp/tie-break ordering, configuration/input/output bounds,
+the whole-operation timeout, and sanitized provider/database failures. Failed
+runs leave the previous latest run available. Provider HTTP is mocked: fixture preservation tests verify application
+handling, not the model's extraction accuracy. The optional real MongoDB suite
+also checks separate extraction runs surviving application restart, with a mocked
+provider. It uses the same isolated disposable-database setup described above.
+No live model verification or measured research findings are claimed.
+To verify live behavior, configure local credentials and MongoDB, save a small
+synthetic discussion, call POST, then manually review every candidate and span.
