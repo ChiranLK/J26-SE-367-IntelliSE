@@ -1,14 +1,15 @@
-"""Local settings; no database or AI dependencies."""
+"""Environment settings; database credentials are kept out of repr output."""
 
 from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="C1_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix="C1_", env_file=".env", env_file_encoding="utf-8", extra="ignore",
+        populate_by_name=True,
     )
 
     backend_host: str = Field(default="127.0.0.1", min_length=1)
@@ -16,6 +17,12 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
+    mongodb_uri: SecretStr | None = Field(default=None, validation_alias="MONGODB_URI")
+    mongodb_database: str = Field(
+        default="intellise_component_1", validation_alias="MONGODB_DATABASE",
+        pattern=r"^[A-Za-z0-9_][A-Za-z0-9_-]{0,62}$",
+    )
+    mongodb_timeout_ms: int = Field(default=2000, ge=100, le=10000)
 
     @field_validator("cors_origins")
     @classmethod
