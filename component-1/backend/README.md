@@ -3,7 +3,8 @@
 Component 01 is the AI-Powered Intelligent Requirement Engineering Agent for
 Agile Software Development in the IntelliSE fourth-year research project.
 The proposed 50% prototype deadline is October 18, 2026. This directory provides
-the backend foundation and source-grounded requirement candidate extraction;
+the backend foundation, source-grounded requirement candidate extraction, and
+optional TF-IDF/logistic FR/NFR baseline tooling;
 it does not represent the completed prototype.
 
 ## Current behavior
@@ -15,8 +16,9 @@ The health endpoint works
 without MongoDB, an LLM API key, downloaded models, or any external service.
 It confirms application availability only, not database or AI readiness.
 
-FR/NFR classification, quality
-validation, RAG, LangGraph, audio processing, and SRS generation remain future
+FR/NFR baseline classification requires a trusted locally trained model. No real
+labeled dataset or trained research classifier is supplied. Quality validation,
+RAG, LangGraph, audio processing, and SRS generation remain future
 work. No frontend or research results are included.
 
 ## macOS setup
@@ -365,7 +367,8 @@ The prompt asks for individual atomic obligations, preserving permissions,
 prohibitions, conditions and constraints, while excluding greetings and meeting
 scheduling. It prohibits invented business rules. Exact evidence matching proves
 traceability only. Atomicity, completeness, and semantic preservation require
-human review; the backend does not certify those properties or classify FR/NFR.
+human review; extraction does not certify those properties or classify FR/NFR.
+The optional baseline classification API is separate.
 LLMs can produce wrong offsets, omit rules, or change meaning. Failed output
 is rejected rather than repaired or represented as an empty success.
 
@@ -417,3 +420,25 @@ provider. It uses the same isolated disposable-database setup described above.
 No live model verification or measured research findings are claimed.
 To verify live behavior, configure local credentials and MongoDB, save a small
 synthetic discussion, call POST, then manually review every candidate and span.
+
+## Initial FR/NFR baseline
+
+See [research/README.md](research/README.md) for dataset provenance and annotation
+requirements, exact preparation/training/freeze/evaluation commands, algorithm,
+trusted local model loading, classification API contract and future BERT work.
+This baseline uses **TF-IDF + logistic regression**, not BERT. No suitable real
+labeled dataset was found; the tiny test-only fixture cannot be used for research
+training or served by the API. Research metrics remain unavailable.
+
+Classification is separate from extraction and operates on a saved run:
+
+- `POST /api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications`
+- `GET /api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications/latest`
+
+Install the optional `requirements-baseline.lock`, prepare genuine reviewed
+labels with canonical source groups, train offline, then explicitly configure
+`C1_CLASSIFIER_MODEL_DIR` to your operator-trusted local artifact directory.
+Missing/invalid models return 503; health still works without a classifier.
+Previous classification runs and original extraction text/evidence/status are
+preserved. Predictions contain FR/NFR labels without probability scores or an
+approval claim. Nothing trains automatically on API startup.

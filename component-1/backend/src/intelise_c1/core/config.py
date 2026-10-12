@@ -1,6 +1,7 @@
 """Environment settings; database credentials are kept out of repr output."""
 
 from urllib.parse import urlsplit
+from pathlib import Path
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,12 @@ class Settings(BaseSettings):
     llm_max_tokens: int = Field(default=8192, ge=256, le=16384)
     llm_response_max_bytes: int = Field(default=262144, ge=1024, le=1048576)
     extraction_max_characters: int = Field(default=30000, ge=1, le=100000)
+    classifier_model_dir: Path | None = None
+
+    @field_validator("classifier_model_dir", mode="before")
+    @classmethod
+    def optional_model_directory(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("cors_origins")
     @classmethod

@@ -19,6 +19,9 @@ htmlcov/
 coverage.xml
 .ruff_cache/
 generated/
+research/raw/
+research/prepared/
+research/models/
 tmp/
 *.log
 .DS_Store

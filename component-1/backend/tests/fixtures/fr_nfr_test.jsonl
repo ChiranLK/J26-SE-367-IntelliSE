@@ -1,0 +1,12 @@
+{"example_id": "test-only-1-FR", "text": "Users can upload documents.", "label": "FR", "source_project_id": "test-only-document-1", "source_reference": "test-fixture://test-only-document-1/FR"}
+{"example_id": "test-only-1-NFR", "text": "Uploads must finish within two seconds.", "label": "NFR", "source_project_id": "test-only-document-1", "source_reference": "test-fixture://test-only-document-1/NFR"}
+{"example_id": "test-only-2-FR", "text": "Admins can export reports.", "label": "FR", "source_project_id": "test-only-document-2", "source_reference": "test-fixture://test-only-document-2/FR"}
+{"example_id": "test-only-2-NFR", "text": "Reports must remain available during maintenance.", "label": "NFR", "source_project_id": "test-only-document-2", "source_reference": "test-fixture://test-only-document-2/NFR"}
+{"example_id": "test-only-3-FR", "text": "Members can edit profiles.", "label": "FR", "source_project_id": "test-only-document-3", "source_reference": "test-fixture://test-only-document-3/FR"}
+{"example_id": "test-only-3-NFR", "text": "Profile pages must render within one second.", "label": "NFR", "source_project_id": "test-only-document-3", "source_reference": "test-fixture://test-only-document-3/NFR"}
+{"example_id": "test-only-4-FR", "text": "Guests can search products.", "label": "FR", "source_project_id": "test-only-document-4", "source_reference": "test-fixture://test-only-document-4/FR"}
+{"example_id": "test-only-4-NFR", "text": "Search requests must use encrypted transport.", "label": "NFR", "source_project_id": "test-only-document-4", "source_reference": "test-fixture://test-only-document-4/NFR"}
+{"example_id": "test-only-5-FR", "text": "Operators can approve orders.", "label": "FR", "source_project_id": "test-only-document-5", "source_reference": "test-fixture://test-only-document-5/FR"}
+{"example_id": "test-only-5-NFR", "text": "Order data must be retained for seven years.", "label": "NFR", "source_project_id": "test-only-document-5", "source_reference": "test-fixture://test-only-document-5/NFR"}
+{"example_id": "test-only-6-FR", "text": "Clients can cancel bookings.", "label": "FR", "source_project_id": "test-only-document-6", "source_reference": "test-fixture://test-only-document-6/FR"}
+{"example_id": "test-only-6-NFR", "text": "Booking service availability must exceed 99 percent.", "label": "NFR", "source_project_id": "test-only-document-6", "source_reference": "test-fixture://test-only-document-6/NFR"}

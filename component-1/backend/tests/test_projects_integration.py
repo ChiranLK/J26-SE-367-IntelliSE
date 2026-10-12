@@ -128,3 +128,37 @@ def test_extraction_runs_persist_across_restart(database_settings):
     with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
         records = list(mongo[database_settings.mongodb_database].extraction_runs.find({"project_id": project["id"]}))
         assert {record["run_id"] for record in records} == {a.json()["run_id"], b.json()["run_id"]}
+
+
+def test_classification_runs_survive_restart_without_model(database_settings):
+    """Real MongoDB, mocked extraction/classifier; not live-model evaluation."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+    from intelise_c1.api.extraction_schemas import ExtractionOutput
+
+    source = 'Members can export reports.'
+    output = ExtractionOutput.model_validate({'candidates': [{
+        'requirement_text': source, 'actor': 'Members', 'action': 'export',
+        'evidence': [{'quote': source, 'start': 0, 'end': len(source)}],
+    }]})
+    with TestClient(create_app(database_settings)) as first:
+        first.app.state.extraction_provider = SimpleNamespace(model_identifier='mock-extractor', extract=AsyncMock(return_value=output))
+        first.app.state.classifier = SimpleNamespace(predict=Mock(return_value=(['FR'], 'mock-baseline', 'a' * 64)))
+        project_response = first.post(PROJECTS, json={'name': 'Classification restart', 'discussion_text': source})
+        assert project_response.status_code == 201
+        project = project_response.json()
+        extracted = first.post(f"{PROJECTS}/{project['id']}/extractions")
+        assert extracted.status_code == 201
+        extraction = extracted.json()
+        url = f"{PROJECTS}/{project['id']}/extractions/{extraction['run_id']}/classifications"
+        a, b = first.post(url), first.post(url)
+        assert a.status_code == b.status_code == 201
+        assert a.json()['classification_id'] != b.json()['classification_id']
+    with TestClient(create_app(database_settings)) as restarted:
+        assert restarted.get(url + '/latest').json() == b.json()
+        assert restarted.get(f"{PROJECTS}/{project['id']}/extractions/latest").json() == extraction
+        assert restarted.get(f"{PROJECTS}/{project['id']}").json() == project
+        assert restarted.post(url).status_code == 503  # No trained classifier configured.
+    with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
+        records = list(mongo[database_settings.mongodb_database].classification_runs.find({'extraction_run_id': extraction['run_id']}))
+        assert {record['classification_id'] for record in records} == {a.json()['classification_id'], b.json()['classification_id']}

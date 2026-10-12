@@ -10,6 +10,7 @@ from pymongo.write_concern import WriteConcern
 from intelise_c1.core.config import Settings
 from intelise_c1.repositories.projects import ProjectRepository
 from intelise_c1.repositories.extractions import ExtractionRepository
+from intelise_c1.repositories.classifications import ClassificationRepository
 
 UNAVAILABLE_DETAIL = "Project persistence is unavailable. Check MongoDB configuration and availability."
 
@@ -20,6 +21,7 @@ def database_lifespan(settings: Settings):
         client = None
         application.state.extractions = None
         application.state.projects = None
+        application.state.classifications = None
         uri = settings.mongodb_uri.get_secret_value() if settings.mongodb_uri else ""
         try:
             if uri.strip():
@@ -42,15 +44,22 @@ def database_lifespan(settings: Settings):
                             "extraction_runs", write_concern=WriteConcern(w="majority")
                         )
                     )
+                    application.state.classifications = ClassificationRepository(
+                        client[settings.mongodb_database].get_collection(
+                            "classification_runs", write_concern=WriteConcern(w="majority")
+                        )
+                    )
                 except (PyMongoError, ValueError):
                     # Invalid URI/configuration must not prevent the health API starting.
                     # Do not echo driver exceptions, which can contain connection details.
                     application.state.projects = None
                     application.state.extractions = None
+                    application.state.classifications = None
             yield
         finally:
             application.state.projects = None
             application.state.extractions = None
+            application.state.classifications = None
             if client is not None:
                 await client.close()
 

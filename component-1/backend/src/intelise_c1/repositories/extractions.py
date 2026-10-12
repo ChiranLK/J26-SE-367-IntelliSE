@@ -30,3 +30,7 @@ class ExtractionRepository:
         if document is None:
             return None
         return ExtractionRun(**{key: value for key, value in document.items() if key != "_id"})
+
+    async def get(self, project_id: str, run_id: str) -> ExtractionRun | None:
+        document = await self.collection.find_one({"project_id": project_id, "run_id": run_id})
+        return ExtractionRun(**{key: value for key, value in document.items() if key != "_id"}) if document else None
