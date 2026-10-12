@@ -1,0 +1,7 @@
+data/
+models/
+colab_pack/
+colab_pack.zip
+tools/plantuml.jar
+__pycache__/
+*.pyc

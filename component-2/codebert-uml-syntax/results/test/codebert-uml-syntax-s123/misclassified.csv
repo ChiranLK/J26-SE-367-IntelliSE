@@ -1,0 +1,1046 @@
+sample_id,diagram_id,group,diagram_type,domain,label,label_id,mutated_line,parser_status,parser_line,parser_message,text,true_err,parser_err,lint_err,rules_err,det_err,pred,confidence
+S006451,repo-genmymodel-uml/data/_bybUkBneEeig8qiayYYCew.xmi,fp_32868c529163,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class WeaponAttack {
+  +execute : void
+  +weapon : Weapon
+}
+class CastSpell {
+  +execute : void
+  +spell : Spell
+}
+class Action {
+  +execute : void
+}
+class Weapon
+class Spell
+class Dash {
+  +execute : void
+}
+class Dash2 {
+  +execute : void
+}
+Action <|-- WeaponAttack
+Action <|-- CastSpell
+Action <|-- Dash
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99494016
+S006453,repo-genmymodel-uml/data/_bybUkBneEeig8qiayYYCew.xmi,fp_32868c529163,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class WeaponAttack {
+  +execute : void
+  +weapon : Weapon
+}
+class CastSpell {
+  +execute : void
+  +spell : Spell
+}
+class Action {
+  +execute : void
+}
+class Weapon
+class Spell
+class Dash {
+  +execute : void
+}
+class Dash2 {
+  +execute : void
+}
+Action <|-- Dash
+Action <|-- CastSpell
+Action <|-- WeaponAttack
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99531436
+S008396,repo-genmymodel-uml/data/_qkkm4NGAEeib2vfQ4l86Yg.xmi,fp_ef9ba48661d6,CLASS,eventmanagement,VALID,0,-1,VALID,-1,,"@startuml
+class Organization {
+  Id : Integer
+  Name : String
+  Description : String
+  Url : String
+  Groups : Group
+  Events : Event
+  Owners : User
+}
+class User {
+  Id : Integer
+  FirstName : String
+  LastName : String
+  UserName : String
+  UserHash : Integer
+  UserNameFull : String
+  EmailAddress : String
+  Password : String
+}
+class Group {
+  Id : Integer
+  Name : String
+  Users : User
+  Permissions : Permission
+  Scope : ScopeType
+  ScopeId : Integer
+}
+class Event {
+  Id : Integer
+  Name : String
+  Description : String
+  Date : DateTime
+  Panels : Panel
+  Resources : Resource
+  Groups : Group
+}
+class Panel {
+  Id : Integer
+  Name : String
+  Submitter : User
+  +Description : String
+  Scheduled : DateTime
+  Length : Integer
+  PreBufferTime : Integer
+  PostBufferTime : Integer
+  Approval : ApprovalType
+  Resources : Resource
+  Private : Boolean
+  Panelists : User
+}
+class Resource {
+  Id : Integer
+  Name : String
+  Description : String
+  NumberAvailable : Integer
+  Type : ResourceType
+  Private : Boolean
+}
+enum ResourceType {
+  Track
+  Room
+  Equipment
+  VIP
+  Tag
+}
+enum ApprovalType {
+  Submitted
+  Reviewed
+  Denied
+  Waitlisted
+  Accepted
+}
+class Permission {
+  Id : Integer
+  Name : String
+  Crud : CrudType
+  Allow : AllowType
+  Scope : ScopeType
+}
+enum CrudType {
+  Create
+  Review
+  Update
+  Delete
+}
+enum AllowType {
+  Allow
+  Deny
+}
+enum ScopeType {
+  Site
+  User
+  Organization
+  Event
+  Group
+  Panel
+  Resource
+}
+enum Enumeration
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.995394
+S008595,repo-genmymodel-uml/data/efd0ceff-408d-41dd-8220-45b05141d1dc.xmi,fp_66c688f58a9a,CLASS,transport,VALID,0,-1,VALID,-1,,"@startuml
+class Train {
+  +milesPerHour : Float
+  +totalCars : Integer
+  inStation() : Boolean
+  nextStation() : String
+}
+class T
+class FreightTrain {
+  +containerTrain : Boolean
+  fullyLoaded() : Boolean
+}
+class PassengerTrain {
+  board()
+  isBoarding() : Boolean
+}
+class EngineCar {
+  +MAXSPEED : Float
+  changeSpeed() : Float
+}
+class PassengerCar {
+  +NUMSEATS : Integer
+  +numSeatsOccupied : Integer
+  addPass()
+  removePass()
+  isFull() : Boolean
+}
+class ContainerCar {
+  +cubicFeet : Float
+  -climateControlled : Boolean
+  -temp : Float
+  load()
+  unload()
+  setTemp() : Float
+}
+class Maglev {
+  -MAXSPEED : Float
+  addCar()
+}
+class ElectricTrain {
+  -MAXSPEED : Float
+  addEngCar()
+  addPassCar()
+}
+class MaglevCar {
+  +NUMSEATS : Integer
+  +numSeatsOccupied : Integer
+  addPass()
+  removePass()
+  isFull() : Boolean
+}
+FreightTrain ""0..1"" -- ""0..1"" Train : Train_freightTrain
+PassengerTrain ""0..1"" -- ""0..1"" Train : Train_passengerTrain
+FreightTrain ""0..1"" -- ""0..1"" ContainerCar : ContainerCar_FreightTrain
+Maglev ""0..1"" -- ""0..1"" PassengerTrain : PassengerTrain_Maglev
+ElectricTrain ""0..1"" -- ""0..1"" PassengerTrain : PassengerTrain_ElectricTrain
+EngineCar ""0..1"" -- ""0..1"" ElectricTrain : ElectricTrain_EngineCar
+PassengerCar ""0..1"" -- ""0..1"" ElectricTrain : ElectricTrain_PassengerCar
+MaglevCar ""0..1"" -- ""0..1"" Maglev : Maglev_MaglevCar
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9958299
+S008821,repo-genmymodel-uml/data/_T-T6AOtlEeeGy5tFxte9Vg.xmi,fp_53abe49d0fad,USE_CASE,socialnetwork,INVALID_USECASE_RELATIONSHIP,12,25,VALID,-1,,"@startuml
+left to right direction
+actor admin
+actor user
+usecase ""Login"" as UC1
+usecase ""Post Product"" as UC2
+usecase ""Update Website"" as UC3
+usecase ""Update Social Media"" as UC4
+usecase ""Update User"" as UC5
+usecase ""Update Product"" as UC6
+usecase ""Setting Tema"" as UC7
+usecase ""Setting Plugin"" as UC8
+usecase ""Setting Domain"" as UC9
+usecase ""Logout"" as UC10
+usecase ""View Product"" as UC11
+usecase ""View Detail Product"" as UC12
+usecase ""View Social Media"" as UC13
+usecase ""Buying"" as UC14
+usecase ""Instagram"" as UC15
+usecase ""Website"" as UC16
+admin --> UC1
+user --> UC11
+user --> UC12
+user --> UC13
+user ..> UC14 : <<extend>>
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC7 : <<extend>>
+UC3 ..> UC8 : <<extend>>
+UC3 ..> UC9 : <<extend>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC5 ..> UC1 : <<include>>
+UC6 ..> UC2 : <<include>>
+UC10 ..> UC1 : <<include>>
+UC14 ..> UC15 : <<extend>>
+UC14 ..> UC16 : <<extend>>
+@enduml
+",1,0,0,1,1,VALID,0.98930055
+S009195,repo-genmymodel-uml/data/_pE620ICTEei-m5BAOg12zA.xmi,fp_40fac452df80,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Piece
+class Colonist
+class Good
+class Role
+class Governor
+class VictoryPoint
+class Doubloon
+class TradingHouse
+class SupplyBoard
+class ColonistShip {
+  Num_Colonists : Integer
+  -ColonistZone : ColonistZone
+}
+class ShippingShip {
+  Size : Integer
+}
+enum PlantationType {
+  COFFEE
+  CORN
+  INDIGO
+  QUARRY
+  SUGAR
+  TABACCO
+}
+class ColonistZone {
+  Stackable : Boolean
+  Pieces : Colonist
+  MaxColonists : Integer
+  add(colonist : Colonist) : Boolean
+  remove() : Colonist
+  isFilled() : Boolean
+}
+class Building {
+  Type
+  Cost : Integer
+  VictoryPoints : Integer
+  Size : Integer
+  -ColonistZones : ColonistZone
+  -MaxColonists : Integer
+  -HasProduced : Boolean
+}
+class PlayerBoard {
+  PlayerID : Integer
+  -ColonistZone : ColonistZone
+}
+class PlantationSupply
+class Plantation {
+  Type : PlantationType
+  -ColonistZone : ColonistZone
+  -HasProduced : Boolean
+  Plantation(Type : PlantationType) : Plantation
+  produce() : Good
+}
+interface IColonistBoard {
+  addColonist() : Boolean
+  hasColonist() : Boolean
+  removeColonist() : Colonist
+}
+interface IBoard {
+  initializeRound()
+  initializeGame()
+}
+class GoodZone {
+  Stackable : Boolean
+  Pieces : Good
+  add(colonist : Colonist) : Boolean
+  remove() : Good
+  isFilled() : Boolean
+}
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9960375
+S009332,repo-genmymodel-uml/data/_MjVEsHP-Eem42bdoMoG80w.xmi,fp_5387eba097cd,USE_CASE,gym,INVALID_USECASE_RELATIONSHIP,12,14,VALID,-1,,"@startuml
+left to right direction
+actor User
+actor Admin
+usecase ""choose Trinner"" as UC1
+usecase ""Accept Trainee"" as UC2
+usecase ""Add new Trinning"" as UC3
+usecase ""Show The trainning"" as UC4
+usecase ""Submmit Trainning"" as UC5
+User --> UC1
+Admin --> UC2
+Admin --> UC3
+User --> UC4
+User ..> UC5 : <<extend>>
+@enduml
+",1,0,0,1,1,VALID,0.98673475
+S011898,repo-genmymodel-uml/data/_MLXXYPW1EemEXt2Xl4w-3Q.xmi,_nvsxmhlzeemeymb8sxp8zg,USE_CASE,course,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor Student
+actor Advisor
+actor Faculty
+actor Registrar
+actor Admission
+actor ""Enrollment Services"" as Enrollment_Services
+rectangle ""MCIT  Registration System"" {
+  usecase ""Get Class list"" as UC1
+  usecase ""Check Student's Transcript"" as UC2
+  usecase ""Student Information"" as UC3
+  usecase ""Enter New Classes"" as UC4
+  usecase ""Cancel a Class"" as UC5
+  usecase ""Check Conflicts in Classroom/Faculty Assignments"" as UC6
+  usecase ""Add New Students"" as UC7
+  usecase ""Report on retention"" as UC8
+  usecase ""Update Student Information"" as UC9
+  usecase ""Check Fulfillment of Graduation Requirments"" as UC10
+  usecase ""Discuss With Advisor"" as UC11
+  usecase ""Course Approval"" as UC12
+  usecase ""Determine Course Prerequisites"" as UC13
+}
+Registrar --> UC4
+Admission --> UC7
+Enrollment_Services --> UC8
+Advisor --> UC12
+Faculty --> UC3
+Faculty --> UC2
+Registrar --> UC6
+Enrollment_Services --> UC9
+Enrollment_Services --> UC10
+Faculty --> UC1
+Registrar --> UC5
+UC13 ..> UC12 : <<extend>>
+Student --> UC11
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.99703443
+S011969,repo-genmymodel-uml/data/_RizPwJ3JEemddr62D2Sizg.xmi,_nvsxmhlzeemeymb8sxp8zg,USE_CASE,course,INVALID_USECASE_RELATIONSHIP,12,30,VALID,-1,,"@startuml
+left to right direction
+actor Admin
+actor Student
+usecase ""Add Student"" as UC1
+usecase ""Add Teacher"" as UC2
+usecase ""AddSubjects"" as UC3
+usecase ""View Students"" as UC4
+usecase ""View Teachers"" as UC5
+usecase ""View Result"" as UC6
+usecase ""Login"" as UC7
+usecase ""Logout"" as UC8
+usecase ""View Basic Info"" as UC9
+usecase ""View Full Info"" as UC10
+Admin --> UC7
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC8
+Student --> UC8
+Student --> UC7
+Student --> UC4
+Student --> UC9
+Student --> UC6
+Student --> UC10
+Admin --> UC9
+Admin ..> UC10 : <<include>>
+@enduml
+",1,0,0,1,1,VALID,0.985786
+S013313,repo-genmymodel-uml/data/a52fc4b3-80bf-462a-be38-def56e45262c.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+Value <|-- String
+Visitor <|-- ArrPrint
+Value <|-- Array
+Value <|-- Bool
+Value <|-- Json
+Value <|-- Number
+Value <|-- Null
+Visitor <|-- Print
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.9985153
+S013351,repo-genmymodel-uml/data/e29dee0e-1e99-405f-9f2f-760366ea2fcc.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+Visitor <|-- ArrPrint
+Value <|-- String
+Value <|-- Json
+Visitor <|-- Print
+Value <|-- Bool
+Array <|-- Null
+Value <|-- Number
+Value <|-- Null
+Value <|-- Array
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.85351074
+S013553,repo-genmymodel-uml/data/429238c1-3b57-4541-8c4b-5bf3be8e4aec.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,INVALID_MEMBER_SYNTAX,6,35,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+class Sprite
+class DynamicObject
+class StaticObject
+class Tile
+class Pacman
+class Ghost
+class Ghosts
+class MyTask
+class MyView
+Value <|-- Null
+Value <|-- String
+Value <|-- Bool
+Value <|-- Number
+Value <|-- Array
+Value <|-- Json
+Visitor <|-- Print
+Visitor <|-- ArrPrint
+@enduml
+",1,0,1,0,1,VALID,0.92277604
+S013561,repo-genmymodel-uml/data/429238c1-3b57-4541-8c4b-5bf3be8e4aec.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,GENERALIZATION_CYCLE,11,78,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+class Sprite
+class DynamicObject
+class StaticObject
+class Tile
+class Pacman
+class Ghost
+class Ghosts
+class MyTask
+class MyView
+Value <|-- Null
+Value <|-- String
+Value <|-- Bool
+Value <|-- Number
+Value <|-- Array
+Value <|-- Json
+Visitor <|-- Print
+Visitor <|-- ArrPrint
+String <|-- Value
+@enduml
+",1,0,0,1,1,VALID,0.68287486
+S013562,repo-genmymodel-uml/data/429238c1-3b57-4541-8c4b-5bf3be8e4aec.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,GENERALIZATION_CYCLE,11,78,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+class Sprite
+class DynamicObject
+class StaticObject
+class Tile
+class Pacman
+class Ghost
+class Ghosts
+class MyTask
+class MyView
+Value <|-- Null
+Value <|-- String
+Value <|-- Bool
+Value <|-- Number
+Value <|-- Array
+Value <|-- Json
+Visitor <|-- Print
+Visitor <|-- ArrPrint
+ArrPrint <|-- Visitor
+@enduml
+",1,0,0,1,1,VALID,0.82426643
+S015350,repo-genmymodel-uml/data/bc7d211a-0172-4307-80d2-2ebedc0286cb.xmi,fp_a232ece87147,USE_CASE,ticket,INVALID_USECASE_RELATIONSHIP,12,27,VALID,-1,,"@startuml
+left to right direction
+actor Customer
+actor ""System Administrator"" as System_Administrator
+rectangle ""Hotel Reservation System"" {
+  usecase ""create an account"" as UC1
+  usecase ""search hotels in prefered areas"" as UC2
+  usecase ""view availability of rooms in between prefered dates"" as UC3
+  usecase ""View prices for different types of rooms"" as UC4
+  usecase ""View discounts"" as UC5
+  usecase ""Reserve prefered rooms"" as UC6
+  usecase ""Make payments through online payment gateway"" as UC7
+  usecase ""Log-in"" as UC8
+  usecase ""Update room available dates"" as UC9
+  usecase ""Update room prices"" as UC10
+  usecase ""Update discount details"" as UC11
+}
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+Customer --> UC6
+Customer --> UC7
+System_Administrator --> UC9
+System_Administrator --> UC10
+System_Administrator ..> UC11 : <<include>>
+UC2 ..> UC8 : <<include>>
+UC3 ..> UC8 : <<include>>
+UC4 ..> UC8 : <<include>>
+UC5 ..> UC8 : <<include>>
+UC6 ..> UC8 : <<include>>
+UC7 ..> UC8 : <<include>>
+@enduml
+",1,0,0,1,1,VALID,0.9882983
+S020234,repo-genmymodel-uml/data/_EJqo0Km3EeeEQN1ZyOr-_g.xmi,fp_3ab4de5b5eac,USE_CASE,smarthouse,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor ""Smoke sensor"" as Smoke_sensor
+actor ""Heat sensor"" as Heat_sensor
+actor ""Door sensor"" as Door_sensor
+actor ""Window sensor"" as Window_sensor
+actor ""Movement Sensor"" as Movement_Sensor
+actor ""Water sensor"" as Water_sensor
+rectangle ""Home Security and Safety System"" {
+  usecase ""Detect fire"" as UC1
+  usecase ""Detect break-in"" as UC2
+  usecase ""Detect flooding"" as UC3
+  usecase ""Authenticate PIN"" as UC4
+  usecase ""Sound alarn"" as UC5
+  usecase ""Disable alarm"" as UC6
+}
+Window_sensor --> UC2
+Heat_sensor --> UC1
+Movement_Sensor --> UC2
+Smoke_sensor --> UC1
+Door_sensor --> UC2
+UC3 ..> UC4 : <<include>>
+UC2 ..> UC4 : <<include>>
+UC4 ..> UC5 : <<extend>>
+UC4 ..> UC6 : <<extend>>
+UC1 ..> UC4 : <<include>>
+Water_sensor --> UC3
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.97992855
+S020351,repo-genmymodel-uml/data/_zspqcKp_EeeEQN1ZyOr-_g.xmi,fp_96d2f7e2d375,USE_CASE,smarthouse,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor User
+actor ""Keypad and alpha display"" as Keypad_and_alpha_display
+actor ""Wireless network card"" as Wireless_network_card
+actor ""Smart sensors"" as Smart_sensors
+actor ""Smoke sensors"" as Smoke_sensors
+actor ""Heat sensors"" as Heat_sensors
+actor ""Door, window and movement sensors"" as Door_window_and_movement_sensors
+actor ""Water sensors"" as Water_sensors
+usecase ""Stop alarm"" as UC1
+usecase ""Change setting"" as UC2
+usecase ""Enable/disable sensor"" as UC3
+usecase ""Set time"" as UC4
+usecase ""Reset system"" as UC5
+usecase ""Get the system connected to internet"" as UC6
+usecase ""Indicate types of sensor attached"" as UC7
+usecase ""Smoke alarm"" as UC8
+usecase ""Fire alarm"" as UC9
+usecase ""Burglar alarm"" as UC10
+usecase ""Flood alarm"" as UC11
+usecase ""Call the fire bridage"" as UC12
+User --> UC3
+Keypad_and_alpha_display --> UC1
+Keypad_and_alpha_display --> UC2
+Wireless_network_card --> UC6
+Smart_sensors --> UC7
+Smoke_sensors --> UC8
+Heat_sensors --> UC9
+UC9 ..> UC8 : <<extend>>
+UC12 ..> UC9 : <<extend>>
+Keypad_and_alpha_display <|-- User
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.9961527
+S020383,repo-genmymodel-uml/data/_zspqcKp_EeeEQN1ZyOr-_g.xmi,fp_96d2f7e2d375,USE_CASE,smarthouse,GENERALIZATION_CYCLE,11,33,VALID,-1,,"@startuml
+left to right direction
+actor User
+actor ""Keypad and alpha display"" as Keypad_and_alpha_display
+actor ""Wireless network card"" as Wireless_network_card
+actor ""Smart sensors"" as Smart_sensors
+actor ""Smoke sensors"" as Smoke_sensors
+actor ""Heat sensors"" as Heat_sensors
+actor ""Door, window and movement sensors"" as Door_window_and_movement_sensors
+actor ""Water sensors"" as Water_sensors
+usecase ""Stop alarm"" as UC1
+usecase ""Change setting"" as UC2
+usecase ""Enable/disable sensor"" as UC3
+usecase ""Set time"" as UC4
+usecase ""Reset system"" as UC5
+usecase ""Get the system connected to internet"" as UC6
+usecase ""Indicate types of sensor attached"" as UC7
+usecase ""Smoke alarm"" as UC8
+usecase ""Fire alarm"" as UC9
+usecase ""Burglar alarm"" as UC10
+usecase ""Flood alarm"" as UC11
+usecase ""Call the fire bridage"" as UC12
+User --> UC3
+Keypad_and_alpha_display --> UC1
+Keypad_and_alpha_display --> UC2
+Wireless_network_card --> UC6
+Smart_sensors --> UC7
+Smoke_sensors --> UC8
+Heat_sensors --> UC9
+UC9 ..> UC8 : <<extend>>
+UC12 ..> UC9 : <<extend>>
+Keypad_and_alpha_display <|-- User
+User <|-- Keypad_and_alpha_display
+@enduml
+",1,0,0,1,1,VALID,0.630779
+S021426,repo-genmymodel-uml/data/d20d480c-000b-4f23-87fb-01e1260abfc9.xmi,fp_29d170fd522e,USE_CASE,smarthouse,INVALID_USECASE_RELATIONSHIP,12,28,VALID,-1,,"@startuml
+left to right direction
+actor ""Smoke sensor"" as Smoke_sensor
+actor Kupac
+actor Dobavljac
+actor User
+actor ""Heat sensor"" as Heat_sensor
+actor ""Smart sensor"" as Smart_sensor
+usecase ""Change settings"" as UC1
+usecase ""Disable/Enable the sensor"" as UC2
+usecase ""Stop the alarm"" as UC3
+usecase ""Detect heat"" as UC4
+usecase ""Potvrda o prijemu i predaji robe"" as UC5
+usecase ""Detect smoke"" as UC6
+usecase ""Authentication"" as UC7
+usecase ""Send code"" as UC8
+usecase ""Reset the system"" as UC9
+usecase ""Reject project"" as UC10
+usecase ""Re-enter username and password"" as UC11
+usecase ""Password/username lost"" as UC12
+usecase ""Ring smoke alarm"" as UC13
+usecase ""Send fire alarm"" as UC14
+User --> UC3
+Smoke_sensor --> UC6
+User --> UC1
+User --> UC2
+User --> UC9
+Smart_sensor ..> UC8 : <<extend>>
+UC1 ..> UC7 : <<include>>
+UC2 ..> UC7 : <<include>>
+UC3 ..> UC7 : <<include>>
+UC9 ..> UC6 : <<extend>>
+UC9 ..> UC7 : <<include>>
+UC10 ..> UC7 : <<extend>>
+UC11 ..> UC7 : <<extend>>
+UC12 ..> UC7 : <<extend>>
+UC13 ..> UC6 : <<extend>>
+@enduml
+",1,0,0,1,1,VALID,0.99002457
+S024275,repo-genmymodel-uml/data/0861d75f-5537-4df4-99d6-6342e18cec2a.xmi,fp_b02f873cfb3f,USE_CASE,rental,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor Customer
+actor Crew
+actor Manager
+actor ""System Administrator"" as System_Administrator
+actor User
+rectangle ""UKM Vehicle Rental Service"" {
+  usecase ""Login"" as UC1
+  usecase ""Register"" as UC2
+  usecase ""Request Vehicle"" as UC3
+  usecase ""Book"" as UC4
+  usecase ""Maintain car information"" as UC5
+  usecase ""View daily rental reports"" as UC6
+  usecase ""View monthly rental reports"" as UC7
+  usecase ""Pay bill"" as UC8
+  usecase ""Generate bill"" as UC9
+  usecase ""Maintain System"" as UC10
+  usecase ""Search Vehicle"" as UC11
+  usecase ""Logout"" as UC12
+}
+System_Administrator --> UC10
+Customer --> UC8
+Customer --> UC11
+Customer --> UC3
+Customer --> UC4
+Manager --> UC7
+Crew --> UC5
+Crew --> UC9
+Crew --> UC6
+User --> UC1
+User --> UC12
+User --> UC2
+UC11 ..> UC3 : <<extend>>
+User <|-- Customer
+User <|-- Crew
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.8229682
+S032590,repo-genmymodel-uml/data/_kKfeADxUEei384rcaJKdxw.xmi,fp_de5a736b891e,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  +Suit : Enumeration
+  +Rank : Integer
+  getRank() : Integer
+  getSuit() : Enumeration
+  toString() : String
+}
+enum Enumeration
+class Deck {
+  -CardsList : ArrayList
+  toString() : String
+  deal() : Card
+  shuffle()
+  isDeckEmpty() : Boolean
+}
+class Hand {
+  +HandOfCards : ArrayList
+  drawNext() : Card
+  draw_String_s() : String
+  addCard_Card_c()
+  getCards() : ArrayList_Card
+}
+class CardException
+class DeckOrHandEmptyException
+class InvalidCardException
+abstract class CardPlayer {
+  takeTurn() : Card
+  dealCard()
+  CardPlayer(name : String)
+  toString() : String
+}
+abstract class CardGame {
+  CardGame(players : CardPlayer)
+  play()
+  isGameOver() : ArrayList_Card
+  getWinner() : String
+}
+class CardPlayer2
+CardException <|-- DeckOrHandEmptyException
+CardException <|-- InvalidCardException
+Deck ""0..*"" *-- ""0..*"" Card : Deck_Card
+Hand ""0..*"" *-- ""0..1"" Card : Hand_Card
+CardPlayer ""0..*"" *-- ""0..*"" Hand : CardPlayer_Hand
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.8955199

@@ -1,0 +1,33 @@
+[
+  {
+    "project_id": "P001",
+    "requirements": [
+      {"id": "REQ-01", "text": "A customer shall be able to register with a name, email and password."},
+      {"id": "REQ-02", "text": "A customer shall be able to browse products by category."},
+      {"id": "REQ-03", "text": "A customer shall be able to place an order containing one or more products."},
+      {"id": "REQ-04", "text": "A customer shall be able to cancel an order before it is shipped."},
+      {"id": "REQ-05", "text": "The system shall accept card payments for an order."},
+      {"id": "REQ-06", "text": "An administrator shall be able to add, update and remove products."}
+    ]
+  },
+  {
+    "project_id": "P002",
+    "requirements": [
+      {"id": "REQ-01", "text": "A library member shall be able to search the catalogue by title, author or ISBN."},
+      {"id": "REQ-02", "text": "A member shall be able to borrow up to five books at a time."},
+      {"id": "REQ-03", "text": "A member shall be able to return a borrowed book."},
+      {"id": "REQ-04", "text": "The system shall calculate a fine for books returned after the due date."},
+      {"id": "REQ-05", "text": "A librarian shall be able to register new books and members."}
+    ]
+  },
+  {
+    "project_id": "P003",
+    "requirements": [
+      {"id": "REQ-01", "text": "A patient shall be able to book an appointment with a doctor."},
+      {"id": "REQ-02", "text": "A patient shall be able to cancel or reschedule an appointment."},
+      {"id": "REQ-03", "text": "A doctor shall be able to record a diagnosis and issue a prescription."},
+      {"id": "REQ-04", "text": "A receptionist shall be able to view the daily appointment schedule."},
+      {"id": "REQ-05", "text": "The system shall send an appointment reminder to the patient one day before."}
+    ]
+  }
+]

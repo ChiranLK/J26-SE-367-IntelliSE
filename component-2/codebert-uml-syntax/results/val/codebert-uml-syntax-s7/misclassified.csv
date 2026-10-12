@@ -1,0 +1,3274 @@
+sample_id,diagram_id,group,diagram_type,domain,label,label_id,mutated_line,parser_status,parser_line,parser_message,text,true_err,parser_err,lint_err,rules_err,det_err,pred,confidence
+S000087,repo-genmymodel-uml/data/_SiRyIBJ7EeimSO_GhE8jew.xmi,fp_45307be11c16,CLASS,computerarchitecture,VALID,0,-1,VALID,-1,,"@startuml
+class Processor {
+  init()
+  readFromMemory()
+  execute()
+  loadProgram()
+  writeIntoMemory()
+}
+interface Memory {
+  read()
+  wite()
+}
+class Cache {
+  chunck
+}
+class RAM
+Memory <|.. Cache
+Memory <|.. RAM
+Processor ""1"" *-- ""1"" Memory : Processor_Memory
+Cache ..> RAM
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.77925104
+S000151,repo-genmymodel-uml/data/_UeZYwHvzEeiF6cTK02sxJA.xmi,fp_d900901fa71b,CLASS,computerarchitecture,VALID,0,-1,VALID,-1,,"@startuml
+class ByteCode {
+  init()
+  execute()
+  toString() : String
+}
+class Args {
+  +nArgs : Integer
+}
+class BOP {
+  +binaryOp : String
+}
+class Call {
+  +funcname : String
+  +address : Integer
+  setAddress()
+  getFuncName() : String
+}
+class Dump {
+  +stats : String
+}
+class FalseBranch {
+  +address : Integer
+  +label : String
+  setAddress()
+  getLabel() : String
+}
+class GoTo {
+  +address : Integer
+  +label : String
+  setAddress()
+  getLabel() : String
+}
+class Halt
+class Label {
+  +label : String
+  getLabel() : String
+}
+class Lit {
+  +var : String
+  +value : Integer
+}
+class Load {
+  +id : String
+  +offset : Integer
+}
+class Pop {
+  +count : Integer
+}
+class Read
+class Return {
+  +funcname : String
+  getFuncName() : String
+}
+class Store {
+  +id : String
+  +offset : Integer
+  +value : Integer
+}
+class Write
+class ByteCodeLoader {
+  -byteSource : BufferedReader
+  -program : Program
+  -byteCodeList
+  ByteCodeLoader()
+  loadCodes() : Program
+}
+ByteCode <|-- Args
+ByteCode <|-- BOP
+ByteCode <|-- Call
+ByteCode <|-- Dump
+ByteCode <|-- FalseBranch
+ByteCode <|-- GoTo
+ByteCode <|-- Halt
+ByteCode <|-- Label
+ByteCode <|-- Lit
+ByteCode <|-- Load
+ByteCode <|-- Pop
+ByteCode <|-- Read
+ByteCode <|-- Return
+ByteCode <|-- Store
+ByteCode <|-- Write
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7219617
+S000153,repo-genmymodel-uml/data/_UeZYwHvzEeiF6cTK02sxJA.xmi,fp_d900901fa71b,CLASS,computerarchitecture,VALID,0,-1,VALID,-1,,"@startuml
+class ByteCode {
+  init()
+  execute()
+  toString() : String
+}
+class Args {
+  +nArgs : Integer
+}
+class BOP {
+  +binaryOp : String
+}
+class Call {
+  +funcname : String
+  +address : Integer
+  setAddress()
+  getFuncName() : String
+}
+class Dump {
+  +stats : String
+}
+class FalseBranch {
+  +address : Integer
+  +label : String
+  setAddress()
+  getLabel() : String
+}
+class GoTo {
+  +address : Integer
+  +label : String
+  setAddress()
+  getLabel() : String
+}
+class Halt
+class Label {
+  +label : String
+  getLabel() : String
+}
+class Lit {
+  +var : String
+  +value : Integer
+}
+class Load {
+  +id : String
+  +offset : Integer
+}
+class Pop {
+  +count : Integer
+}
+class Read
+class Return {
+  +funcname : String
+  getFuncName() : String
+}
+class Store {
+  +id : String
+  +offset : Integer
+  +value : Integer
+}
+class Write
+class ByteCodeLoader {
+  -byteSource : BufferedReader
+  -program : Program
+  -byteCodeList
+  ByteCodeLoader()
+  loadCodes() : Program
+}
+ByteCode <|-- GoTo
+ByteCode <|-- Store
+ByteCode <|-- FalseBranch
+ByteCode <|-- BOP
+ByteCode <|-- Load
+ByteCode <|-- Pop
+ByteCode <|-- Halt
+ByteCode <|-- Write
+ByteCode <|-- Args
+ByteCode <|-- Label
+ByteCode <|-- Lit
+ByteCode <|-- Read
+ByteCode <|-- Return
+ByteCode <|-- Call
+ByteCode <|-- Dump
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7926962
+S008429,repo-genmymodel-uml/data/_nagKUMTAEeeWu-SLkciAbg.xmi,fp_cde0e1c28df5,CLASS,eventmanagement,VALID,0,-1,VALID,-1,,"@startuml
+class Event {
+  +EventId : Integer
+  +Address : String
+  +CurrentNumberOfPlayers : Integer
+  +MaxNumberOfPlayers : Integer
+  +DateTime : DateTime
+  +Description : String
+  +attribute
+}
+class User {
+  +UserId : Integer
+  +Email : String
+  +Login : String
+  +Password : String
+  +PhoneNumber : String
+  +DateOfBirth : DateTime
+}
+class EventType {
+  +Type : String
+  +EventTypeId : Integer
+}
+class Registration
+Registration ""0..*"" -- ""1"" User : User_Registration
+Event ""0..*"" -- ""1"" EventType : EventType_Event
+Event ""1"" *-- ""0..*"" Registration : Event_Registration
+Event ""0..1"" -- ""1"" User : User_Event
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.816599
+S008430,repo-genmymodel-uml/data/_nagKUMTAEeeWu-SLkciAbg.xmi,fp_cde0e1c28df5,CLASS,eventmanagement,VALID,0,-1,VALID,-1,,"@startuml
+class Event {
+  +EventId : Integer
+  +Address : String
+  +CurrentNumberOfPlayers : Integer
+  +MaxNumberOfPlayers : Integer
+  +DateTime : DateTime
+  +Description : String
+  +attribute
+}
+class User {
+  +UserId : Integer
+  +Email : String
+  +Login : String
+  +Password : String
+  +PhoneNumber : String
+  +DateOfBirth : DateTime
+}
+class EventType {
+  +Type : String
+  +EventTypeId : Integer
+}
+class Registration
+Event ""1"" *-- ""0..*"" Registration : Event_Registration
+Event ""0..*"" -- ""1"" EventType : EventType_Event
+Registration ""0..*"" -- ""1"" User : User_Registration
+Event ""0..1"" -- ""1"" User : User_Event
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81635225
+S008468,repo-genmymodel-uml/data/_QDtykIiSEeeveJPbhFhy-g.xmi,fp_8870f6097292,CLASS,transport,VALID,0,-1,VALID,-1,,"@startuml
+class Train {
+  +Power : Engine
+  +Manufacturer : String
+  +Cars : LinkedList_Car
+  +Operator : String
+  addCar() : Car
+}
+class CargoTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +Containers : List_Container
+  receiveCargo() : Container
+  deliverCargo() : Container
+}
+class PassengerTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +numberOfPassengers : Integer
+  receivePassengers() : List_String
+  dropOffPassengers() : List_String
+}
+class FirstClass {
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+class Coach {
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+Train <|-- CargoTrain
+Train <|-- PassengerTrain
+PassengerTrain <|-- FirstClass
+PassengerTrain <|-- Coach
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.50776035
+S008473,repo-genmymodel-uml/data/_QDtykIiSEeeveJPbhFhy-g.xmi,fp_8870f6097292,CLASS,transport,UNMATCHED_BRACE,3,23,ERROR,24,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class Train {
+  +Power : Engine
+  +Manufacturer : String
+  +Cars : LinkedList_Car
+  +Operator : String
+  addCar() : Car
+}
+class CargoTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +Containers : List_Container
+  receiveCargo() : Container
+  deliverCargo() : Container
+}
+class PassengerTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +numberOfPassengers : Integer
+  receivePassengers() : List_String
+  dropOffPassengers() : List_String
+}
+class FirstClass
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+class Coach {
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+Train <|-- CargoTrain
+Train <|-- PassengerTrain
+PassengerTrain <|-- FirstClass
+PassengerTrain <|-- Coach
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.9079359
+S008474,repo-genmymodel-uml/data/_QDtykIiSEeeveJPbhFhy-g.xmi,fp_8870f6097292,CLASS,transport,UNMATCHED_BRACE,3,8,VALID,-1,,"@startuml
+class Train {
+  +Power : Engine
+  +Manufacturer : String
+  +Cars : LinkedList_Car
+  +Operator : String
+  addCar() : Car
+class CargoTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +Containers : List_Container
+  receiveCargo() : Container
+  deliverCargo() : Container
+}
+class PassengerTrain {
+  +Origin : String
+  +Stops : LinkedList_String
+  +numberOfPassengers : Integer
+  receivePassengers() : List_String
+  dropOffPassengers() : List_String
+}
+class FirstClass {
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+class Coach {
+  +numberOfSeats : Integer
+  +seatsFilled : Integer
+  deliverMealService() : Boolean
+  bookNewPassenger()
+}
+Train <|-- CargoTrain
+Train <|-- PassengerTrain
+PassengerTrain <|-- FirstClass
+PassengerTrain <|-- Coach
+@enduml
+",1,0,1,0,1,DUPLICATE_ELEMENT,0.42336825
+S008944,repo-genmymodel-uml/data/_grOBAOs7EeiJfugOH9Y5Zg.xmi,fp_e9dff1f1d570,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Match {
+  -date : LocalDateTime
+  -name : String
+  -players : Player
+  +winner : Result
+  play()
+  -generateMatchInformation()
+  -calculateResult() : Result
+}
+class Player {
+  -name : String
+  -totalScore : Integer
+  -games : Game
+}
+class Game {
+  -number : Integer
+  -score : Integer
+  calculateScore()
+}
+class Attempt {
+  number : Integer
+  points : Integer
+}
+enum ScoreType {
+  STRIKE
+  SPARE
+  NONE
+}
+class FileImporter {
+  -INITIAL_DATAFILE : String
+  loadData() : List_InitialData
+}
+class InitialData {
+  -playerName : String
+  -points
+}
+class Result {
+  +player : Player
+  +score : Integer
+}
+interface Importer {
+  loadData() : List_InitialData
+}
+class BowlingGame {
+  +attempts : List_Attempt
+  scoreType : ScoreType
+  previousGame : Game
+  nextGames : List_Game
+}
+Importer <|.. FileImporter
+Game <|-- BowlingGame
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.96186465
+S008949,repo-genmymodel-uml/data/_grOBAOs7EeiJfugOH9Y5Zg.xmi,fp_e9dff1f1d570,CLASS,computer,UNMATCHED_BRACE,3,50,ERROR,45,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class Match {
+  -date : LocalDateTime
+  -name : String
+  -players : Player
+  +winner : Result
+  play()
+  -generateMatchInformation()
+  -calculateResult() : Result
+}
+class Player {
+  -name : String
+  -totalScore : Integer
+  -games : Game
+}
+class Game {
+  -number : Integer
+  -score : Integer
+  calculateScore()
+}
+class Attempt {
+  number : Integer
+  points : Integer
+}
+enum ScoreType {
+  STRIKE
+  SPARE
+  NONE
+}
+class FileImporter {
+  -INITIAL_DATAFILE : String
+  loadData() : List_InitialData
+}
+class InitialData {
+  -playerName : String
+  -points
+}
+class Result {
+  +player : Player
+  +score : Integer
+}
+interface Importer {
+  loadData() : List_InitialData
+}
+class BowlingGame {
+  +attempts : List_Attempt
+  scoreType : ScoreType
+  previousGame : Game
+  nextGames : List_Game
+Importer <|.. FileImporter
+Game <|-- BowlingGame
+@enduml
+",1,1,1,0,1,GENERALIZATION_CYCLE,0.8060778
+S008950,repo-genmymodel-uml/data/_grOBAOs7EeiJfugOH9Y5Zg.xmi,fp_e9dff1f1d570,CLASS,computer,UNMATCHED_BRACE,3,16,ERROR,17,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class Match {
+  -date : LocalDateTime
+  -name : String
+  -players : Player
+  +winner : Result
+  play()
+  -generateMatchInformation()
+  -calculateResult() : Result
+}
+class Player {
+  -name : String
+  -totalScore : Integer
+  -games : Game
+}
+class Game
+  -number : Integer
+  -score : Integer
+  calculateScore()
+}
+class Attempt {
+  number : Integer
+  points : Integer
+}
+enum ScoreType {
+  STRIKE
+  SPARE
+  NONE
+}
+class FileImporter {
+  -INITIAL_DATAFILE : String
+  loadData() : List_InitialData
+}
+class InitialData {
+  -playerName : String
+  -points
+}
+class Result {
+  +player : Player
+  +score : Integer
+}
+interface Importer {
+  loadData() : List_InitialData
+}
+class BowlingGame {
+  +attempts : List_Attempt
+  scoreType : ScoreType
+  previousGame : Game
+  nextGames : List_Game
+}
+Importer <|.. FileImporter
+Game <|-- BowlingGame
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.46330383
+S011324,repo-genmymodel-uml/data/8e89b16c-3645-4d62-a63c-015f48416c5d.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,15,ERROR,15,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+actor Student
+usecase ""Books"" as UC1
+usecase ""Requests"" as UC2
+usecase ""Reference Books"" as UC3
+usecase ""Reminders"" as UC4
+usecase ""Foreign Resources"" as UC5
+usecase ""Music CD's"" as UC6
+usecase ""Videos"" as UC7
+usecase ""Software"" as UC8
+usecase ""Magazines"" as UC9
+use case ""Reshelving Books"" as UC10
+usecase ""Renew Magazine Subscription"" as UC11
+usecase ""Order New Resources"" as UC12
+usecase ""Computers"" as UC13
+usecase ""Internet"" as UC14
+usecase ""Acquisition"" as UC15
+usecase ""Retirement"" as UC16
+usecase ""Other Libraries' Holdings"" as UC17
+usecase ""Overdue Fine"" as UC18
+Library_Staff --> UC4
+Library_Staff --> UC7
+Library_Staff --> UC13
+Library_Staff --> UC14
+Library_Staff --> UC16
+Library_Staff --> UC15
+Library_Staff --> UC12
+Library_Staff --> UC11
+Library_Staff --> UC10
+Library_Staff --> UC5
+Library_Staff --> UC3
+Library_Staff --> UC9
+Library_Staff --> UC8
+Library_Staff --> UC2
+Library_Staff --> UC1
+Library_Staff --> UC6
+Library_Staff --> UC17
+Faculty --> UC5
+Faculty --> UC3
+Faculty --> UC2
+Student --> UC6
+Student --> UC14
+Faculty --> UC14
+Faculty --> UC6
+Faculty --> UC13
+Faculty --> UC7
+Faculty --> UC8
+Faculty --> UC9
+Faculty --> UC1
+Faculty --> UC17
+Student --> UC17
+Student --> UC1
+Student --> UC9
+Student --> UC8
+Student --> UC7
+Student --> UC13
+Student --> UC2
+Student --> UC3
+Library_Staff --> UC18
+Faculty --> UC18
+Student --> UC18
+@enduml
+",1,1,0,0,1,VALID,0.8701322
+S011363,repo-genmymodel-uml/data/_b32rMMEKEeeEXb8Dudo6PQ.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,7,ERROR,7,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Librarian
+actor Book
+usecase ""Reserve Book"" as UC1
+use case ""Check Out Book"" as UC2
+usecase ""Check In Book"" as UC3
+usecase ""Mail 2 Week Reminders"" as UC4
+usecase ""Acquisition of Books"" as UC5
+usecase ""Retirement of Books"" as UC6
+usecase ""Retired"" as UC7
+usecase ""Acquired"" as UC8
+usecase ""Checked In"" as UC9
+usecase ""Checked Out"" as UC10
+Patron --> UC2
+Patron --> UC3
+Patron --> UC1
+Librarian --> UC2
+Librarian --> UC3
+Librarian --> UC1
+Librarian --> UC4
+Librarian --> UC5
+Librarian --> UC6
+Book --> UC7
+Book --> UC8
+Book --> UC9
+Book --> UC10
+@enduml
+",1,1,0,0,1,VALID,0.8505816
+S011402,repo-genmymodel-uml/data/_b4Mf4MNvEeeWu-SLkciAbg.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Student
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+rectangle ""Library Management"" {
+  usecase ""Check In Item"" as UC1
+  use case ""Request Book"" as UC2
+  usecase ""Overdue Notification"" as UC3
+  usecase ""Check Out Item"" as UC4
+  usecase ""Charge Late Fee"" as UC5
+  usecase ""Reserve Book For Semester"" as UC6
+  usecase ""Manage Reference Materials"" as UC7
+  usecase ""Organize Books"" as UC8
+  usecase ""Renew Magazine Subscriptions"" as UC9
+  usecase ""Order New Resources"" as UC10
+  usecase ""Extended Checkout"" as UC11
+  usecase ""Manage Computer Terminals"" as UC12
+}
+Patron --> UC1
+Patron --> UC2
+Patron --> UC4
+Library_Staff --> UC6
+Faculty --> UC6
+Library_Staff --> UC7
+Library_Staff --> UC8
+Library_Staff --> UC9
+Library_Staff --> UC10
+Student --> UC11
+Faculty --> UC11
+Library_Staff --> UC12
+UC3 ..> UC4 : <<extend>>
+UC3 ..> UC5 : <<include>>
+UC11 ..> UC4 : <<extend>>
+Patron <|-- Student
+Patron <|-- Faculty
+@enduml
+",1,1,0,0,1,VALID,0.86269754
+S011403,repo-genmymodel-uml/data/_b4Mf4MNvEeeWu-SLkciAbg.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,16,ERROR,16,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Student
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+rectangle ""Library Management"" {
+  usecase ""Check In Item"" as UC1
+  usecase ""Request Book"" as UC2
+  usecase ""Overdue Notification"" as UC3
+  usecase ""Check Out Item"" as UC4
+  usecase ""Charge Late Fee"" as UC5
+  usecase ""Reserve Book For Semester"" as UC6
+  usecase ""Manage Reference Materials"" as UC7
+  usecase ""Organize Books"" as UC8
+  use case ""Renew Magazine Subscriptions"" as UC9
+  usecase ""Order New Resources"" as UC10
+  usecase ""Extended Checkout"" as UC11
+  usecase ""Manage Computer Terminals"" as UC12
+}
+Patron --> UC1
+Patron --> UC2
+Patron --> UC4
+Library_Staff --> UC6
+Faculty --> UC6
+Library_Staff --> UC7
+Library_Staff --> UC8
+Library_Staff --> UC9
+Library_Staff --> UC10
+Student --> UC11
+Faculty --> UC11
+Library_Staff --> UC12
+UC3 ..> UC4 : <<extend>>
+UC3 ..> UC5 : <<include>>
+UC11 ..> UC4 : <<extend>>
+Patron <|-- Student
+Patron <|-- Faculty
+@enduml
+",1,1,0,0,1,VALID,0.8627057
+S012512,repo-genmymodel-uml/data/dc902674-fd02-45e5-a9ee-fb6be6d38789.xmi,fp_3d85584d52c6,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class PaypalProcessor {
+  process()
+}
+class SetExpressCheckoutProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class GetExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class DoExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+interface IPaypalProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class SetExpressCheckoutAdapter
+class GetExpressCheckoutDetailsAdapter
+class DoExpressCheckoutDetailsAdapter
+IPaypalProcessor <|.. SetExpressCheckoutProcessor
+IPaypalProcessor <|.. GetExpressCheckoutDetailsProcessor
+IPaypalProcessor <|.. DoExpressCheckoutDetailsProcessor
+PaypalProcessor ..> IPaypalProcessor
+SetExpressCheckoutProcessor ..> SetExpressCheckoutAdapter
+GetExpressCheckoutDetailsProcessor ..> GetExpressCheckoutDetailsAdapter
+DoExpressCheckoutDetailsProcessor ..> DoExpressCheckoutDetailsAdapter
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99580693
+S012517,repo-genmymodel-uml/data/dc902674-fd02-45e5-a9ee-fb6be6d38789.xmi,fp_3d85584d52c6,CLASS,computer,UNMATCHED_BRACE,3,24,ERROR,20,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class PaypalProcessor {
+  process()
+}
+class SetExpressCheckoutProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class GetExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class DoExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+interface IPaypalProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+class SetExpressCheckoutAdapter
+class GetExpressCheckoutDetailsAdapter
+class DoExpressCheckoutDetailsAdapter
+IPaypalProcessor <|.. SetExpressCheckoutProcessor
+IPaypalProcessor <|.. GetExpressCheckoutDetailsProcessor
+IPaypalProcessor <|.. DoExpressCheckoutDetailsProcessor
+PaypalProcessor ..> IPaypalProcessor
+SetExpressCheckoutProcessor ..> SetExpressCheckoutAdapter
+GetExpressCheckoutDetailsProcessor ..> GetExpressCheckoutDetailsAdapter
+DoExpressCheckoutDetailsProcessor ..> DoExpressCheckoutDetailsAdapter
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.99486536
+S012518,repo-genmymodel-uml/data/dc902674-fd02-45e5-a9ee-fb6be6d38789.xmi,fp_3d85584d52c6,CLASS,computer,UNMATCHED_BRACE,3,5,ERROR,6,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class PaypalProcessor {
+  process()
+}
+class SetExpressCheckoutProcessor
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class GetExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class DoExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+interface IPaypalProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class SetExpressCheckoutAdapter
+class GetExpressCheckoutDetailsAdapter
+class DoExpressCheckoutDetailsAdapter
+IPaypalProcessor <|.. SetExpressCheckoutProcessor
+IPaypalProcessor <|.. GetExpressCheckoutDetailsProcessor
+IPaypalProcessor <|.. DoExpressCheckoutDetailsProcessor
+PaypalProcessor ..> IPaypalProcessor
+SetExpressCheckoutProcessor ..> SetExpressCheckoutAdapter
+GetExpressCheckoutDetailsProcessor ..> GetExpressCheckoutDetailsAdapter
+DoExpressCheckoutDetailsProcessor ..> DoExpressCheckoutDetailsAdapter
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.9958593
+S012584,repo-genmymodel-uml/data/_fMJ0YG3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class OrdenesPedidos {
+  -codigo : String
+  -fecha : String
+}
+class Proveedor {
+  -nit : String
+  -nombre : String
+  -direccion : String
+  -telefono : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class SolicitudSuministros {
+  -codigo : String
+  -fecha : String
+}
+class dependencia {
+  -codigo : String
+  -nombre : String
+  -responsable : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+Proveedor ""1"" -- ""0..*"" OrdenesPedidos : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : provee
+OrdenesPedidos ""0..*"" -- ""1..*"" Elementos : conforma
+SolicitudSuministros ""0..*"" -- ""1..*"" Elementos : relaciona
+SolicitudSuministros ""1..*"" -- ""0..1"" OrdenesPedidos : genera
+dependencia ""1"" -- ""1..*"" SolicitudSuministros : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Factura ""0..*"" -- ""1..*"" Elementos : factura
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7345547
+S012631,repo-genmymodel-uml/data/_jnq9cG3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class OrdenesPedidos {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class Dependencias {
+  -codigo : String
+  -nombre : String
+  -responsable : String
+}
+class Proveedor {
+  -nit : String
+  -razonSocial : String
+  -direccion : String
+  -telefonos : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class SolicitudSuministro {
+  -codigo : String
+  -fecha : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+Proveedor ""1"" -- ""0..*"" OrdenesPedidos : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : provee
+Elementos ""0..1"" -- ""0..*"" OrdenesPedidos : conforma
+SolicitudSuministro ""1..*"" -- ""0..1"" OrdenesPedidos : genera
+Elementos ""1..*"" -- ""0..*"" SolicitudSuministro : relaciona
+Dependencias ""1"" -- ""1..*"" SolicitudSuministro : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Elementos ""1..*"" -- ""0..*"" Factura : Factura_Elementos
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.47915787
+S012636,repo-genmymodel-uml/data/_jnq9cG3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,UNMATCHED_BRACE,3,24,VALID,-1,,"@startuml
+class OrdenesPedidos {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class Dependencias {
+  -codigo : String
+  -nombre : String
+  -responsable : String
+}
+class Proveedor {
+  -nit : String
+  -razonSocial : String
+  -direccion : String
+  -telefonos : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+class SolicitudSuministro {
+  -codigo : String
+  -fecha : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+Proveedor ""1"" -- ""0..*"" OrdenesPedidos : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : provee
+Elementos ""0..1"" -- ""0..*"" OrdenesPedidos : conforma
+SolicitudSuministro ""1..*"" -- ""0..1"" OrdenesPedidos : genera
+Elementos ""1..*"" -- ""0..*"" SolicitudSuministro : relaciona
+Dependencias ""1"" -- ""1..*"" SolicitudSuministro : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Elementos ""1..*"" -- ""0..*"" Factura : Factura_Elementos
+@enduml
+",1,0,1,0,1,DUPLICATE_ELEMENT,0.9658256
+S012679,repo-genmymodel-uml/data/_exXV0G3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class Proveedor {
+  -nit : String
+  -razonSocial : String
+  -direccion : String
+  -telefono : String
+}
+class rdenesPedido {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class SolicitudSuministro {
+  -solicitud : String
+  -fecha : String
+}
+class Dependencia {
+  -codgio : String
+  -nombre : String
+  -reponsable : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+rdenesPedido ""0..*"" -- ""1"" Proveedor : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : Provee
+Elementos ""1..*"" -- ""0..*"" rdenesPedido : Conforma
+SolicitudSuministro ""0..1"" -- ""0..1"" Elementos : relaciona
+rdenesPedido ""0..1"" -- ""1..*"" SolicitudSuministro : genera
+Dependencia ""1"" -- ""1..*"" SolicitudSuministro : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Elementos ""1..*"" -- ""0..*"" Factura : factura
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7852165
+S012726,repo-genmymodel-uml/data/_cB5e4G3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class Ordenes_Pedidos {
+  codigo : String
+  fecha : String
+}
+class Proveedor {
+  -nit : String
+  -razonSocial : String
+  -direccion : String
+  -telefonos : String
+}
+class Dependencia {
+  codigo : String
+  nombre : String
+  responsable : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class Solicitud_Suministros {
+  codigo : String
+  fecha : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  referencia : String
+  clasificacion : String
+}
+Proveedor ""0..1"" -- ""0..*"" Ordenes_Pedidos : Ordenes Pedidos_Proveedor
+Pedidos ""0..*"" -- ""1"" Proveedor : Proveedor_Pedidos
+Elementos ""1..*"" -- ""0..*"" Ordenes_Pedidos : Ordenes Pedidos_Elementos
+Solicitud_Suministros ""0..*"" -- ""1..*"" Elementos : Elementos_Solicitud Suministros
+Ordenes_Pedidos ""0..1"" -- ""1..*"" Solicitud_Suministros : Solicitud Suministros_Ordenes Pedidos
+Solicitud_Suministros ""1..*"" -- ""1"" Dependencia : Dependencia_Solicitud Suministros
+Factura ""0..*"" -- ""1..*"" Elementos : Elementos_Factura
+Factura ""0..1"" -- ""0..1"" Proveedor : Proveedor_Factura
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7589182
+S014245,repo-genmymodel-uml/data/_nha88MfSEeiZ3fREAmKE6g.xmi,fp_183643fd3efd,USE_CASE,restaurant,INVALID_USECASE_DECLARATION,8,21,ERROR,21,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Registered user"" as Registered_user
+actor Admin
+actor ""Delivery person"" as Delivery_person
+actor ""Pizza chef"" as Pizza_chef
+usecase ""Create Account"" as UC1
+usecase ""Sign in"" as UC2
+usecase ""Save favourite flavour"" as UC3
+usecase ""Create your own pizza"" as UC4
+usecase ""View meal deal"" as UC5
+usecase ""View pizza flavours"" as UC6
+usecase ""Checkout"" as UC7
+usecase ""Make payment"" as UC8
+usecase ""Pay at delivery"" as UC9
+usecase ""Pay online"" as UC10
+usecase ""Order tarcking"" as UC11
+usecase ""Pre-order"" as UC12
+usecase ""Change toppings"" as UC13
+usecase ""Add item"" as UC14
+use case ""Add Address"" as UC15
+usecase ""validate account"" as UC16
+UC9 <|-- UC8
+UC10 <|-- UC8
+UC8 ..> UC7 : <<extend>>
+UC13 ..> UC4 : <<extend>>
+UC13 ..> UC14 : <<extend>>
+UC14 ..> UC5 : <<extend>>
+UC14 ..> UC6 : <<extend>>
+UC14 ..> UC7 : <<extend>>
+UC15 ..> UC7 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8521394
+S014904,repo-genmymodel-uml/data/_rZE1INXiEeiRsZPYq94rUg.xmi,fp_65206d05f7dd,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class PASSENGER {
+  #Pass_Name : String
+  +Pass_ID : Integer
+  +Pass_Address : String
+  Get_Train_Ticket()
+  Reserve_Ticket()
+  Make_Payment()
+}
+class FLIGHT {
+  +Flight_No : Integer
+  +Flight_Name : String
+  Capacity()
+  Start_Point()
+  End_Point()
+}
+class RESERVATION_SYSTEM {
+  #Reservation_ID : Integer
+  +Reservation_Date : Integer
+  Make_Reservation()
+  Receive_Payment()
+  Confirm_Reservation()
+}
+PASSENGER <|-- FLIGHT
+PASSENGER <|-- RESERVATION_SYSTEM
+FLIGHT ""0..1"" *-- ""0..1"" RESERVATION_SYSTEM : FLIGHT_RESERVATION SYSTEM
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7903797
+S015185,repo-genmymodel-uml/data/f99b41b8-0436-47fb-a363-d5f4868c80c8.xmi,fp_136a5076cf97,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class Customer {
+  +Fullname : String
+  +Location : String
+  +Card_details : Integer
+  +Gender : String
+  RequestForCancellation() : X
+  BookFlight() : X
+  Pay() : X
+  SelectTicket() : X
+  SearchFlight() : X
+  AddCardDetails() : X
+}
+class Bank {
+  +Name : String
+  +Account : Integer
+  ProcessPayment() : X
+  GenerateReceipt() : X
+}
+class Flight {
+  +Number_of_seats : Integer
+  +Name : String
+  +Id : Flight
+  +Destination : String
+  +Time : Integer
+  +Source : String
+  Maintain_Details() : X
+  Availability()
+}
+class Administrator {
+  +Fullname : String
+  +Account : String
+  Log_out()
+  Log_in()
+  RemoveFlight() : X
+  AddFlight() : X
+  AcceptRequest() : X
+  Deny_Request() : X
+  GetNewFlightInfo() : X
+  CheckAvailability() : X
+}
+class Ticket {
+  +Id : Integer
+  +Price : Boolean
+  +Customer_Name : String
+  +Type : String
+  MaintainDetails() : X
+}
+Administrator ""1"" -- ""1..*"" Customer : Customer_Administrator
+Customer ""1..*"" -- ""1"" Bank : Bank_Customer
+Ticket ""1..*"" o-- ""1"" Customer : Ticket_Customer
+Ticket ""1..*"" *-- ""1"" Flight : Ticket_Flight
+Flight ..> Administrator
+Flight ..> Customer
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.82221055
+S015186,repo-genmymodel-uml/data/f99b41b8-0436-47fb-a363-d5f4868c80c8.xmi,fp_136a5076cf97,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class Customer {
+  +Fullname : String
+  +Location : String
+  +Card_details : Integer
+  +Gender : String
+  RequestForCancellation() : X
+  BookFlight() : X
+  Pay() : X
+  SelectTicket() : X
+  SearchFlight() : X
+  AddCardDetails() : X
+}
+class Bank {
+  +Name : String
+  +Account : Integer
+  ProcessPayment() : X
+  GenerateReceipt() : X
+}
+class Flight {
+  +Number_of_seats : Integer
+  +Name : String
+  +Id : Flight
+  +Destination : String
+  +Time : Integer
+  +Source : String
+  Maintain_Details() : X
+  Availability()
+}
+class Administrator {
+  +Fullname : String
+  +Account : String
+  Log_out()
+  Log_in()
+  RemoveFlight() : X
+  AddFlight() : X
+  AcceptRequest() : X
+  Deny_Request() : X
+  GetNewFlightInfo() : X
+  CheckAvailability() : X
+}
+class Ticket {
+  +Id : Integer
+  +Price : Boolean
+  +Customer_Name : String
+  +Type : String
+  MaintainDetails() : X
+}
+Customer ""1..*"" -- ""1"" Bank : Bank_Customer
+Administrator ""1"" -- ""1..*"" Customer : Customer_Administrator
+Ticket ""1..*"" o-- ""1"" Customer : Ticket_Customer
+Flight ..> Administrator
+Ticket ""1..*"" *-- ""1"" Flight : Ticket_Flight
+Flight ..> Customer
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8209747
+S015292,repo-genmymodel-uml/data/6006d6f5-e088-4725-8095-7c38fd415c56.xmi,fp_ef9abf4aadaf,USE_CASE,ticket,INVALID_USECASE_DECLARATION,8,20,ERROR,20,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""User / Passenger"" as User_Passenger
+actor ""Travel Agent"" as Travel_Agent
+actor ""Airline Agency"" as Airline_Agency
+usecase ""Register/ Login"" as UC1
+usecase ""Create Account"" as UC2
+usecase ""Valid"" as UC3
+usecase ""Invalid"" as UC4
+usecase ""Review Order"" as UC5
+usecase ""Check Tickets"" as UC6
+usecase ""Choose Flight"" as UC7
+usecase ""Proceed to Checkout"" as UC8
+usecase ""Make Payment / Checkout"" as UC9
+usecase ""Valid Details"" as UC10
+usecase ""Invalid Details"" as UC11
+usecase ""Pay Travel Agent"" as UC12
+usecase ""Travel Agent Fee"" as UC13
+usecase ""Reserve a Ticket"" as UC14
+use case ""Receive Payment"" as UC15
+User_Passenger --> UC1
+User_Passenger --> UC5
+User_Passenger --> UC6
+User_Passenger --> UC7
+User_Passenger --> UC8
+User_Passenger --> UC9
+User_Passenger --> UC12
+Airline_Agency --> UC14
+Airline_Agency --> UC15
+Airline_Agency --> UC5
+Travel_Agent --> UC1
+Travel_Agent --> UC5
+Travel_Agent --> UC6
+Travel_Agent --> UC7
+Travel_Agent --> UC8
+Travel_Agent --> UC9
+Travel_Agent --> UC12
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC10 ..> UC9 : <<include>>
+UC11 ..> UC9 : <<include>>
+UC12 ..> UC13 : <<include>>
+@enduml
+",1,1,0,0,1,VALID,0.8469804
+S015441,repo-genmymodel-uml/data/79dc438d-8344-41b8-bbd7-ad4f5d14d49c.xmi,fp_ef5c70f41b8b,CLASS,airport,VALID,0,-1,VALID,-1,,"@startuml
+class Airline {
+  id : String
+}
+class Flight {
+  id : Integer
+  departureTime : Date
+  arrivalTime : Date
+}
+class Airport {
+  id : String
+}
+class Pilot
+class Aircraft {
+  state : MaintenanceState
+  flightState : FlightState
+}
+enum MaintenanceState {
+  Working
+  UnderRepair
+}
+enum FlightState {
+  Landed
+  Airborne
+}
+class Company
+class CoPilot
+class Navigator
+class Captain
+Pilot <|-- CoPilot
+Pilot <|-- Navigator
+Pilot <|-- Captain
+Airline ""0..*"" *-- ""0..*"" Aircraft : Airline_Aircraft
+Company ""1"" *-- ""1..*"" Pilot : Company_Pilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport2
+Airline ""1"" *-- ""0..*"" Flight : Airline_Flight
+Flight ""0..*"" *-- ""1"" Aircraft : Flight_Aircraft
+Aircraft ""0..*"" *-- ""0..*"" Pilot : Aircraft_Pilot
+Aircraft ""0..*"" *-- ""1..*"" CoPilot : Aircraft_CoPilot
+Aircraft ""0..*"" *-- ""1..*"" Captain : Aircraft_Captain
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.744893
+S015443,repo-genmymodel-uml/data/79dc438d-8344-41b8-bbd7-ad4f5d14d49c.xmi,fp_ef5c70f41b8b,CLASS,airport,VALID,0,-1,VALID,-1,,"@startuml
+class Airline {
+  id : String
+}
+class Flight {
+  id : Integer
+  departureTime : Date
+  arrivalTime : Date
+}
+class Airport {
+  id : String
+}
+class Pilot
+class Aircraft {
+  state : MaintenanceState
+  flightState : FlightState
+}
+enum MaintenanceState {
+  Working
+  UnderRepair
+}
+enum FlightState {
+  Landed
+  Airborne
+}
+class Company
+class CoPilot
+class Navigator
+class Captain
+Pilot <|-- Captain
+Aircraft ""0..*"" *-- ""1..*"" Captain : Aircraft_Captain
+Flight ""0..*"" *-- ""1"" Aircraft : Flight_Aircraft
+Pilot <|-- CoPilot
+Company ""1"" *-- ""1..*"" Pilot : Company_Pilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport2
+Pilot <|-- Navigator
+Aircraft ""0..*"" *-- ""1..*"" CoPilot : Aircraft_CoPilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport
+Aircraft ""0..*"" *-- ""0..*"" Pilot : Aircraft_Pilot
+Airline ""1"" *-- ""0..*"" Flight : Airline_Flight
+Airline ""0..*"" *-- ""0..*"" Aircraft : Airline_Aircraft
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.71419364
+S016046,repo-genmymodel-uml/data/_lFM4sIEyEeipCpVU7M5dbw.xmi,fp_a6f8cd4cd91c,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class HotelBusiness
+class Guest
+class Room {
+  +name : String
+}
+class RoomType {
+  name : String
+  pricePerNight : Real
+}
+class Booking {
+  bookingDate : Date
+  checkInDate : Date
+  checkOutDate : Date
+  numberOfNights : Integer
+}
+class Hotel {
+  name : String
+}
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ARRIVED
+  DEPARTED
+}
+class Contact {
+  name : PersonName
+  address : Address
+  email : String
+  phone : String
+}
+Contact <|-- Guest
+Hotel ""1..*"" -- ""1"" HotelBusiness : HotelBusiness_Hotel
+RoomType ""1..*"" -- ""1"" Hotel : Hotel_RoomType
+Room ""0..*"" -- ""1"" RoomType : RoomType_Room
+Room ""0..*"" -- ""1"" Guest : Guest_Room
+Hotel ""1"" -- ""0..*"" Booking : /hotel
+Contact ""0..1"" -- ""0..1"" Booking : Booking_Contact
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.82383406
+S016048,repo-genmymodel-uml/data/_lFM4sIEyEeipCpVU7M5dbw.xmi,fp_a6f8cd4cd91c,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class HotelBusiness
+class Guest
+class Room {
+  +name : String
+}
+class RoomType {
+  name : String
+  pricePerNight : Real
+}
+class Booking {
+  bookingDate : Date
+  checkInDate : Date
+  checkOutDate : Date
+  numberOfNights : Integer
+}
+class Hotel {
+  name : String
+}
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ARRIVED
+  DEPARTED
+}
+class Contact {
+  name : PersonName
+  address : Address
+  email : String
+  phone : String
+}
+Room ""0..*"" -- ""1"" Guest : Guest_Room
+Contact ""0..1"" -- ""0..1"" Booking : Booking_Contact
+Room ""0..*"" -- ""1"" RoomType : RoomType_Room
+Hotel ""1..*"" -- ""1"" HotelBusiness : HotelBusiness_Hotel
+RoomType ""1..*"" -- ""1"" Hotel : Hotel_RoomType
+Contact <|-- Guest
+Hotel ""1"" -- ""0..*"" Booking : /hotel
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8115886
+S016391,repo-genmymodel-uml/data/b4a907fb-6f80-4164-a4c9-d61c8c336c53.xmi,fp_0016f19f9a7a,USE_CASE,ticket,INVALID_USECASE_RELATIONSHIP,12,13,VALID,-1,,"@startuml
+left to right direction
+actor USER
+actor RECEPTION
+usecase ""Hotel Search"" as UC1
+usecase ""Book Room"" as UC2
+usecase ""Cancel Reservation"" as UC3
+usecase ""Sign Up"" as UC4
+usecase ""Check Availability"" as UC5
+USER --> UC1
+USER --> UC2
+RECEPTION --> UC2
+RECEPTION ..> UC3 : <<include>>
+USER --> UC4
+USER --> UC5
+RECEPTION --> UC5
+UC3 ..> UC2 : <<include>>
+@enduml
+",1,0,0,1,1,VALID,0.56483424
+S016822,repo-genmymodel-uml/data/df5ac426-cbc0-47e2-ad97-4211978b5484.xmi,fp_a6f8cd4cd91c,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class HotelBusiness
+class Guest
+class Room {
+  +name : String
+}
+class RoomType {
+  name : String
+  pricePerNight : Real
+}
+class Booking {
+  bookingDate : Date
+  checkInDate : Date
+  checkOutDate : Date
+  numberOfNights : Integer
+}
+class Hotel {
+  name : String
+}
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ARRIVED
+  DEPARTED
+}
+class Contact {
+  name : PersonName
+  address : Address
+  email : String
+  phone : String
+}
+Contact <|-- Guest
+Hotel ""1..*"" -- ""1"" HotelBusiness : HotelBusiness_Hotel
+RoomType ""1..*"" -- ""1"" Hotel : Hotel_RoomType
+Room ""0..*"" -- ""1"" RoomType : RoomType_Room
+Room ""0..1"" -- ""0..*"" Guest : Guest_Room
+Hotel ""1"" -- ""0..*"" Booking : Booking_Hotel
+Booking ""0..*"" -- ""1..*"" Guest : Guest_Booking
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81576425
+S018552,repo-genmymodel-uml/data/_is0EgLOdEemcsc4aPpxbEQ.xmi,fp_1f255c4d88c9,CLASS,bank,VALID,0,-1,VALID,-1,,"@startuml
+class Bank {
+  -code : Integer
+  -address : String
+  getAccounts()
+}
+class ATM {
+  -location : String
+  -managedby : String
+  withdraw()
+  deposit()
+  checkBalance()
+}
+class Account {
+  -number : Integer
+  -balance : Integer
+  withdraw()
+  deposit()
+}
+class Customer {
+  -name : String
+  -address : String
+  -dob : String
+  -cardnumber : Integer
+  -pin : Integer
+  verifyPassword()
+}
+Bank ""0..1"" o-- ""0..1"" ATM : Bank_ATM
+Bank ""0..1"" o-- ""0..1"" Account : Bank_Account
+Account ""0..1"" -- ""0..1"" Customer : Customer_Account
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81210434
+S018641,repo-genmymodel-uml/data/4b424ab7-c43b-4086-9d9c-aff0aa83ac82.xmi,fp_8eafaa94983d,CLASS,bank,VALID,0,-1,VALID,-1,,"@startuml
+class BANK {
+  +Code : String
+  +Address : String
+  Manages()
+  Maintains()
+}
+class Customer {
+  +Name : String
+  DOB : String
+  Pin : Integer
+  Card_num : Integer
+  VerifyPassword()
+}
+class Account {
+  AccountNumber : UnlimitedNatural
+  Balance : UnlimitedNatural
+  Deposit()
+  Withdraw()
+  CreateTransaction()
+}
+class ATM {
+  +location : String
+  +ManagedBy : String
+  Identifies()
+  transactions()
+  Balance()
+}
+class ATM_Transactions {
+  Transaction_id : String
+  Date : String
+  +Type : String
+  +Amount : UnlimitedNatural
+  +Post_balance : UnlimitedNatural
+  Modifies()
+}
+class T
+ATM <|-- Customer
+BANK ""0..1"" o-- ""0..*"" ATM : BANK_ATM
+BANK ""0..1"" o-- ""0..*"" Account : BANK_Account
+Account ""0..*"" -- ""0..1"" Customer : Customer_Account
+ATM_Transactions ""0..1"" -- ""0..1"" Account : Account_ATM  Transactions
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8298576
+S019015,repo-genmymodel-uml/data/d6570ac2-1abd-4af4-8d0f-767cd6f637ba.xmi,fp_0c7880c799ca,USE_CASE,elevator,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor passenger
+actor ""technical/ maintenance enginee"" as technical_maintenance_enginee
+usecase ""move up / move down"" as UC1
+usecase ""call help"" as UC2
+usecase ""hold"" as UC3
+usecase ""close door"" as UC4
+use case ""start"" as UC5
+usecase ""stop"" as UC6
+usecase ""call elevator cabin"" as UC7
+usecase ""select floor"" as UC8
+usecase ""release door"" as UC9
+usecase ""open door"" as UC10
+usecase ""check load"" as UC11
+usecase ""change location"" as UC12
+passenger --> UC1
+passenger --> UC2
+passenger --> UC3
+passenger --> UC4
+technical_maintenance_enginee --> UC5
+technical_maintenance_enginee --> UC6
+UC1 ..> UC7 : <<include>>
+UC3 ..> UC9 : <<extend>>
+UC4 ..> UC11 : <<include>>
+UC8 ..> UC1 : <<extend>>
+UC9 ..> UC4 : <<include>>
+UC10 ..> UC11 : <<extend>>
+UC10 ..> UC4 : <<include>>
+UC12 ..> UC7 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8316311
+S019188,repo-genmymodel-uml/data/_HO3HYGc6EemNlbg3QBOQDg.xmi,fp_dff23766bdfc,CLASS,elevator,VALID,0,-1,VALID,-1,,"@startuml
+class Elevator_Controller {
+  -Floor_ID : Integer
+  -Position : Integer
+  -Direction : Boolean
+  +attribute
+  operation()
+  operation2()
+  operation3()
+}
+class Elevator_Controller_2 {
+  -Floor_ID : Integer
+  -Position : Integer
+  -Direction : Boolean
+  +attribute
+  operation()
+  operation2()
+  operation3()
+}
+class Elevator {
+  -Direction : Boolean
+  -Current_Floor : Integer
+  #attribute3
+  Move()
+  Stop()
+  Status()
+}
+class Door {
+  -Close : Boolean_true
+  Close()
+  Open()
+}
+class Button {
+  -illuminate : Boolean_false
+  operation()
+  operation2()
+  operaon3()
+  illuminate()
+  Cancel_illuminate()
+  Status()
+}
+class Elevator_button {
+  -Floor_num : Integer
+}
+class Floor_button {
+  -Floor_num : Integer
+  -Direction : Boolean
+}
+Button <|-- Elevator_button
+Button <|-- Floor_button
+Elevator ""0..1"" -- ""0..1"" Elevator_Controller : Elevator_Elevator_Controller
+Elevator_Controller ""0..1"" -- ""0..1"" Door : Elevator_Controller _Door
+Elevator_Controller ""0..1"" -- ""0..1"" Elevator : Elevator_Elevator_Controller 2
+Button ""0..1"" -- ""0..1"" Elevator_Controller : Elevator_Controller _Button
+Elevator_Controller ..> Door
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7786309
+S019189,repo-genmymodel-uml/data/_HO3HYGc6EemNlbg3QBOQDg.xmi,fp_dff23766bdfc,CLASS,elevator,VALID,0,-1,VALID,-1,,"@startuml
+class Elevator_Controller {
+  -Floor_ID : Integer
+  -Position : Integer
+  -Direction : Boolean
+  +attribute
+  operation()
+  operation2()
+  operation3()
+}
+class Elevator_Controller_2 {
+  -Floor_ID : Integer
+  -Position : Integer
+  -Direction : Boolean
+  +attribute
+  operation()
+  operation2()
+  operation3()
+}
+class Elevator {
+  -Direction : Boolean
+  -Current_Floor : Integer
+  #attribute3
+  Move()
+  Stop()
+  Status()
+}
+class Door {
+  -Close : Boolean_true
+  Close()
+  Open()
+}
+class Button {
+  -illuminate : Boolean_false
+  operation()
+  operation2()
+  operaon3()
+  illuminate()
+  Cancel_illuminate()
+  Status()
+}
+class Elevator_button {
+  -Floor_num : Integer
+}
+class Floor_button {
+  -Floor_num : Integer
+  -Direction : Boolean
+}
+Button ""0..1"" -- ""0..1"" Elevator_Controller : Elevator_Controller _Button
+Button <|-- Floor_button
+Button <|-- Elevator_button
+Elevator_Controller ..> Door
+Elevator_Controller ""0..1"" -- ""0..1"" Elevator : Elevator_Elevator_Controller 2
+Elevator_Controller ""0..1"" -- ""0..1"" Door : Elevator_Controller _Door
+Elevator ""0..1"" -- ""0..1"" Elevator_Controller : Elevator_Elevator_Controller
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.7974938
+S019272,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,VALID,0,-1,VALID,-1,,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9971903
+S019277,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,UNMATCHED_BRACE,3,2,ERROR,7,You should send a mail to plantuml@gmail.com with this log (V1.2026.8) java.lang.IllegalStateException (Assumed diagram type: class); ,"@startuml
+class elevator
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.99721295
+S019278,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,UNMATCHED_BRACE,3,13,VALID,-1,,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+@enduml
+",1,0,1,0,1,DUPLICATE_ELEMENT,0.9971873
+S019295,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,INVALID_MULTIPLICITY,7,19,ERROR,19,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1 elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.98161674
+S019296,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,INVALID_MULTIPLICITY,7,20,ERROR,20,Syntax Error? (Assumed diagram type: class); ,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1 elevator : elevator_button
+@enduml
+",1,1,1,0,1,DUPLICATE_ELEMENT,0.97802645
+S019305,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,GENERALIZATION_CYCLE,11,21,VALID,-1,,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+floor_s_buttons <|-- button
+@enduml
+",1,0,0,1,1,DUPLICATE_ELEMENT,0.99415874
+S019567,repo-genmymodel-uml/data/ea1bd4d0-e109-4c89-b830-50e10a4f345e.xmi,fp_13da401abc18,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,10,ERROR,10,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Water sensor"" as Water_sensor
+actor ""Movement sensor"" as Movement_sensor
+actor ""Door sensor"" as Door_sensor
+actor ""Window sensor"" as Window_sensor
+actor ""Heat sensor"" as Heat_sensor
+actor ""Smoke sensor"" as Smoke_sensor
+rectangle ""home security and safety system"" {
+  use case ""sound  flood  alarm"" as UC1
+  usecase ""sound  burglar  alarm"" as UC2
+  usecase ""sound  fire  alarm"" as UC3
+}
+Water_sensor --> UC1
+Window_sensor --> UC2
+Door_sensor --> UC2
+Movement_sensor --> UC2
+Heat_sensor --> UC3
+Smoke_sensor --> UC3
+@enduml
+",1,1,0,0,1,VALID,0.87172556
+S020207,repo-genmymodel-uml/data/_bMFKQLzsEeedTfUoC-GfaA.xmi,fp_20bd0a4fdc66,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,20,ERROR,20,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Home Owner"" as Home_Owner
+actor ""Smoke detector"" as Smoke_detector
+usecase ""Configure wireless network card"" as UC1
+usecase ""Configure mobile app/web interface"" as UC2
+usecase ""Configure system sensors"" as UC3
+usecase ""Configure smart sensors"" as UC4
+usecase ""Enable sensor"" as UC5
+usecase ""Disable sensor"" as UC6
+usecase ""Set enable/disable time of day"" as UC7
+usecase ""Set time before burglar alarm"" as UC8
+usecase ""Configure police"" as UC9
+usecase ""Configure brigade"" as UC10
+usecase ""System reset"" as UC11
+usecase ""Authenticate user"" as UC12
+usecase ""Detect smoke"" as UC13
+usecase ""Smoke alarm"" as UC14
+usecase ""Fire alarm"" as UC15
+use case ""Indicate fire"" as UC16
+usecase ""Arm burglar alarm"" as UC17
+usecase ""Disarm burglar alarm"" as UC18
+Home_Owner --> UC1
+Home_Owner --> UC2
+Home_Owner --> UC3
+Home_Owner --> UC5
+Home_Owner --> UC6
+Home_Owner --> UC7
+Home_Owner --> UC8
+Home_Owner --> UC9
+Home_Owner --> UC10
+Home_Owner --> UC11
+Smoke_detector --> UC13
+UC1 ..> UC12 : <<include>>
+UC2 ..> UC12 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC12 : <<include>>
+UC4 ..> UC12 : <<include>>
+UC5 ..> UC12 : <<include>>
+UC6 ..> UC12 : <<include>>
+UC7 ..> UC12 : <<include>>
+UC8 ..> UC12 : <<include>>
+UC9 ..> UC12 : <<include>>
+UC10 ..> UC12 : <<include>>
+UC11 ..> UC12 : <<include>>
+UC13 ..> UC14 : <<include>>
+UC14 ..> UC16 : <<include>>
+UC15 ..> UC14 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8578415
+S021896,repo-genmymodel-uml/data/5d001fd4-1c48-4c10-bcbc-b1c8d15498c2.xmi,fp_1b6abf78f591,CLASS,elevator,VALID,0,-1,VALID,-1,,"@startuml
+class Canvas
+class Frame
+class Button
+class TK {
+  main_loop()
+}
+class Text
+class Panel {
+  canvas : Canvas
+  button_list : Button
+  flag_list : Boolean
+  PanelButtonClicked(liftnumber : Integer, flag : Boolean)
+  PeopleButtonClicked(liftnumber : Integer, event : String)
+  AlarmButtonClicked(liftnumber : Integer, event : String)
+}
+class Elevator {
+  Width : Integer
+  Height : Integer
+  Velocity : Integer
+  building : Canvas
+  name : Integer
+  destination : Integer
+  body : Canvas
+  call_queue : Floor
+  move_direction : String
+  gate_status : String
+  people : Integer
+  ready : Boolean
+  floor_list : Floor
+  sorted_queue(call_queue : Floor)
+  addFloor(floor : Integer, direction : String)
+  update()
+  checkQueue()
+  checkDestination()
+  openGate()
+  keepGateOpen()
+  closeGate()
+  moveElevator()
+}
+class Floor {
+  name : Integer
+  canvas : Canvas
+  up_status : String
+  down_status : String
+  onButtonClickUp()
+  onButtonClickDown()
+  upButtonTurnOff()
+  downButtonTurnOff()
+}
+class Building {
+  Building : Canvas
+  Panel : Canvas
+  Elevator_list : Elevator
+  Panel_list : Panel
+  draw_panel()
+  make_elevators()
+  make_floors()
+  simulate()
+  floorRequest()
+}
+Elevator ""0..1"" -- ""0..1"" Panel : Panel_Elevator
+Floor ""0..1"" -- ""0..1"" Elevator : Floor_Elevator
+Building ""0..1"" *-- ""0..1"" Panel : Building_Panel
+Building ""0..1"" *-- ""0..1"" Elevator : Building_Elevator
+Building ""0..1"" *-- ""0..1"" Floor : Building_Floor
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8005549
+S023915,repo-genmymodel-uml/data/_utGxoHqSEeqeQcxm9hmzHw.xmi,fp_e0cf77e13c38,USE_CASE,shopping,INVALID_USECASE_DECLARATION,8,5,ERROR,5,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Admin
+use case ""Register"" as UC1
+usecase ""Validation"" as UC2
+usecase ""Menu Category"" as UC3
+usecase ""Login"" as UC4
+usecase ""Combo Package"" as UC5
+usecase ""General Package"" as UC6
+usecase ""Phone No."" as UC7
+usecase ""Other Requirement"" as UC8
+usecase ""Order"" as UC9
+usecase ""Location"" as UC10
+usecase ""Insert Details"" as UC11
+usecase ""Authentication"" as UC12
+usecase ""View Details"" as UC13
+usecase ""Reply"" as UC14
+usecase ""Food Received"" as UC15
+usecase ""Bill"" as UC16
+usecase ""Pay by Credit Card Only"" as UC17
+usecase ""Logout"" as UC18
+usecase ""Send Bill"" as UC19
+Customer --> UC1
+Customer --> UC4
+Customer --> UC3
+Customer --> UC11
+Customer --> UC9
+Customer --> UC15
+Customer --> UC17
+Customer --> UC18
+Admin --> UC4
+Admin --> UC18
+Admin --> UC13
+Admin --> UC14
+Admin --> UC19
+UC1 ..> UC2 : <<include>>
+UC4 ..> UC12 : <<include>>
+UC3 <|-- UC5
+UC3 <|-- UC6
+UC11 <|-- UC7
+UC11 <|-- UC8
+UC11 <|-- UC10
+UC16 ..> UC9 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8523301
+S024399,repo-genmymodel-uml/data/81059392-9a65-4588-8f2b-b2755a4d8a5a.xmi,fp_2b79c7a27c9b,USE_CASE,rental,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor Customer
+actor Employee
+actor Manager
+rectangle ""Car Rental"" {
+  usecase ""Register"" as UC1
+  usecase ""Search car"" as UC2
+  usecase ""Maintain car information"" as UC3
+  usecase ""View monthly reservation reports"" as UC4
+  usecase ""Generate bill"" as UC5
+  usecase ""Pay bill"" as UC6
+}
+usecase ""Login"" as UC7
+usecase ""View daily reservation reports"" as UC8
+usecase ""Order"" as UC9
+usecase ""Select car"" as UC10
+Customer --> UC6
+Customer --> UC7
+Customer --> UC1
+Manager --> UC4
+Employee --> UC8
+Employee --> UC3
+Employee --> UC7
+Employee --> UC5
+Employee --> UC9
+Employee <|-- Manager
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.9980786
+S024413,repo-genmymodel-uml/data/81059392-9a65-4588-8f2b-b2755a4d8a5a.xmi,fp_2b79c7a27c9b,USE_CASE,rental,INVALID_USECASE_DECLARATION,8,7,ERROR,7,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Employee
+actor Manager
+rectangle ""Car Rental"" {
+  use case ""Register"" as UC1
+  usecase ""Search car"" as UC2
+  usecase ""Maintain car information"" as UC3
+  usecase ""View monthly reservation reports"" as UC4
+  usecase ""Generate bill"" as UC5
+  usecase ""Pay bill"" as UC6
+}
+usecase ""Login"" as UC7
+usecase ""View daily reservation reports"" as UC8
+usecase ""Order"" as UC9
+usecase ""Select car"" as UC10
+Customer --> UC6
+Customer --> UC7
+Customer --> UC1
+Manager --> UC4
+Employee --> UC8
+Employee --> UC3
+Employee --> UC7
+Employee --> UC5
+Employee --> UC9
+Employee <|-- Manager
+@enduml
+",1,1,0,0,1,INVALID_USECASE_RELATIONSHIP,0.9980787
+S024414,repo-genmymodel-uml/data/81059392-9a65-4588-8f2b-b2755a4d8a5a.xmi,fp_2b79c7a27c9b,USE_CASE,rental,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Employee
+actor Manager
+rectangle ""Car Rental"" {
+  usecase ""Register"" as UC1
+  usecase ""Search car"" as UC2
+  use case ""Maintain car information"" as UC3
+  usecase ""View monthly reservation reports"" as UC4
+  usecase ""Generate bill"" as UC5
+  usecase ""Pay bill"" as UC6
+}
+usecase ""Login"" as UC7
+usecase ""View daily reservation reports"" as UC8
+usecase ""Order"" as UC9
+usecase ""Select car"" as UC10
+Customer --> UC6
+Customer --> UC7
+Customer --> UC1
+Manager --> UC4
+Employee --> UC8
+Employee --> UC3
+Employee --> UC7
+Employee --> UC5
+Employee --> UC9
+Employee <|-- Manager
+@enduml
+",1,1,0,0,1,INVALID_USECASE_RELATIONSHIP,0.9980793
+S024902,repo-genmymodel-uml/data/_iPGWcGH0EeqK2M3E1LfZ7Q.xmi,fp_786afffc8997,CLASS,shopping,VALID,0,-1,VALID,-1,,"@startuml
+class ShoppingCart {
+  creationDate : Date
+}
+class Order {
+  id : Integer
+}
+class LineItem {
+  quantity : Integer
+  price : Long
+}
+class Account {
+  id : Integer
+}
+class Customer
+class Class {
+  -attribute : String
+}
+class Location
+class Packet
+class Neighbor
+class Transportation
+class Sistema2
+interface Client
+class User
+class Class2
+class Class3
+Order ""1"" *-- ""1..*"" LineItem : Order_Line
+ShoppingCart ""1"" *-- ""0..*"" Order : ShoppingCart_Order
+Account ""1"" *-- ""1"" ShoppingCart : Account_ShoppingCart
+Customer ""1"" -- ""1"" Account : Account_Customer
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7951919
+S025028,repo-genmymodel-uml/data/9b8bf6af-0d78-47ec-bf12-2b1fb24f2ffb.xmi,fp_c7bfbc2b0ca7,CLASS,shopping,VALID,0,-1,VALID,-1,,"@startuml
+class ShoppingCart {
+  -id : Long
+  creationDate : Date
+}
+class Item {
+  quantity : Integer
+  price : Real
+  -id : Long
+}
+class Product {
+  name : String
+  -id : Long
+  description : String
+}
+class Account {
+  -id : Long
+  openDate : Date
+  billingAddress : String
+}
+class Payment {
+  -id : Long
+  total : Long
+  comments : String
+}
+class Order {
+  -id : Long
+  shippingAddress : String
+  finalTotal : Real
+  status : OrderStatus
+}
+class Customer {
+  firstname : String
+  lastname : String
+  emailAddress : String
+  -id : Long
+  login : String
+  password : String
+  isBan : Boolean
+}
+enum OrderStatus {
+  New
+  Old
+  Shipped
+  Delivered
+  Unknown
+}
+class Class {
+  #attribute
+  operation()
+}
+ShoppingCart ""0..1"" -- ""1"" Customer : association2
+Customer ""1"" *-- ""1"" Account : association3
+Account ""1"" *-- ""1"" ShoppingCart : association4
+Payment ""0..*"" -- ""1"" Account : association5
+Order ""1"" -- ""1"" Payment : association6
+Item ""0..*"" -- ""1"" ShoppingCart : association7
+Product ""1"" -- ""1..*"" Item : association8
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8311408
+S025029,repo-genmymodel-uml/data/9b8bf6af-0d78-47ec-bf12-2b1fb24f2ffb.xmi,fp_c7bfbc2b0ca7,CLASS,shopping,VALID,0,-1,VALID,-1,,"@startuml
+class ShoppingCart {
+  -id : Long
+  creationDate : Date
+}
+class Item {
+  quantity : Integer
+  price : Real
+  -id : Long
+}
+class Product {
+  name : String
+  -id : Long
+  description : String
+}
+class Account {
+  -id : Long
+  openDate : Date
+  billingAddress : String
+}
+class Payment {
+  -id : Long
+  total : Long
+  comments : String
+}
+class Order {
+  -id : Long
+  shippingAddress : String
+  finalTotal : Real
+  status : OrderStatus
+}
+class Customer {
+  firstname : String
+  lastname : String
+  emailAddress : String
+  -id : Long
+  login : String
+  password : String
+  isBan : Boolean
+}
+enum OrderStatus {
+  New
+  Old
+  Shipped
+  Delivered
+  Unknown
+}
+class Class {
+  #attribute
+  operation()
+}
+Account ""1"" *-- ""1"" ShoppingCart : association4
+Payment ""0..*"" -- ""1"" Account : association5
+Item ""0..*"" -- ""1"" ShoppingCart : association7
+Product ""1"" -- ""1..*"" Item : association8
+Customer ""1"" *-- ""1"" Account : association3
+ShoppingCart ""0..1"" -- ""1"" Customer : association2
+Order ""1"" -- ""1"" Payment : association6
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8330669
+S025354,repo-genmymodel-uml/data/_3jO2MGf5EeqH6JNbB4-uaw.xmi,fp_cfda829c815c,CLASS,shopping,VALID,0,-1,VALID,-1,,"@startuml
+enum UserState {
+  New
+  Active
+  Banned
+}
+enum OrderStatus {
+  New
+  Old
+  Shipped
+  Delivered
+  Closed
+}
+class Customer {
+  address : String
+  phone : String
+  email : String
+  isVIP() : Boolean
+}
+class Payment {
+  paidDate : Date
+  total : Real
+  details : String
+}
+class ShoppinCart {
+  creationDate : Date
+}
+class Account {
+  billingAddress : String
+  open : Date
+  closed : Date
+  isClosed : Boolean
+}
+class WebUser {
+  #login : String
+  -password : String
+  state : UserState
+}
+class Order {
+  number : Integer
+  ordered : Date
+  shipped : Boolean
+  shipTo : String
+  total : Real
+  status : OrderStatus
+}
+class LineItem {
+  quantity : Integer
+  price : Real
+}
+class Product {
+  name : String
+  description : String
+}
+Account ""1"" -- ""0..*"" Payment : Account_Payment
+Payment -- ""1"" Order : Payment_Order
+Account ""1"" *-- ""0..*"" Order : Account_Order
+WebUser ""1"" -- ""1"" Customer : WebUser_Customer
+ShoppinCart ""0..1"" -- ""1"" WebUser : ShoppinCart_WebUser
+Customer ""1"" *-- ""1"" Account : Customer_Account
+Product ""1"" -- ""0..*"" LineItem : Product_LineItem
+Order -- ""1..*"" LineItem : Order_LineItem
+Account ""1"" *-- ""1"" ShoppinCart : Account_ShoppinCart
+ShoppinCart ""1"" -- ""0..*"" LineItem : ShoppinCart_LineItem
+ShoppinCart ""0..1"" -- ""0..1"" ShoppinCart : ShoppinCart_ShoppinCart
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8136532
+S025401,repo-genmymodel-uml/data/_JxtXMH5TEeqjCeBtMxTJVQ.xmi,fp_cfda829c815c,CLASS,shopping,VALID,0,-1,VALID,-1,,"@startuml
+enum UserState {
+  New
+  Active
+  Banned
+}
+enum OrderStatus {
+  New
+  Old
+  Shipped
+  Delivered
+  Closed
+}
+class Customer {
+  address : String
+  phone : String
+  email : String
+  isVIP() : Boolean
+}
+class Payment {
+  paidDate : Date
+  total : Real
+  details : String
+}
+class ShoppinCart {
+  creationDate : Date
+}
+class Account {
+  billingAddress : String
+  open : Date
+  closed : Date
+  isClosed : Boolean
+}
+class WebUser {
+  #login : String
+  -password : String
+  state : UserState
+}
+class Order {
+  number : Integer
+  ordered : Date
+  shipped : Boolean
+  shipTo : String
+  total : Real
+  status : OrderStatus
+}
+class LineItem {
+  quantity : Integer
+  price : Real
+}
+class Product {
+  name : String
+  description : String
+}
+Payment ""0..*"" -- ""1"" Account : Account_Payment
+Order ""1"" -- Payment : Payment_Order
+Account ""1"" *-- ""0..*"" Order : Account_Order
+Customer ""1"" -- ""1"" WebUser : WebUser_Customer
+WebUser ""1"" -- ""0..1"" ShoppinCart : ShoppinCart_WebUser
+Customer ""1"" *-- ""1"" Account : Customer_Account
+LineItem ""0..*"" -- ""1"" Product : Product_LineItem
+LineItem ""1..*"" -- Order : Order_LineItem
+Account ""1"" *-- ""1"" ShoppinCart : Account_ShoppinCart
+LineItem ""0..*"" -- ""1"" ShoppinCart : ShoppinCart_LineItem
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.80663395
+S027015,repo-genmymodel-uml/data/_EFLyoDdrEeiQp6eXyhUzBA.xmi,fp_3186722a9b87,CLASS,course,VALID,0,-1,VALID,-1,,"@startuml
+class Portal {
+  academicResult()
+  getAttendance()
+  giveTeacherFeedback()
+  anyDues() : Integer
+  changePwd()
+}
+class AcademicRecords {
+  student : Student
+  attendance
+  result : AcademicResult
+  dues : Integer
+}
+class FacultyInfo {
+  facultyID : String
+  facultyName : String
+  department : Department
+}
+class Department {
+  name : String
+  course : Course
+  getStaffInfo() : FacultyInfo
+}
+class AcademicResult {
+  semester : Integer
+  branchWise()
+  individual()
+  subjectWise()
+  meritList()
+  analysis()
+}
+class Student {
+  name : String
+  scholarNo : Integer
+  branch : Department
+  semester : Integer
+}
+class Course {
+  courseName : String
+  subjectCode : String
+}
+class Administrator {
+  name : String
+  administratorID : Integer
+  updateResult()
+  updateAttendance()
+  updateDues()
+  getTeacherFeedback()
+  changePwd()
+}
+AcademicRecords ""0..1"" -- ""0..1"" Portal : Portal_AcademicRecords
+Administrator ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_Administrator
+Student ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_Student
+AcademicResult ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_AcademicResult
+Department ""0..1"" -- ""0..1"" FacultyInfo : FacultyInfo_Department
+Course ""0..1"" -- ""0..1"" Department : Department_Course
+Student ""0..1"" -- ""0..1"" Department : Department_Student
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81598586
+S027017,repo-genmymodel-uml/data/_EFLyoDdrEeiQp6eXyhUzBA.xmi,fp_3186722a9b87,CLASS,course,VALID,0,-1,VALID,-1,,"@startuml
+class Portal {
+  academicResult()
+  getAttendance()
+  giveTeacherFeedback()
+  anyDues() : Integer
+  changePwd()
+}
+class AcademicRecords {
+  student : Student
+  attendance
+  result : AcademicResult
+  dues : Integer
+}
+class FacultyInfo {
+  facultyID : String
+  facultyName : String
+  department : Department
+}
+class Department {
+  name : String
+  course : Course
+  getStaffInfo() : FacultyInfo
+}
+class AcademicResult {
+  semester : Integer
+  branchWise()
+  individual()
+  subjectWise()
+  meritList()
+  analysis()
+}
+class Student {
+  name : String
+  scholarNo : Integer
+  branch : Department
+  semester : Integer
+}
+class Course {
+  courseName : String
+  subjectCode : String
+}
+class Administrator {
+  name : String
+  administratorID : Integer
+  updateResult()
+  updateAttendance()
+  updateDues()
+  getTeacherFeedback()
+  changePwd()
+}
+Department ""0..1"" -- ""0..1"" FacultyInfo : FacultyInfo_Department
+Course ""0..1"" -- ""0..1"" Department : Department_Course
+AcademicRecords ""0..1"" -- ""0..1"" Portal : Portal_AcademicRecords
+Student ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_Student
+Student ""0..1"" -- ""0..1"" Department : Department_Student
+AcademicResult ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_AcademicResult
+Administrator ""0..1"" -- ""0..1"" AcademicRecords : AcademicRecords_Administrator
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81594723
+S027289,repo-genmymodel-uml/data/f4c9c061-f7e1-4e5b-b44e-418effce2039.xmi,fp_2c81fcff286a,USE_CASE,sales,INVALID_USECASE_DECLARATION,8,22,ERROR,22,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Sales Manager"" as Sales_Manager
+actor ""Sales Assistant"" as Sales_Assistant
+actor Customer
+rectangle ""Sales Management System"" {
+  usecase ""login"" as UC1
+  usecase ""print receipt"" as UC2
+  usecase ""add item"" as UC3
+  usecase ""approves item"" as UC4
+  usecase ""view person details"" as UC5
+  usecase ""view details"" as UC6
+  usecase ""add person"" as UC7
+  usecase ""view item details"" as UC8
+  usecase ""update username"" as UC9
+  usecase ""update password"" as UC10
+  usecase ""update person"" as UC11
+  usecase ""search product"" as UC12
+  usecase ""change password"" as UC13
+  usecase ""view sales details"" as UC14
+  usecase ""Sales Quotes"" as UC15
+  use case ""Sales Invoice"" as UC16
+}
+Sales_Assistant --> UC13
+Sales_Manager --> UC1
+Sales_Manager --> UC13
+Sales_Manager --> UC2
+Sales_Manager --> UC7
+Sales_Manager --> UC5
+Sales_Manager --> UC8
+Sales_Manager --> UC9
+Sales_Manager --> UC11
+Sales_Manager --> UC10
+Sales_Manager --> UC12
+Sales_Assistant --> UC14
+Sales_Assistant --> UC4
+Sales_Assistant --> UC2
+Sales_Assistant --> UC1
+Sales_Manager --> UC3
+UC3 ..> UC4 : <<include>>
+UC6 <|-- UC5
+UC6 <|-- UC14
+@enduml
+",1,1,0,0,1,VALID,0.86854964
+S028333,repo-genmymodel-uml/data/_qIFmUAW6EeqkL8atiZCKNw.xmi,fp_daa20eccba28,USE_CASE,bank,INVALID_USECASE_DECLARATION,8,18,ERROR,18,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""Bank/Server"" as Bank_Server
+usecase ""Insert Card"" as UC1
+usecase ""Input PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw Cash"" as UC4
+usecase ""Deposit Money"" as UC5
+usecase ""Check Balance"" as UC6
+usecase ""Change PIN"" as UC7
+usecase ""Transfer fund"" as UC8
+usecase ""Select Ac (Saving/Checking)"" as UC9
+usecase ""Select/Enter Amount"" as UC10
+usecase ""Verify Balance"" as UC11
+usecase ""Collect Cash"" as UC12
+usecase ""Print Reciept"" as UC13
+use case ""Send SMS"" as UC14
+Existing_Customer --> UC1
+Bank_Server --> UC1
+Existing_Customer --> UC2
+Bank_Server --> UC3
+Existing_Customer --> UC9
+Existing_Customer --> UC10
+Existing_Customer --> UC12
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC8 <|-- UC3
+UC7 <|-- UC3
+UC10 ..> UC11 : <<include>>
+UC12 ..> UC13 : <<extend>>
+UC12 ..> UC14 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.84143424
+S028451,repo-genmymodel-uml/data/d52f011a-474c-47e3-ac60-4d878c9eab83.xmi,fp_6aef2f4ea407,USE_CASE,bank,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""ATM Machine"" as ATM_Machine
+usecase ""Insert the ATM Card"" as UC1
+usecase ""Enter PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw CASH"" as UC4
+usecase ""Check Balances"" as UC5
+usecase ""Deposit Cash/Cheque"" as UC6
+usecase ""Transfer Funds"" as UC7
+usecase ""Change PIN"" as UC8
+usecase ""Collect CARD"" as UC9
+usecase ""Select Account  From"" as UC10
+usecase ""Select Account  To"" as UC11
+usecase ""Confirm Account"" as UC12
+usecase ""Enter Amount to Transfer"" as UC13
+usecase ""Any other Usage/Transaction Fee"" as UC14
+usecase ""Confirm Amount"" as UC15
+usecase ""View New Balance"" as UC16
+usecase ""Print Receipt"" as UC17
+usecase ""Any more Transaction"" as UC18
+Existing_Customer --> UC1
+Existing_Customer --> UC2
+ATM_Machine --> UC1
+ATM_Machine --> UC2
+ATM_Machine --> UC3
+Existing_Customer --> UC3
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC7 <|-- UC3
+UC8 <|-- UC3
+UC10 <|-- UC7
+UC11 <|-- UC10
+UC13 <|-- UC11
+UC11 ..> UC12 : <<include>>
+UC15 <|-- UC13
+UC13 ..> UC14 : <<extend>>
+UC16 <|-- UC15
+UC15 ..> UC17 : <<extend>>
+UC18 <|-- UC16
+UC9 <|-- UC18
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.9971411
+S028640,repo-genmymodel-uml/data/_yVsqELKMEee7sYPkE4-GPA.xmi,fp_6e1c72e0c7ab,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,8,ERROR,8,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor user
+usecase ""sign up"" as UC1
+usecase ""enter name"" as UC2
+usecase ""enter email"" as UC3
+usecase ""enter address"" as UC4
+use case ""enter phone"" as UC5
+usecase ""enter password"" as UC6
+usecase ""log in"" as UC7
+usecase ""email"" as UC8
+usecase ""password"" as UC9
+user --> UC1
+user --> UC7
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC5 ..> UC1 : <<include>>
+UC6 ..> UC1 : <<include>>
+UC7 ..> UC1 : <<include>>
+UC8 ..> UC7 : <<include>>
+UC9 ..> UC7 : <<include>>
+@enduml
+",1,1,0,0,1,VALID,0.8486122
+S028743,repo-genmymodel-uml/data/_jp4NENBgEeeLcIicqHdTUQ.xmi,fp_2c50de750de6,CLASS,ticket,VALID,0,-1,VALID,-1,,"@startuml
+class Manager {
+  +Name : String
+  +ID : Integer
+  +Phn_no : Manager
+  +Address : String
+  purchase_stock()
+  recordcomplains()
+  cancellation()
+}
+class Hotels {
+  +id : Integer
+  +name : Integer
+  +location : Integer
+}
+class Rooms {
+  +id : Integer
+  +name : String
+  +room_description : String
+  +price : Integer
+}
+class Guest {
+  +Nmae : String
+  +id : Integer
+  +Phone_no : Integer
+  +address : String
+  checkin()
+  checkout()
+  submitfeedback()
+}
+class City {
+  +city : String
+  +id : Integer
+}
+class Payment {
+  +amount : Integer
+  +card_no : Integer
+  -cvv : Integer
+  +card_type : String
+  -password : Integer
+  printbill()
+  cancellation()
+}
+class User {
+  +Name : String
+  +phn_no : Integer
+  +id : Integer
+  +mail_id : String
+  +address : String
+  -password : Integer
+  login()
+  logout()
+}
+Hotels ""0..1"" -- ""1"" City : City_Hotels
+Rooms ""0..1"" -- ""0..1"" Hotels : Hotels_Rooms
+Guest ""0..1"" -- ""0..1"" Rooms : Rooms_Guest
+Payment ""0..1"" -- ""0..1"" Guest : Guest_Payment
+Guest ""0..1"" -- ""0..1"" Hotels : Hotels_Guest
+Guest ""0..1"" -- ""0..1"" User : User_Guest
+Payment ""0..1"" -- ""0..1"" Manager : Manager_Payment
+Guest ""0..1"" -- ""0..1"" Manager : Manager_Guest
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8246875
+S031904,repo-genmymodel-uml/data/_CC450CluEeqqcaoAsxFIeg.xmi,fp_64d69f74d0a9,CLASS,restaurant,VALID,0,-1,VALID,-1,,"@startuml
+class Waiter {
+  -Name : String
+  ID : String
+  Address : String
+  Contact : Integer
+  Personal_Information : String
+  TakeOrder()
+  ServeFood()
+  HandoverBill()
+  Collect_Tip()
+  MiscellaneousJobs()
+  operation()
+}
+class Customer {
+  -Name : String
+  -Contact_Number : Integer
+  -Dishes_Ordered : String
+  -Reservation : Boolean
+  -date : datetime
+  -reservedTables : Table
+  ReceiveMenu()
+  PlaceOrder()
+  RecieveOrder()
+  PayBill()
+}
+class Class
+class Manager {
+  Name : String
+  Address : String
+  ID : Integer
+  Contact : Integer
+  Personalnformation : String
+  BookingReservation()
+  Attebdance()
+  BillGenetation()
+  MaintainRecords()
+  OverallFunctioning()
+}
+Manager ""0..1"" -- ""0..1"" Waiter : Waiter_Manager
+Customer ""0..1"" -- ""0..1"" Waiter : Waiter_Customer
+Manager ""0..1"" -- ""0..1"" Customer : Customer_Manager
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.83913285
+S032419,repo-genmymodel-uml/data/_tuFa4MKUEeeEXb8Dudo6PQ.xmi,fp_937a13a129f0,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Deck {
+  -numOfCards : Integer
+  -Card : Card
+  Deal()
+}
+class Card {
+  -suit : Integer
+  -value : Integer
+  getValue() : Integer
+  getSuit() : Integer
+}
+class Stack {
+  -cards : Card
+  -numOfCards : Integer
+  removeCard() : Card
+  addCard() : Activity
+}
+Deck ""0..1"" -- ""0..1"" Card : Card_Deck
+Stack ""0..1"" -- ""0..1"" Card : Card_Stack
+Stack ""0..1"" -- ""0..1"" Deck : Deck_Stack
+Stack ""0..1"" -- ""0..1"" Stack : Stack_Stack
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.79877096
+S032456,repo-genmymodel-uml/data/_vLkzsJUmEeiilJ4tAEXZQQ.xmi,fp_8f1dd60afccb,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  -faceUp : Boolean
+  -value : Integer
+  -display : String
+  -suit : Integer
+  Card(parameter : String, parameter2 : Integer)
+  flipCard()
+  displayCard() : String
+  getValue() : Integer
+}
+class Deck {
+  -deck : Card
+  -usedCards : Integer
+  getCard() : Card
+  addUsedCardIndex(parameter : Integer)
+  indexOf(parameter : Integer, parameter2 : Integer) : Boolean
+}
+class Player {
+  -cards : Card
+  -type : String
+  -value : String
+  getCardTotal() : Integer
+  addCard(parameter : Card)
+}
+Deck ""0..*"" -- ""0..*"" Card : Card_Deck
+Card ""0..*"" -- ""0..*"" Player : Player_Card
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8270268
+S032657,repo-genmymodel-uml/data/_u8AE0P61EemrrdzmwAEMcA.xmi,fp_f88f13e7a6c7,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+enum Suit {
+  LITERAL
+}
+enum CardSuit {
+  HEARTS
+  SPADES
+  DIAMONS
+  CLUBS
+}
+class BlackjackGameSimulator {
+  Main(parameter : String)
+}
+class Deck {
+  ArrayList : Card
+  Deck()
+  takeOutCard(parameter : int_x2)
+  drawTop() : Deck_ofDeck
+  newDeck()
+  shuffleCards()
+  toString()
+  cardsToDeck() : Deck_cardsMove
+  sizeOfDeck()
+  deckValue()
+  requestCard() : int_x
+}
+class Card {
+  CardSuit : Integer
+  toString : String
+  Value : Integer
+}
+enum Value {
+  ACE
+  TWO
+  THREE
+  FOUR
+  FIVE
+  SIX
+  SEVEN
+  EIGHT
+  NINE
+  TEN
+  JACK
+  QUEEN
+  KING
+}
+Deck <|-- Card
+Value ..> Card
+CardSuit ..> Card
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8141712
+S032880,repo-genmymodel-uml/data/_2xwCoN8EEemZHaiox11UDg.xmi,fp_88249e00e46f,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+abstract class BJPlayer {
+  isBusted : Boolean
+  currentHand() : HandDeck
+}
+class JLabel
+class Gambler {
+  hand : HandDeck
+  profile
+  money : Integer
+  stand()
+  doubleDown()
+  split(parameter : String)
+}
+class Dealer {
+  hand : HandDeck
+  cardTotalLimit : Integer
+  currentHand() : HandDeck
+  reveal()
+}
+class BlackjackGame {
+  deck : Deck
+  dealer : Dealer
+  player : Gambler
+  bet : Integer
+  dealCard() : Card
+}
+class Deck {
+  cards : Card
+  shuffle()
+  Deck(numberOfDeck : Integer)
+  deal() : Card
+}
+class HandDeck {
+  cards : Card
+  total : Integer
+  addCard(parameter : Card)
+}
+class Card {
+  name : String
+  avatar : String
+  valueSoft : String
+  valueHard : String
+  suit : String
+  rank : String
+  Count : Integer
+  Card(suit : Integer, rank : Integer) : Card
+}
+class Strategy {
+  game : BlackjackGame
+  getSuggestion() : String
+}
+class JButton
+class Player
+Player <|-- BJPlayer
+BJPlayer <|-- Gambler
+BJPlayer <|-- Dealer
+Deck <|-- HandDeck
+BlackjackGame ""0..1"" -- ""0..1"" Strategy : Blackjack_Strategy
+Gambler ""0..1"" -- ""0..1"" BlackjackGame : Player_Blackjack
+Dealer ""0..1"" -- ""0..1"" BlackjackGame : Dealer_Blackjack
+BlackjackGame ""0..1"" -- ""0..1"" Deck : Blackjack_Deck
+Dealer ""1"" o-- ""1"" HandDeck : Dealer_Hand
+Gambler ""1"" o-- ""1..*"" HandDeck : Player_Hand
+HandDeck ""0..1"" o-- ""0..*"" Card : Hand_Card
+Deck ""0..1"" o-- ""0..*"" Card : Deck_Card
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8041927
+S033000,repo-genmymodel-uml/data/_ktPnMEocEeeu8_4LH_yuyg.xmi,fp_9d689ce8e2d2,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Blackjack {
+  -players : Integer
+  -count : Integer
+  -playerName : String
+  -hand : Card
+  hit()
+  stand()
+  checkBlackJack() : Boolean
+  compareTo() : Integer
+  reset()
+  getHandValue() : Integer
+}
+class Player {
+  -totalAmount : Integer
+  getCount() : Integer
+  split()
+  doubleDown()
+  bet()
+  getTotalAmount() : Integer
+}
+class Dealer {
+  getCount() : Integer
+}
+class Card {
+  -value : Integer
+  -suit : String
+  -rank : Integer
+  getCardValue() : Integer
+  shuffle()
+  toString() : String
+}
+class BlackjackDriver {
+  main()
+  startNewGame()
+  quit()
+  keepPlaying()
+}
+class BlackjackGUI
+class JFrame
+Blackjack <|-- Player
+Blackjack <|-- Dealer
+JFrame <|-- BlackjackGUI
+Card ""0..1"" -- ""0..1"" Blackjack : Blackjack_Card
+BlackjackDriver ..> BlackjackGUI
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.78266674
+S033393,repo-genmymodel-uml/data/_DxezcEmfEemcCbHu8oEdZw.xmi,fp_21d5f916c145,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  value : Integer
+}
+class Deck {
+  -cards : Card
+  Deck()
+  shuffle() : Card
+  reset() : Card
+  removeCard(cardVal : Integer) : Boolean
+  addCard(cardVal : Integer) : Boolean
+  isFull() : Boolean
+  getNextCard() : Card
+}
+class Game {
+  mainDeck : Deck
+  completedCards : Deck
+  cardsOnTable : Card
+  main(args : String)
+  turn()
+  isEleven(card1 : Card, card2 : Card) : Boolean
+  onTable(card1 : Card, card2 : Card) : Boolean
+  win() : Boolean
+  movesPossible() : Boolean
+}
+Game ..> Deck
+Game ..> Card
+Deck ..> Card
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8263347
+S033466,repo-genmymodel-uml/data/_Wr1DEORqEemtQJ5uHCArog.xmi,fp_a111b82cc195,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  -value : Integer
+  -suit : Integer
+}
+class Deck {
+  suffle()
+  pickTopCard()
+  pickNthCard(parameter : Integer)
+  pickCard(parameter : Integer, parameter2 : Integer)
+  addCard(parameter : Card)
+}
+class GameBoard {
+  -garbagePile
+  -discardPile
+  -shelf
+}
+class Player {
+  -points : Integer
+  -hand : Deck
+  discard()
+  putToShelf()
+  kalashnikov()
+}
+class GUI
+Card ""0..*"" -- ""0..1"" Deck : Deck_Card
+Deck ""0..1"" -- ""0..1"" GameBoard : GameBoard_Deck
+Deck ""0..1"" -- ""0..1"" Player : Player_Deck
+GUI ""0..1"" -- ""0..1"" GameBoard : GameBoard_GUI
+GameBoard ""0..1"" -- ""1..*"" Player : Player_GameBoard
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.817684
+S033540,repo-genmymodel-uml/data/bce89613-016f-48a8-a277-8ce84efbc630.xmi,fp_379649be3e48,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  +suit : Integer
+  +rank : Integer
+  compareTo(c : Card) : Integer
+}
+class Player {
+  draw(deck : Deck) : Card
+  redraw(Counter : Integer, deck : Deck) : Card
+}
+class Deck {
+  -deck_size : Integer
+  -hand_size : Integer
+  -numberofShuffles : Integer
+  -remainofDeck : Integer
+  filldeck()
+  shuffle()
+  deal() : Card
+  redeal() : Card
+  refreshDeck()
+}
+interface Comparable
+class Card2
+class Game {
+  -hand_size : Integer
+  -tryagain : Integer
+  play()
+  playAgain()
+  displayCards(parameter : Card)
+  checktheHand()
+  redraw() : Card
+  evaluation()
+  straightFlush()
+  fourOfaKind()
+  flush()
+  operation()
+  straight()
+  threeofaKind()
+  twoPairs()
+  onePair()
+  highCard()
+}
+class GameRun {
+  main(args : String)
+}
+Comparable <|.. Card
+Game ..> Card
+Game ..> Player
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8226892
+S033574,repo-genmymodel-uml/data/_N6ujUAuYEeihOuC11hdjgA.xmi,fp_379649be3e48,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Card {
+  +suit : Integer
+  +rank : Integer
+  compareTo(o : Card) : Integer
+}
+class Player {
+  draw(deck : Deck) : Card
+  redraw(Counter : Integer, deck : Deck) : Card
+}
+class Deck {
+  -deck_size : Integer
+  -hand_size : Integer
+  -numberofShuffles : Integer
+  -remainofDeck : Integer
+  filldeck()
+  shuffle()
+  deal() : Card
+  redeal() : Card
+  refreshDeck()
+}
+interface Comparable
+class Card2
+class Game {
+  -hand_size : Integer
+  -tryagain : Integer
+  play()
+  playAgain()
+  displayCards(parameter : Card)
+  checktheHand()
+  redraw() : Card
+  evaluation()
+  straightFlush()
+  fourOfaKind()
+  flush()
+  operation()
+  straight()
+  threeofaKind()
+  twoPairs()
+  onePair()
+  highCard()
+}
+class GameRun {
+  main(args : String)
+}
+Comparable <|.. Card
+Game ..> Card
+Game ..> Player
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.8226476
+S033637,repo-genmymodel-uml/data/_r2h1IBUQEeqDmNBP3mfLQg.xmi,fp_370652be91ff,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class PokerGame {
+  numPlayers : Integer
+  Round : Integer
+  setup(parameter : Integer)
+  Deal()
+  Redraw()
+}
+class Player {
+  hand : Hand
+  currentMoney : Integer
+  currentBet : Integer
+}
+class Human {
+  AskMove()
+}
+class Computer {
+  Move()
+}
+interface Iterator {
+  hasNext()
+  next()
+  remove()
+}
+class HandIterator {
+  next() : card_Card
+  remove(parameter : replacementCard_Card)
+}
+class Hand {
+  numCards : Integer
+  cardsInHand : Array_Card
+  Fold : Boolean
+  handIterator : HandIterator
+  redraw(parameter : cardToRedraw_Card)
+}
+enum PokerRank {
+  StrightFlush
+  FourCard
+  FullHouse
+  Flush
+  Straight
+  Triple
+  TwoPair
+  OnePair
+  High
+}
+class Card {
+  rank : Integer
+}
+class Deck {
+  cardsInDeck : Array_Card
+  setup()
+  Shuffle()
+  DrawCard() : Card
+}
+Player <|-- Human
+Player <|-- Computer
+Iterator <|.. HandIterator
+Hand ""1"" *-- ""1"" HandIterator : Hand_HandIterator
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.81606305
+S033846,repo-genmymodel-uml/data/_WT5D8E1SEeict5GQq2fjkw.xmi,fp_8f1dd60afccb,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Player {
+  name : String
+  points : Float
+  request_card(deck_of_cards : Deck) : Card
+  getName() : String
+  getPoints() : Float
+}
+class Card {
+  front : String
+  suit : String
+  value : Float
+  -getCardValue() : Float
+  getValue() : Float
+  getCardName() : String
+}
+class Deck {
+  deck_of_cards : Array
+  -deck_position : Integer
+  requestCard() : Card
+}
+Card ""0..*"" o-- ""1"" Deck : Card_Deck
+Player ..> Deck
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.80709785
+S034596,repo-genmymodel-uml/data/afbc058c-d4eb-4c7d-bdaa-cc51eba433e2.xmi,fp_4e81effa4a7b,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Player {
+  +stack : Integer
+  +bid : Integer
+}
+class PlayCard
+class PokerTable
+abstract class abstract_BaseDeck
+class GameRound
+class T
+class StandardDeck
+class PokerTableView
+class PlayerView
+abstract_BaseDeck <|-- StandardDeck
+PlayCard ""2"" -- ""0..1"" Player : Pelaaja_Kortti
+Player ""2..*"" -- ""1"" PokerTable : PeliPoyta_Pelaaja
+PlayCard ""52"" -- ""1"" abstract_BaseDeck : Deck_Card
+GameRound ""0..*"" -- ""1"" PokerTable : Has had
+PlayCard ""0..5"" -- ""0..1"" PokerTable : Table_Card
+abstract_BaseDeck ""1"" -- ""1"" PokerTable : Table_Deck
+Player ""1"" -- ""1"" PokerTable : PokerTable_Player
+PokerTable ""1"" -- ""1"" PokerTableView : PokerTableView_PokerTable
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7686414
+S034668,repo-genmymodel-uml/data/ba3e930e-5446-4d66-817b-9440122e2486.xmi,fp_e69c27cbc7bd,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+enum Kind {
+  Two
+  Three
+  Four
+  Five
+  Six
+  Seven
+  Eight
+  Nine
+  Ten
+  Jack
+  Queen
+  King
+  Ace
+}
+abstract class Game {
+  #name : String
+  getName() : String
+}
+abstract class Player {
+  #name : String
+  getName() : String
+}
+class Card {
+  #suit
+  #kind : Kind
+  getSuit()
+  getKind() : Kind
+}
+Card ""1..*"" -- ""0..1"" Player : Player_Card
+Game ""0..1"" *-- ""1..*"" Player : Game_Player2
+@enduml
+",0,0,0,0,0,UNMATCHED_BRACE,0.7763702

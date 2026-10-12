@@ -1,0 +1,895 @@
+sample_id,diagram_id,group,diagram_type,domain,label,label_id,mutated_line,parser_status,parser_line,parser_message,text,true_err,parser_err,lint_err,rules_err,det_err,pred,confidence
+S003677,repo-genmymodel-uml/data/9c48f098-5614-406a-92eb-9f7b2b7c3554.xmi,fp_27dce229e031,CLASS,poll,VALID,0,-1,VALID,-1,,"@startuml
+enum NuRightAnswer {
+  New
+  Active
+  Banned
+}
+enum OtherAnswer {
+  New
+  Old
+  Shipped
+  Delivered
+  Closed
+}
+class ConcreteRightAnswers {
+  address : String
+  phone : String
+  email : String
+  isVIP() : Boolean
+}
+class Answers {
+  paidDate : Date
+  total : Real
+  details : String
+}
+class Choices {
+  creationDate : Date
+}
+class ConcreteOtherAnswers {
+  billingAddress : String
+  open : Date
+  closed : Date
+  isClosed : Boolean
+}
+class AnswerdBuilder {
+  #login : String
+  -password : String
+  state : NuRightAnswer
+}
+class MultipleChoicesAnswers {
+  number : Integer
+  ordered : Date
+  shipped : Boolean
+  shipTo : String
+  total : Real
+  status : OtherAnswer
+}
+class MCRightAnswer {
+  quantity : Integer
+  price : Real
+}
+class NumericAnswers {
+  name : String
+  description : String
+}
+ConcreteRightAnswers ""1"" -- ""1"" AnswerdBuilder : WebUser_Customer
+AnswerdBuilder ""1"" *-- ""1"" ConcreteOtherAnswers : Customer_Account
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99023974
+S008396,repo-genmymodel-uml/data/_qkkm4NGAEeib2vfQ4l86Yg.xmi,fp_ef9ba48661d6,CLASS,eventmanagement,VALID,0,-1,VALID,-1,,"@startuml
+class Organization {
+  Id : Integer
+  Name : String
+  Description : String
+  Url : String
+  Groups : Group
+  Events : Event
+  Owners : User
+}
+class User {
+  Id : Integer
+  FirstName : String
+  LastName : String
+  UserName : String
+  UserHash : Integer
+  UserNameFull : String
+  EmailAddress : String
+  Password : String
+}
+class Group {
+  Id : Integer
+  Name : String
+  Users : User
+  Permissions : Permission
+  Scope : ScopeType
+  ScopeId : Integer
+}
+class Event {
+  Id : Integer
+  Name : String
+  Description : String
+  Date : DateTime
+  Panels : Panel
+  Resources : Resource
+  Groups : Group
+}
+class Panel {
+  Id : Integer
+  Name : String
+  Submitter : User
+  +Description : String
+  Scheduled : DateTime
+  Length : Integer
+  PreBufferTime : Integer
+  PostBufferTime : Integer
+  Approval : ApprovalType
+  Resources : Resource
+  Private : Boolean
+  Panelists : User
+}
+class Resource {
+  Id : Integer
+  Name : String
+  Description : String
+  NumberAvailable : Integer
+  Type : ResourceType
+  Private : Boolean
+}
+enum ResourceType {
+  Track
+  Room
+  Equipment
+  VIP
+  Tag
+}
+enum ApprovalType {
+  Submitted
+  Reviewed
+  Denied
+  Waitlisted
+  Accepted
+}
+class Permission {
+  Id : Integer
+  Name : String
+  Crud : CrudType
+  Allow : AllowType
+  Scope : ScopeType
+}
+enum CrudType {
+  Create
+  Review
+  Update
+  Delete
+}
+enum AllowType {
+  Allow
+  Deny
+}
+enum ScopeType {
+  Site
+  User
+  Organization
+  Event
+  Group
+  Panel
+  Resource
+}
+enum Enumeration
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99842983
+S009195,repo-genmymodel-uml/data/_pE620ICTEei-m5BAOg12zA.xmi,fp_40fac452df80,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Piece
+class Colonist
+class Good
+class Role
+class Governor
+class VictoryPoint
+class Doubloon
+class TradingHouse
+class SupplyBoard
+class ColonistShip {
+  Num_Colonists : Integer
+  -ColonistZone : ColonistZone
+}
+class ShippingShip {
+  Size : Integer
+}
+enum PlantationType {
+  COFFEE
+  CORN
+  INDIGO
+  QUARRY
+  SUGAR
+  TABACCO
+}
+class ColonistZone {
+  Stackable : Boolean
+  Pieces : Colonist
+  MaxColonists : Integer
+  add(colonist : Colonist) : Boolean
+  remove() : Colonist
+  isFilled() : Boolean
+}
+class Building {
+  Type
+  Cost : Integer
+  VictoryPoints : Integer
+  Size : Integer
+  -ColonistZones : ColonistZone
+  -MaxColonists : Integer
+  -HasProduced : Boolean
+}
+class PlayerBoard {
+  PlayerID : Integer
+  -ColonistZone : ColonistZone
+}
+class PlantationSupply
+class Plantation {
+  Type : PlantationType
+  -ColonistZone : ColonistZone
+  -HasProduced : Boolean
+  Plantation(Type : PlantationType) : Plantation
+  produce() : Good
+}
+interface IColonistBoard {
+  addColonist() : Boolean
+  hasColonist() : Boolean
+  removeColonist() : Colonist
+}
+interface IBoard {
+  initializeRound()
+  initializeGame()
+}
+class GoodZone {
+  Stackable : Boolean
+  Pieces : Good
+  add(colonist : Colonist) : Boolean
+  remove() : Good
+  isFilled() : Boolean
+}
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9988763
+S011912,repo-genmymodel-uml/data/_MLXXYPW1EemEXt2Xl4w-3Q.xmi,_nvsxmhlzeemeymb8sxp8zg,USE_CASE,course,INVALID_USECASE_DECLARATION,8,14,ERROR,14,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Student
+actor Advisor
+actor Faculty
+actor Registrar
+actor Admission
+actor ""Enrollment Services"" as Enrollment_Services
+rectangle ""MCIT  Registration System"" {
+  usecase ""Get Class list"" as UC1
+  usecase ""Check Student's Transcript"" as UC2
+  usecase ""Student Information"" as UC3
+  usecase ""Enter New Classes"" as UC4
+  use case ""Cancel a Class"" as UC5
+  usecase ""Check Conflicts in Classroom/Faculty Assignments"" as UC6
+  usecase ""Add New Students"" as UC7
+  usecase ""Report on retention"" as UC8
+  usecase ""Update Student Information"" as UC9
+  usecase ""Check Fulfillment of Graduation Requirments"" as UC10
+  usecase ""Discuss With Advisor"" as UC11
+  usecase ""Course Approval"" as UC12
+  usecase ""Determine Course Prerequisites"" as UC13
+}
+Registrar --> UC4
+Registrar --> UC5
+Registrar --> UC6
+Enrollment_Services --> UC10
+Enrollment_Services --> UC9
+Enrollment_Services --> UC8
+Advisor --> UC12
+Faculty --> UC1
+Faculty --> UC2
+Faculty --> UC3
+Admission --> UC7
+Student --> UC11
+UC13 ..> UC12 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8573733
+S011951,repo-genmymodel-uml/data/_RizPwJ3JEemddr62D2Sizg.xmi,_nvsxmhlzeemeymb8sxp8zg,USE_CASE,course,INVALID_USECASE_DECLARATION,8,14,ERROR,14,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Admin
+actor Student
+usecase ""Add Student"" as UC1
+usecase ""Add Teacher"" as UC2
+usecase ""AddSubjects"" as UC3
+usecase ""View Students"" as UC4
+usecase ""View Teachers"" as UC5
+usecase ""View Result"" as UC6
+usecase ""Login"" as UC7
+usecase ""Logout"" as UC8
+usecase ""View Basic Info"" as UC9
+use case ""View Full Info"" as UC10
+Admin --> UC7
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC8
+Student --> UC8
+Student --> UC7
+Student --> UC4
+Student --> UC9
+Student --> UC6
+Student --> UC10
+Admin --> UC9
+Admin --> UC10
+@enduml
+",1,1,0,0,1,VALID,0.81956494
+S012318,repo-genmymodel-uml/data/f771fb57-ea2f-4451-98c4-0a0f4d068c42.xmi,fp_ed5f0f2faa3d,USE_CASE,health,INVALID_USECASE_DECLARATION,8,11,ERROR,11,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor operator
+actor patient
+actor doctor
+actor admin
+usecase ""Login"" as UC1
+usecase ""patient form"" as UC2
+usecase ""fix appointment"" as UC3
+usecase ""doctor consultancy"" as UC4
+use case ""bill generation"" as UC5
+usecase ""payment"" as UC6
+usecase ""report generation"" as UC7
+operator --> UC1
+doctor --> UC4
+admin --> UC7
+patient --> UC6
+operator --> UC5
+admin --> UC1
+operator --> UC3
+operator --> UC2
+patient --> UC2
+@enduml
+",1,1,0,0,1,VALID,0.83915263
+S013313,repo-genmymodel-uml/data/a52fc4b3-80bf-462a-be38-def56e45262c.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+abstract class Value {
+  #attribute : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Bool {
+  -data : Boolean
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : Value
+  get_data() : Value
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Bool)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Json {
+  -values : Value
+  add_value(parameter : Value)
+  get_values() : Value
+  write_file()
+  accept(parameter : Visitor)
+}
+class Documents {
+  -file
+  -data : Json
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Json)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Bool)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : Value)
+  tab()
+}
+class Print
+class ArrPrint
+Value <|-- String
+Visitor <|-- ArrPrint
+Value <|-- Array
+Value <|-- Bool
+Value <|-- Json
+Value <|-- Number
+Value <|-- Null
+Visitor <|-- Print
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.96401876
+S013624,repo-genmymodel-uml/data/8f782f73-9e0b-4c92-8371-fb4242f7650d.xmi,a52fc4b3-80bf-462a-be38-def56e45262c,CLASS,computer,GENERALIZATION_CYCLE,11,78,VALID,-1,,"@startuml
+abstract class User {
+  #id : String
+  firstName : String
+  +lastName : String
+  email : String
+  phone : String
+  address : Documents
+  photoURL : String
+  get_name()
+  accept(parameter : Visitor)
+}
+class Null {
+  accept(parameter : Visitor)
+}
+class String {
+  -data : String
+  get_data() : String
+  accept(parameter : Visitor)
+}
+class Category {
+  id : String
+  +section : String
+  name : String
+  parent : String
+  get_data() : Boolean
+  accept(parameter : Visitor)
+}
+class Number {
+  -data : Long
+  get_data() : Long
+  accept(parameter : Visitor)
+}
+class Array {
+  -data : User
+  get_data() : User
+  accept(parameter : Visitor)
+}
+class Visitor {
+  visit(parameter : Array)
+  visit(parameter : Category)
+  visit(parameter : Null)
+  visit(parameter : Number)
+  visit(parameter : String)
+}
+class Provider {
+  -uid : String
+  providerId : String
+  email : String
+  +displayName : String
+  photoURL : String
+}
+class Documents {
+  -file
+  -data : Provider
+  -file_name : String
+  -tab_counter : Integer
+  write_file()
+  write_object(parameter : Provider)
+  write_array(parameter : Array)
+  write_string(parameter : String)
+  write_bool(parameter : Category)
+  write_null(parameter : Null)
+  write_number(parameter : Number)
+  write_value(parameter : User)
+  tab()
+}
+class Print
+class ArrPrint
+User <|-- Null
+User <|-- String
+User <|-- Category
+User <|-- Number
+User <|-- Array
+User <|-- Provider
+Visitor <|-- Print
+Visitor <|-- ArrPrint
+Print <|-- Visitor
+@enduml
+",1,0,0,1,1,VALID,0.99340445
+S014208,repo-genmymodel-uml/data/263d5481-1f51-4adc-bef4-ffa09332118f.xmi,263d5481-1f51-4adc-bef4-ffa09332118f,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,10,ERROR,10,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor student
+actor chatbot
+usecase ""open chat"" as UC1
+usecase ""ask query"" as UC2
+usecase ""reply to chat"" as UC3
+usecase ""reply for query"" as UC4
+usecase ""search results"" as UC5
+use case ""search response"" as UC6
+student --> UC1
+student --> UC2
+chatbot --> UC3
+chatbot --> UC5
+chatbot --> UC4
+chatbot --> UC6
+@enduml
+",1,1,0,0,1,VALID,0.8324039
+S014362,repo-genmymodel-uml/data/d3505c19-dbc3-4ba3-be6f-e2bab2d9c7d9.xmi,263d5481-1f51-4adc-bef4-ffa09332118f,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor user
+actor chatbot
+usecase ""open chat"" as UC1
+usecase ""ask query"" as UC2
+usecase ""reply to chat"" as UC3
+usecase ""reply for query"" as UC4
+use case ""search results"" as UC5
+usecase ""search response"" as UC6
+user --> UC1
+user --> UC2
+chatbot --> UC3
+chatbot --> UC5
+chatbot --> UC4
+chatbot --> UC6
+@enduml
+",1,1,0,0,1,VALID,0.8346149
+S014438,repo-genmymodel-uml/data/58e5d432-56a1-420f-b2a0-1bce79830b64.xmi,263d5481-1f51-4adc-bef4-ffa09332118f,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor chatbot
+actor employee
+usecase ""open chat"" as UC1
+usecase ""ask query"" as UC2
+usecase ""reply to chat"" as UC3
+usecase ""reply for query"" as UC4
+use case ""search results"" as UC5
+usecase ""search response"" as UC6
+chatbot --> UC3
+chatbot --> UC5
+chatbot --> UC4
+chatbot --> UC6
+employee --> UC1
+employee --> UC2
+@enduml
+",1,1,0,0,1,VALID,0.8291836
+S015331,repo-genmymodel-uml/data/bc7d211a-0172-4307-80d2-2ebedc0286cb.xmi,fp_a232ece87147,USE_CASE,ticket,INVALID_USECASE_DECLARATION,8,15,ERROR,15,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor ""System Administrator"" as System_Administrator
+rectangle ""Hotel Reservation System"" {
+  usecase ""create an account"" as UC1
+  usecase ""search hotels in prefered areas"" as UC2
+  usecase ""view availability of rooms in between prefered dates"" as UC3
+  usecase ""View prices for different types of rooms"" as UC4
+  usecase ""View discounts"" as UC5
+  usecase ""Reserve prefered rooms"" as UC6
+  usecase ""Make payments through online payment gateway"" as UC7
+  usecase ""Log-in"" as UC8
+  usecase ""Update room available dates"" as UC9
+  use case ""Update room prices"" as UC10
+  usecase ""Update discount details"" as UC11
+}
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+Customer --> UC6
+Customer --> UC7
+System_Administrator --> UC9
+System_Administrator --> UC10
+System_Administrator --> UC11
+UC2 ..> UC8 : <<include>>
+UC3 ..> UC8 : <<include>>
+UC4 ..> UC8 : <<include>>
+UC5 ..> UC8 : <<include>>
+UC6 ..> UC8 : <<include>>
+UC7 ..> UC8 : <<include>>
+@enduml
+",1,1,0,0,1,VALID,0.8438927
+S015724,repo-genmymodel-uml/data/f7733192-6192-4826-a5ee-2784eacd5867.xmi,fp_f55a63d5136e,USE_CASE,ticket,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor Visitor
+actor Member
+actor ""Ticket Booth"" as Ticket_Booth
+actor ""Food Seller"" as Food_Seller
+actor Security
+usecase ""Book Ticket On Site"" as UC1
+usecase ""Order Food"" as UC2
+usecase ""Order Drink"" as UC3
+usecase ""Watch Movie"" as UC4
+usecase ""Book Ticket Online"" as UC5
+usecase ""Enter Studio"" as UC6
+usecase ""Redeem Booking Code"" as UC7
+Visitor --> UC1
+Ticket_Booth --> UC1
+Food_Seller --> UC3
+Food_Seller --> UC2
+Visitor --> UC4
+Member --> UC5
+Security --> UC6
+Visitor --> UC6
+UC2 ..> UC1 : <<extend>>
+UC3 ..> UC1 : <<extend>>
+UC5 ..> UC7 : <<include>>
+Visitor <|-- Member
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.9847498
+S020249,repo-genmymodel-uml/data/_EJqo0Km3EeeEQN1ZyOr-_g.xmi,fp_3ab4de5b5eac,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,15,ERROR,15,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Smoke sensor"" as Smoke_sensor
+actor ""Heat sensor"" as Heat_sensor
+actor ""Door sensor"" as Door_sensor
+actor ""Window sensor"" as Window_sensor
+actor ""Movement Sensor"" as Movement_Sensor
+actor ""Water sensor"" as Water_sensor
+rectangle ""Home Security and Safety System"" {
+  usecase ""Detect fire"" as UC1
+  usecase ""Detect break-in"" as UC2
+  usecase ""Detect flooding"" as UC3
+  usecase ""Authenticate PIN"" as UC4
+  usecase ""Sound alarn"" as UC5
+  use case ""Disable alarm"" as UC6
+}
+Smoke_sensor --> UC1
+Heat_sensor --> UC1
+Door_sensor --> UC2
+Window_sensor --> UC2
+Movement_Sensor --> UC2
+Water_sensor --> UC3
+UC1 ..> UC4 : <<include>>
+UC2 ..> UC4 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC4 ..> UC5 : <<extend>>
+UC4 ..> UC6 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.86211133
+S020351,repo-genmymodel-uml/data/_zspqcKp_EeeEQN1ZyOr-_g.xmi,fp_96d2f7e2d375,USE_CASE,smarthouse,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor User
+actor ""Keypad and alpha display"" as Keypad_and_alpha_display
+actor ""Wireless network card"" as Wireless_network_card
+actor ""Smart sensors"" as Smart_sensors
+actor ""Smoke sensors"" as Smoke_sensors
+actor ""Heat sensors"" as Heat_sensors
+actor ""Door, window and movement sensors"" as Door_window_and_movement_sensors
+actor ""Water sensors"" as Water_sensors
+usecase ""Stop alarm"" as UC1
+usecase ""Change setting"" as UC2
+usecase ""Enable/disable sensor"" as UC3
+usecase ""Set time"" as UC4
+usecase ""Reset system"" as UC5
+usecase ""Get the system connected to internet"" as UC6
+usecase ""Indicate types of sensor attached"" as UC7
+usecase ""Smoke alarm"" as UC8
+usecase ""Fire alarm"" as UC9
+usecase ""Burglar alarm"" as UC10
+usecase ""Flood alarm"" as UC11
+usecase ""Call the fire bridage"" as UC12
+User --> UC3
+Keypad_and_alpha_display --> UC1
+Keypad_and_alpha_display --> UC2
+Wireless_network_card --> UC6
+Smart_sensors --> UC7
+Smoke_sensors --> UC8
+Heat_sensors --> UC9
+UC9 ..> UC8 : <<extend>>
+UC12 ..> UC9 : <<extend>>
+Keypad_and_alpha_display <|-- User
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.9988937
+S021254,repo-genmymodel-uml/data/_AydTkLJWEee7sYPkE4-GPA.xmi,fp_bfe9e08a0676,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,8,ERROR,8,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Home Owner"" as Home_Owner
+usecase ""Reset System"" as UC1
+usecase ""Change Settings"" as UC2
+usecase ""Change Burglar Settings"" as UC3
+usecase ""Set activity period"" as UC4
+use case ""Arm/Disarm Burglar Alarm"" as UC5
+usecase ""Configure time before reset"" as UC6
+usecase ""Change authority contact settings"" as UC7
+usecase ""Configure Sensor Type"" as UC8
+usecase ""Enable/Disable Sensors"" as UC9
+usecase ""Authenticate User"" as UC10
+usecase ""Re-enter PIN"" as UC11
+Home_Owner --> UC10
+UC2 ..> UC3 : <<include>>
+UC2 ..> UC7 : <<include>>
+UC2 ..> UC8 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<include>>
+UC3 ..> UC6 : <<include>>
+UC10 ..> UC1 : <<include>>
+UC10 ..> UC2 : <<include>>
+UC10 ..> UC9 : <<include>>
+UC11 ..> UC10 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.83379745
+S022734,repo-genmymodel-uml/data/_eTBJwOvCEeeGy5tFxte9Vg.xmi,fp_cbae90d6339d,USE_CASE,travel,INVALID_USECASE_DECLARATION,8,12,ERROR,12,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor USER
+actor DRIVER
+actor ""CUSTOMER SUPPORT"" as CUSTOMER_SUPPORT
+usecase ""Call 108 / Website"" as UC1
+usecase ""Check Availability"" as UC2
+usecase ""View Distance"" as UC3
+usecase ""Confirmation"" as UC4
+usecase ""Send Message"" as UC5
+usecase ""Receive Message"" as UC6
+use case ""Shortest Route"" as UC7
+usecase ""Trace Out"" as UC8
+usecase ""Cancel"" as UC9
+USER --> UC2
+USER --> UC3
+USER --> UC4
+USER --> UC1
+USER --> UC6
+USER --> UC7
+USER --> UC8
+USER --> UC9
+CUSTOMER_SUPPORT --> UC2
+CUSTOMER_SUPPORT --> UC5
+DRIVER --> UC6
+DRIVER --> UC7
+@enduml
+",1,1,0,0,1,VALID,0.8200693
+S027150,repo-genmymodel-uml/data/_OIapALpiEeehVczkwiTSNA.xmi,fp_d67bcdf23298,CLASS,course,VALID,0,-1,VALID,-1,,"@startuml
+class Student {
+  -phone : String
+  -email : String
+  -surname : String
+  -name : String
+}
+class Teacher {
+  -name : String
+  -surname : String
+  -email : String
+  -phone : String
+}
+class Grade {
+  -name : String
+  addStudent()
+  getStudent()
+  getTotal()
+}
+class Subject
+class Note
+class Schedule {
+  showSchedule()
+}
+Teacher ""0..1"" -- ""0..1"" Grade : Grade_Teacher
+Student ""0..1"" o-- ""1"" Grade : Student_Grade
+Subject ""0..1"" -- ""0..1"" Student : Student_Subject
+Subject ""1"" -- ""0..1"" Note : Note_Subject
+Student ""1"" -- ""1"" Schedule : Schedule_Student
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9988022
+S027410,repo-genmymodel-uml/data/_LgT2oAAkEeiLEbIzy5aHfg.xmi,fp_1443add1501c,USE_CASE,course,INVALID_USECASE_DECLARATION,8,11,ERROR,11,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Student
+actor Registerer
+actor Faculty
+usecase ""Take a course"" as UC1
+usecase ""Drop a course"" as UC2
+usecase ""See the raken courses"" as UC3
+usecase ""Edit the personal information"" as UC4
+usecase ""See the personal information"" as UC5
+use case ""Send a feedback faculty"" as UC6
+usecase ""See the semster information"" as UC7
+usecase ""Login"" as UC8
+usecase ""Logout"" as UC9
+usecase ""UseCase"" as UC10
+usecase ""UseCase2"" as UC11
+usecase ""Add Stu"" as UC12
+usecase ""UseCase4"" as UC13
+usecase ""add faculty"" as UC14
+usecase ""UseCase5"" as UC15
+usecase ""UseCase3"" as UC16
+usecase ""UseCase6"" as UC17
+Student --> UC1
+Student --> UC2
+Student --> UC3
+Student --> UC4
+Student --> UC5
+Student --> UC6
+Student --> UC7
+@enduml
+",1,1,0,0,1,VALID,0.8182222
+S028718,repo-genmymodel-uml/data/_5xocsP4mEeeLEbIzy5aHfg.xmi,fp_7328d5f6048d,USE_CASE,ticket,INVALID_USECASE_DECLARATION,8,5,ERROR,5,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+rectangle ""System Boundary"" {
+  use case ""Customer login"" as UC1
+  usecase ""Manage Profile"" as UC2
+  usecase ""Check Room availablity"" as UC3
+  usecase ""Room Reservation"" as UC4
+  usecase ""Payment Processing"" as UC5
+  usecase ""Checkout"" as UC6
+}
+Customer --> UC1
+Customer --> UC3
+Customer --> UC2
+Customer --> UC4
+Customer --> UC5
+Customer --> UC6
+@enduml
+",1,1,0,0,1,VALID,0.8411297
+S033245,repo-genmymodel-uml/data/_Tsd1gF5QEemkzeedQvutWw.xmi,fp_34a4d340224e,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Blackjack {
+  +main(args : String)
+}
+class Deck {
+  -cards : Unknown_Card
+  +Deck()
+  +startDeck()
+  +getCard(card : Integer) : Unknown_Card
+  +drawCard(owner : Unknown_Deck)
+  +deckSize() : Integer
+  +toString() : String
+  +cardsValue() : Integer
+}
+class Card {
+  -suit : Unknown_Suit
+  -rank : Unknown_Rank
+  +Card(suit : Unknown_Suit, rank : Unknown_Rank)
+  +getRank() : Unknown_Rank
+  +toString() : String
+}
+enum Rank {
+  TWO
+  THREE
+  FOUR
+  FIVE
+  SIX
+  SEVEN
+  EIGHT
+  NINE
+  TEN
+  JACK
+  QUEEN
+  KING
+  ACE
+}
+enum Suit {
+  HEART
+  SPADE
+  DIAMOND
+  CLUB
+}
+Deck <|-- Card
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.9928778
+S033633,repo-genmymodel-uml/data/_a3NhYAqnEeihOuC11hdjgA.xmi,fp_3b9e2a93a4b8,CLASS,computer,GENERALIZATION_CYCLE,11,55,VALID,-1,,"@startuml
+class Game {
+  -hand_size : Integer
+  -tryagain : Integer
+  play()
+  playAgain()
+  displayCards(card : Card)
+  checktheHand()
+  redraw() : Card
+  evaluation()
+  straightFlush()
+  fourOfaKind()
+  flush()
+  straight()
+  threeofaKind()
+  twoPairs()
+  onePair()
+  highCard()
+}
+class GameRun {
+  main(args : String)
+}
+class Card {
+  +suit : Integer
+  +rank : Integer
+  compareTo(o : Card) : Integer
+}
+interface Comparable
+class Card2
+class Player {
+  draw(deck : Deck) : Card
+  redraw(Counter : Integer, deck : Deck) : Card
+}
+class Deck {
+  -deck_size : Integer
+  -hand_size : Integer
+  -numberofShuffles : Integer
+  -remainofDeck : Integer
+  filldeck()
+  shuffle()
+  deal() : Card
+  redeal() : Card
+  refreshDeck()
+}
+class Board {
+  -cardArea : JPanel
+  -playAagain : JButton
+  createLayout() : Container
+  addCard(parameter : Integer) : JPanel
+  actions(e : ActionEvent)
+}
+class JFrame
+Comparable <|.. Card
+JFrame <|-- Board
+Card <|-- Comparable
+@enduml
+",1,0,0,1,1,VALID,0.9446469

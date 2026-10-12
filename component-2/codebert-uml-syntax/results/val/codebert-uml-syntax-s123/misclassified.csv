@@ -1,0 +1,799 @@
+sample_id,diagram_id,group,diagram_type,domain,label,label_id,mutated_line,parser_status,parser_line,parser_message,text,true_err,parser_err,lint_err,rules_err,det_err,pred,confidence
+S008944,repo-genmymodel-uml/data/_grOBAOs7EeiJfugOH9Y5Zg.xmi,fp_e9dff1f1d570,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class Match {
+  -date : LocalDateTime
+  -name : String
+  -players : Player
+  +winner : Result
+  play()
+  -generateMatchInformation()
+  -calculateResult() : Result
+}
+class Player {
+  -name : String
+  -totalScore : Integer
+  -games : Game
+}
+class Game {
+  -number : Integer
+  -score : Integer
+  calculateScore()
+}
+class Attempt {
+  number : Integer
+  points : Integer
+}
+enum ScoreType {
+  STRIKE
+  SPARE
+  NONE
+}
+class FileImporter {
+  -INITIAL_DATAFILE : String
+  loadData() : List_InitialData
+}
+class InitialData {
+  -playerName : String
+  -points
+}
+class Result {
+  +player : Player
+  +score : Integer
+}
+interface Importer {
+  loadData() : List_InitialData
+}
+class BowlingGame {
+  +attempts : List_Attempt
+  scoreType : ScoreType
+  previousGame : Game
+  nextGames : List_Game
+}
+Importer <|.. FileImporter
+Game <|-- BowlingGame
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9950956
+S010884,repo-genmymodel-uml/data/_YO4loND-EeeLcIicqHdTUQ.xmi,2e334883-c26a-4105-af64-4203922187d0,USE_CASE,recruitment,INVALID_USECASE_RELATIONSHIP,12,33,VALID,-1,,"@startuml
+left to right direction
+actor ""Job Seeker"" as Job_Seeker
+actor Employer
+rectangle ""My Career Assistent"" {
+  usecase ""Register"" as UC1
+  usecase ""Login"" as UC2
+  usecase ""Post resume"" as UC3
+  usecase ""Update resume"" as UC4
+  usecase ""Search job by location and company"" as UC5
+  usecase ""Apply for job"" as UC6
+  usecase ""Faverate list"" as UC7
+  usecase ""Keep track of applyed job"" as UC8
+  usecase ""profile of company"" as UC9
+  usecase ""Job Posting"" as UC10
+  usecase ""Modify posted job"" as UC11
+  usecase ""application for job"" as UC12
+  usecase ""Call for interview"" as UC13
+  usecase ""Add and remove resumes to their favorites list"" as UC14
+  usecase ""Search the resume database"" as UC15
+}
+Job_Seeker --> UC1
+Job_Seeker --> UC2
+Job_Seeker --> UC4
+Job_Seeker --> UC5
+Job_Seeker --> UC6
+Job_Seeker --> UC7
+Job_Seeker --> UC8
+Employer --> UC9
+Employer --> UC1
+Employer --> UC2
+Employer --> UC3
+Employer ..> UC14 : <<extend>>
+Employer --> UC10
+Employer --> UC11
+Employer --> UC15
+Employer --> UC12
+Employer --> UC13
+@enduml
+",1,0,0,1,1,VALID,0.83694077
+S011304,repo-genmymodel-uml/data/_8GTOcFBVEeeTnI9B59buBQ.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_RELATIONSHIP,12,42,VALID,-1,,"@startuml
+left to right direction
+actor faculty
+actor Students
+actor ""Designated Library Staff"" as Designated_Library_Staff
+actor ""library staff"" as library_staff
+usecase ""Check In"" as UC1
+usecase ""Check Out"" as UC2
+usecase ""Book Request"" as UC3
+usecase ""Check Book's Availability"" as UC4
+usecase ""Emailing Patrons Reminders"" as UC5
+usecase ""Fining Patrons (overdue)"" as UC6
+usecase ""Checking Book's Status"" as UC7
+usecase ""Checking Patron's Status"" as UC8
+usecase ""Book Renewal"" as UC9
+usecase ""Acquisition of  library resources"" as UC10
+usecase ""Retiring library Resources"" as UC11
+usecase ""Reshelving Books"" as UC12
+usecase ""Accessing Database"" as UC13
+usecase ""Research"" as UC14
+faculty --> UC9
+faculty --> UC1
+faculty --> UC2
+faculty --> UC3
+Students --> UC9
+Students --> UC1
+Students --> UC2
+Students --> UC3
+Designated_Library_Staff --> UC13
+Designated_Library_Staff --> UC14
+Students --> UC13
+Students --> UC14
+library_staff --> UC1
+library_staff --> UC3
+library_staff --> UC5
+library_staff --> UC10
+library_staff --> UC12
+library_staff --> UC6
+library_staff --> UC11
+library_staff --> UC7
+library_staff --> UC2
+library_staff ..> UC8 : <<extend>>
+faculty --> UC6
+library_staff --> UC9
+faculty --> UC5
+Students --> UC5
+library_staff --> UC13
+faculty --> UC14
+UC4 ..> UC9 : <<include>>
+UC4 ..> UC3 : <<include>>
+@enduml
+",1,0,0,1,1,VALID,0.96287507
+S011342,repo-genmymodel-uml/data/8e89b16c-3645-4d62-a63c-015f48416c5d.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_RELATIONSHIP,12,48,VALID,-1,,"@startuml
+left to right direction
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+actor Student
+usecase ""Books"" as UC1
+usecase ""Requests"" as UC2
+usecase ""Reference Books"" as UC3
+usecase ""Reminders"" as UC4
+usecase ""Foreign Resources"" as UC5
+usecase ""Music CD's"" as UC6
+usecase ""Videos"" as UC7
+usecase ""Software"" as UC8
+usecase ""Magazines"" as UC9
+usecase ""Reshelving Books"" as UC10
+usecase ""Renew Magazine Subscription"" as UC11
+usecase ""Order New Resources"" as UC12
+usecase ""Computers"" as UC13
+usecase ""Internet"" as UC14
+usecase ""Acquisition"" as UC15
+usecase ""Retirement"" as UC16
+usecase ""Other Libraries' Holdings"" as UC17
+usecase ""Overdue Fine"" as UC18
+Library_Staff --> UC4
+Library_Staff --> UC7
+Library_Staff --> UC13
+Library_Staff --> UC14
+Library_Staff --> UC16
+Library_Staff --> UC15
+Library_Staff --> UC12
+Library_Staff --> UC11
+Library_Staff --> UC10
+Library_Staff --> UC5
+Library_Staff --> UC3
+Library_Staff --> UC9
+Library_Staff --> UC8
+Library_Staff --> UC2
+Library_Staff --> UC1
+Library_Staff --> UC6
+Library_Staff --> UC17
+Faculty --> UC5
+Faculty --> UC3
+Faculty --> UC2
+Student --> UC6
+Student --> UC14
+Faculty --> UC14
+Faculty --> UC6
+Faculty ..> UC13 : <<extend>>
+Faculty --> UC7
+Faculty --> UC8
+Faculty --> UC9
+Faculty --> UC1
+Faculty --> UC17
+Student --> UC17
+Student --> UC1
+Student --> UC9
+Student --> UC8
+Student --> UC7
+Student --> UC13
+Student --> UC2
+Student --> UC3
+Library_Staff --> UC18
+Faculty --> UC18
+Student --> UC18
+@enduml
+",1,0,0,1,1,VALID,0.96921074
+S011462,repo-genmymodel-uml/data/1b7a4000-3b3f-4eca-a1d2-b9ed2e00ef25.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_RELATIONSHIP,12,33,VALID,-1,,"@startuml
+left to right direction
+actor Faculty
+actor Student
+actor ""Library Staff"" as Library_Staff
+rectangle ""Library management system"" {
+  usecase ""Renew checked book"" as UC1
+  usecase ""Place book on reserve"" as UC2
+  usecase ""Renew magazine subscription"" as UC3
+  usecase ""Order new resources"" as UC4
+  usecase ""Assist patrons"" as UC5
+}
+usecase ""Reshelf books"" as UC6
+usecase ""Bring in foreign resources"" as UC7
+usecase ""Check out books"" as UC8
+usecase ""Check in books"" as UC9
+usecase ""Request books"" as UC10
+usecase ""Get fined for overdue item"" as UC11
+usecase ""Check out other resources"" as UC12
+Library_Staff --> UC6
+Faculty --> UC7
+Library_Staff --> UC7
+Library_Staff --> UC4
+Library_Staff --> UC3
+Library_Staff --> UC5
+Student --> UC8
+Faculty --> UC8
+Library_Staff --> UC8
+Student --> UC9
+Faculty --> UC9
+Library_Staff --> UC9
+Student --> UC10
+Faculty ..> UC10 : <<include>>
+Library_Staff --> UC10
+Student --> UC11
+Faculty --> UC11
+Library_Staff --> UC11
+Faculty --> UC2
+Library_Staff --> UC2
+Student --> UC12
+Faculty --> UC12
+Library_Staff --> UC12
+Student --> UC1
+Faculty --> UC1
+Library_Staff --> UC1
+@enduml
+",1,0,0,1,1,VALID,0.8414872
+S012512,repo-genmymodel-uml/data/dc902674-fd02-45e5-a9ee-fb6be6d38789.xmi,fp_3d85584d52c6,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class PaypalProcessor {
+  process()
+}
+class SetExpressCheckoutProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class GetExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class DoExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+interface IPaypalProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class SetExpressCheckoutAdapter
+class GetExpressCheckoutDetailsAdapter
+class DoExpressCheckoutDetailsAdapter
+IPaypalProcessor <|.. SetExpressCheckoutProcessor
+IPaypalProcessor <|.. GetExpressCheckoutDetailsProcessor
+IPaypalProcessor <|.. DoExpressCheckoutDetailsProcessor
+PaypalProcessor ..> IPaypalProcessor
+SetExpressCheckoutProcessor ..> SetExpressCheckoutAdapter
+GetExpressCheckoutDetailsProcessor ..> GetExpressCheckoutDetailsAdapter
+DoExpressCheckoutDetailsProcessor ..> DoExpressCheckoutDetailsAdapter
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9956613
+S012584,repo-genmymodel-uml/data/_fMJ0YG3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class OrdenesPedidos {
+  -codigo : String
+  -fecha : String
+}
+class Proveedor {
+  -nit : String
+  -nombre : String
+  -direccion : String
+  -telefono : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class SolicitudSuministros {
+  -codigo : String
+  -fecha : String
+}
+class dependencia {
+  -codigo : String
+  -nombre : String
+  -responsable : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+Proveedor ""1"" -- ""0..*"" OrdenesPedidos : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : provee
+OrdenesPedidos ""0..*"" -- ""1..*"" Elementos : conforma
+SolicitudSuministros ""0..*"" -- ""1..*"" Elementos : relaciona
+SolicitudSuministros ""1..*"" -- ""0..1"" OrdenesPedidos : genera
+dependencia ""1"" -- ""1..*"" SolicitudSuministros : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Factura ""0..*"" -- ""1..*"" Elementos : factura
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9926641
+S014262,repo-genmymodel-uml/data/_nha88MfSEeiZ3fREAmKE6g.xmi,fp_183643fd3efd,USE_CASE,restaurant,GENERALIZATION_CYCLE,11,32,VALID,-1,,"@startuml
+left to right direction
+actor ""Registered user"" as Registered_user
+actor Admin
+actor ""Delivery person"" as Delivery_person
+actor ""Pizza chef"" as Pizza_chef
+usecase ""Create Account"" as UC1
+usecase ""Sign in"" as UC2
+usecase ""Save favourite flavour"" as UC3
+usecase ""Create your own pizza"" as UC4
+usecase ""View meal deal"" as UC5
+usecase ""View pizza flavours"" as UC6
+usecase ""Checkout"" as UC7
+usecase ""Make payment"" as UC8
+usecase ""Pay at delivery"" as UC9
+usecase ""Pay online"" as UC10
+usecase ""Order tarcking"" as UC11
+usecase ""Pre-order"" as UC12
+usecase ""Change toppings"" as UC13
+usecase ""Add item"" as UC14
+usecase ""Add Address"" as UC15
+usecase ""validate account"" as UC16
+UC9 <|-- UC8
+UC10 <|-- UC8
+UC8 ..> UC7 : <<extend>>
+UC13 ..> UC4 : <<extend>>
+UC13 ..> UC14 : <<extend>>
+UC14 ..> UC5 : <<extend>>
+UC14 ..> UC6 : <<extend>>
+UC14 ..> UC7 : <<extend>>
+UC15 ..> UC7 : <<extend>>
+UC8 <|-- UC10
+@enduml
+",1,0,0,1,1,VALID,0.46051088
+S014531,repo-genmymodel-uml/data/_8kQ1YNLaEeiczqJWtOPN4Q.xmi,fp_18b41b6d4414,USE_CASE,restaurant,INVALID_USECASE_RELATIONSHIP,12,23,VALID,-1,,"@startuml
+left to right direction
+actor Customer
+actor Admin
+actor ""Delivery Person"" as Delivery_Person
+actor System
+usecase ""Create Account"" as UC1
+usecase ""Login"" as UC2
+usecase ""View Menu"" as UC3
+usecase ""Add Items to Cart"" as UC4
+usecase ""Check Out"" as UC5
+usecase ""Make Payment"" as UC6
+usecase ""Confirmation e-mail"" as UC7
+usecase ""Void Order"" as UC8
+usecase ""Receive Order"" as UC9
+usecase ""Deliver Order"" as UC10
+usecase ""Register"" as UC11
+usecase ""Generate report"" as UC12
+usecase ""Update Menu Info"" as UC13
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer ..> UC4 : <<include>>
+Customer --> UC5
+Customer --> UC6
+Customer --> UC7
+Customer --> UC8
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+Delivery_Person --> UC9
+Delivery_Person --> UC10
+Delivery_Person --> UC11
+Admin --> UC11
+Admin --> UC9
+Admin --> UC10
+Admin --> UC12
+System --> UC12
+Admin --> UC13
+System --> UC13
+@enduml
+",1,0,0,1,1,VALID,0.6535488
+S015441,repo-genmymodel-uml/data/79dc438d-8344-41b8-bbd7-ad4f5d14d49c.xmi,fp_ef5c70f41b8b,CLASS,airport,VALID,0,-1,VALID,-1,,"@startuml
+class Airline {
+  id : String
+}
+class Flight {
+  id : Integer
+  departureTime : Date
+  arrivalTime : Date
+}
+class Airport {
+  id : String
+}
+class Pilot
+class Aircraft {
+  state : MaintenanceState
+  flightState : FlightState
+}
+enum MaintenanceState {
+  Working
+  UnderRepair
+}
+enum FlightState {
+  Landed
+  Airborne
+}
+class Company
+class CoPilot
+class Navigator
+class Captain
+Pilot <|-- CoPilot
+Pilot <|-- Navigator
+Pilot <|-- Captain
+Airline ""0..*"" *-- ""0..*"" Aircraft : Airline_Aircraft
+Company ""1"" *-- ""1..*"" Pilot : Company_Pilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport2
+Airline ""1"" *-- ""0..*"" Flight : Airline_Flight
+Flight ""0..*"" *-- ""1"" Aircraft : Flight_Aircraft
+Aircraft ""0..*"" *-- ""0..*"" Pilot : Aircraft_Pilot
+Aircraft ""0..*"" *-- ""1..*"" CoPilot : Aircraft_CoPilot
+Aircraft ""0..*"" *-- ""1..*"" Captain : Aircraft_Captain
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9946794
+S015443,repo-genmymodel-uml/data/79dc438d-8344-41b8-bbd7-ad4f5d14d49c.xmi,fp_ef5c70f41b8b,CLASS,airport,VALID,0,-1,VALID,-1,,"@startuml
+class Airline {
+  id : String
+}
+class Flight {
+  id : Integer
+  departureTime : Date
+  arrivalTime : Date
+}
+class Airport {
+  id : String
+}
+class Pilot
+class Aircraft {
+  state : MaintenanceState
+  flightState : FlightState
+}
+enum MaintenanceState {
+  Working
+  UnderRepair
+}
+enum FlightState {
+  Landed
+  Airborne
+}
+class Company
+class CoPilot
+class Navigator
+class Captain
+Pilot <|-- Captain
+Aircraft ""0..*"" *-- ""1..*"" Captain : Aircraft_Captain
+Flight ""0..*"" *-- ""1"" Aircraft : Flight_Aircraft
+Pilot <|-- CoPilot
+Company ""1"" *-- ""1..*"" Pilot : Company_Pilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport2
+Pilot <|-- Navigator
+Aircraft ""0..*"" *-- ""1..*"" CoPilot : Aircraft_CoPilot
+Flight ""0..*"" *-- ""1"" Airport : Flights_Airport
+Aircraft ""0..*"" *-- ""0..*"" Pilot : Aircraft_Pilot
+Airline ""1"" *-- ""0..*"" Flight : Airline_Flight
+Airline ""0..*"" *-- ""0..*"" Aircraft : Airline_Aircraft
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9948774
+S017413,repo-genmymodel-uml/data/2eff820a-d60d-41d8-919d-a58c6ba952dd.xmi,fp_92d1dd83e1db,USE_CASE,ticket,INVALID_USECASE_RELATIONSHIP,12,27,VALID,-1,,"@startuml
+left to right direction
+actor User
+actor Admin
+actor System
+rectangle ""Online Booking"" {
+  usecase ""Fill out the details"" as UC1
+  usecase ""Registered"" as UC2
+  usecase ""Produce a unique ID"" as UC3
+  usecase ""Book tickets"" as UC4
+  usecase ""Make the payments"" as UC5
+  usecase ""Display the tickets"" as UC6
+  usecase ""Produce report costumer/event information"" as UC7
+}
+System --> UC7
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+Admin --> UC7
+System --> UC1
+System --> UC2
+System --> UC3
+System --> UC4
+System --> UC5
+System ..> UC6 : <<extend>>
+@enduml
+",1,0,0,1,1,VALID,0.9867359
+S019272,repo-genmymodel-uml/data/_Bq5VcGSlEeio56zSTH7puw.xmi,fp_518cd3e8590a,CLASS,elevator,VALID,0,-1,VALID,-1,,"@startuml
+class elevator {
+  floor : Integer
+}
+class door {
+  close : Boolean
+}
+class button {
+  number : Integer
+}
+class elevator_s_buttons {
+  number : Integer
+}
+class floor_s_buttons {
+  number : Boolean
+}
+button <|-- elevator_s_buttons
+button <|-- floor_s_buttons
+door ""1"" -- ""1"" elevator : elevator_door
+button ""0..*"" -- ""0..1"" elevator : elevator_button
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99565226
+S028183,repo-genmymodel-uml/data/_1Wx8MHRvEeqHBZyMlFJVZw.xmi,fp_1f1d5cf591b2,USE_CASE,bank,INVALID_USECASE_RELATIONSHIP,12,34,VALID,-1,,"@startuml
+left to right direction
+actor ""An Existing Customer"" as An_Existing_Customer
+actor ""ATM Admin"" as ATM_Admin
+usecase ""Insert Card"" as UC1
+usecase ""Enter PIN"" as UC2
+usecase ""Display ATM Menu"" as UC3
+usecase ""Withdraw Cash"" as UC4
+usecase ""Check Balance"" as UC5
+usecase ""Transfer funds"" as UC6
+usecase ""Change PIN"" as UC7
+usecase ""Deposit Cash/Cheque"" as UC8
+usecase ""Select Change Pin option"" as UC9
+usecase ""Enter your new PIN"" as UC10
+usecase ""Re-enter Your new PIN"" as UC11
+usecase ""Valid Old PIN"" as UC12
+usecase ""Valid PIN(EX. 3 Digit PIN)"" as UC13
+usecase ""Must Match with Previous Entry"" as UC14
+An_Existing_Customer --> UC1
+An_Existing_Customer --> UC2
+ATM_Admin --> UC3
+An_Existing_Customer --> UC7
+An_Existing_Customer --> UC9
+An_Existing_Customer --> UC10
+An_Existing_Customer --> UC11
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC7 <|-- UC3
+UC8 <|-- UC3
+UC10 ..> UC12 : <<include>>
+UC10 ..> UC13 : <<include>>
+UC11 ..> UC14 : <<include>>
+ATM_Admin <|-- UC7
+@enduml
+",1,0,0,1,1,GENERALIZATION_CYCLE,0.90241617
+S028451,repo-genmymodel-uml/data/d52f011a-474c-47e3-ac60-4d878c9eab83.xmi,fp_6aef2f4ea407,USE_CASE,bank,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""ATM Machine"" as ATM_Machine
+usecase ""Insert the ATM Card"" as UC1
+usecase ""Enter PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw CASH"" as UC4
+usecase ""Check Balances"" as UC5
+usecase ""Deposit Cash/Cheque"" as UC6
+usecase ""Transfer Funds"" as UC7
+usecase ""Change PIN"" as UC8
+usecase ""Collect CARD"" as UC9
+usecase ""Select Account  From"" as UC10
+usecase ""Select Account  To"" as UC11
+usecase ""Confirm Account"" as UC12
+usecase ""Enter Amount to Transfer"" as UC13
+usecase ""Any other Usage/Transaction Fee"" as UC14
+usecase ""Confirm Amount"" as UC15
+usecase ""View New Balance"" as UC16
+usecase ""Print Receipt"" as UC17
+usecase ""Any more Transaction"" as UC18
+Existing_Customer --> UC1
+Existing_Customer --> UC2
+ATM_Machine --> UC1
+ATM_Machine --> UC2
+ATM_Machine --> UC3
+Existing_Customer --> UC3
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC7 <|-- UC3
+UC8 <|-- UC3
+UC10 <|-- UC7
+UC11 <|-- UC10
+UC13 <|-- UC11
+UC11 ..> UC12 : <<include>>
+UC15 <|-- UC13
+UC13 ..> UC14 : <<extend>>
+UC16 <|-- UC15
+UC15 ..> UC17 : <<extend>>
+UC18 <|-- UC16
+UC9 <|-- UC18
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.99800915
+S028482,repo-genmymodel-uml/data/d52f011a-474c-47e3-ac60-4d878c9eab83.xmi,fp_6aef2f4ea407,USE_CASE,bank,GENERALIZATION_CYCLE,11,44,VALID,-1,,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""ATM Machine"" as ATM_Machine
+usecase ""Insert the ATM Card"" as UC1
+usecase ""Enter PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw CASH"" as UC4
+usecase ""Check Balances"" as UC5
+usecase ""Deposit Cash/Cheque"" as UC6
+usecase ""Transfer Funds"" as UC7
+usecase ""Change PIN"" as UC8
+usecase ""Collect CARD"" as UC9
+usecase ""Select Account  From"" as UC10
+usecase ""Select Account  To"" as UC11
+usecase ""Confirm Account"" as UC12
+usecase ""Enter Amount to Transfer"" as UC13
+usecase ""Any other Usage/Transaction Fee"" as UC14
+usecase ""Confirm Amount"" as UC15
+usecase ""View New Balance"" as UC16
+usecase ""Print Receipt"" as UC17
+usecase ""Any more Transaction"" as UC18
+Existing_Customer --> UC1
+Existing_Customer --> UC2
+ATM_Machine --> UC1
+ATM_Machine --> UC2
+ATM_Machine --> UC3
+Existing_Customer --> UC3
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC7 <|-- UC3
+UC8 <|-- UC3
+UC10 <|-- UC7
+UC11 <|-- UC10
+UC13 <|-- UC11
+UC11 ..> UC12 : <<include>>
+UC15 <|-- UC13
+UC13 ..> UC14 : <<extend>>
+UC16 <|-- UC15
+UC15 ..> UC17 : <<extend>>
+UC18 <|-- UC16
+UC9 <|-- UC18
+UC3 <|-- UC6
+@enduml
+",1,0,0,1,1,VALID,0.71304446
+S028629,repo-genmymodel-uml/data/_yVsqELKMEee7sYPkE4-GPA.xmi,fp_6e1c72e0c7ab,USE_CASE,computer,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor user
+usecase ""sign up"" as UC1
+usecase ""enter name"" as UC2
+usecase ""enter email"" as UC3
+usecase ""enter address"" as UC4
+usecase ""enter phone"" as UC5
+usecase ""enter password"" as UC6
+usecase ""log in"" as UC7
+usecase ""email"" as UC8
+usecase ""password"" as UC9
+UC2 ..> UC1 : <<include>>
+UC6 ..> UC1 : <<include>>
+UC7 ..> UC1 : <<include>>
+user --> UC7
+UC9 ..> UC7 : <<include>>
+UC4 ..> UC1 : <<include>>
+user --> UC1
+UC8 ..> UC7 : <<include>>
+UC5 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+@enduml
+",0,0,0,0,0,INVALID_USECASE_RELATIONSHIP,0.996774
+S028659,repo-genmymodel-uml/data/_yVsqELKMEee7sYPkE4-GPA.xmi,fp_6e1c72e0c7ab,USE_CASE,computer,INVALID_USECASE_RELATIONSHIP,12,14,VALID,-1,,"@startuml
+left to right direction
+actor user
+usecase ""sign up"" as UC1
+usecase ""enter name"" as UC2
+usecase ""enter email"" as UC3
+usecase ""enter address"" as UC4
+usecase ""enter phone"" as UC5
+usecase ""enter password"" as UC6
+usecase ""log in"" as UC7
+usecase ""email"" as UC8
+usecase ""password"" as UC9
+user --> UC1
+user ..> UC7 : <<include>>
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC5 ..> UC1 : <<include>>
+UC6 ..> UC1 : <<include>>
+UC7 ..> UC1 : <<include>>
+UC8 ..> UC7 : <<include>>
+UC9 ..> UC7 : <<include>>
+@enduml
+",1,0,0,1,1,VALID,0.9593098
+S032880,repo-genmymodel-uml/data/_2xwCoN8EEemZHaiox11UDg.xmi,fp_88249e00e46f,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+abstract class BJPlayer {
+  isBusted : Boolean
+  currentHand() : HandDeck
+}
+class JLabel
+class Gambler {
+  hand : HandDeck
+  profile
+  money : Integer
+  stand()
+  doubleDown()
+  split(parameter : String)
+}
+class Dealer {
+  hand : HandDeck
+  cardTotalLimit : Integer
+  currentHand() : HandDeck
+  reveal()
+}
+class BlackjackGame {
+  deck : Deck
+  dealer : Dealer
+  player : Gambler
+  bet : Integer
+  dealCard() : Card
+}
+class Deck {
+  cards : Card
+  shuffle()
+  Deck(numberOfDeck : Integer)
+  deal() : Card
+}
+class HandDeck {
+  cards : Card
+  total : Integer
+  addCard(parameter : Card)
+}
+class Card {
+  name : String
+  avatar : String
+  valueSoft : String
+  valueHard : String
+  suit : String
+  rank : String
+  Count : Integer
+  Card(suit : Integer, rank : Integer) : Card
+}
+class Strategy {
+  game : BlackjackGame
+  getSuggestion() : String
+}
+class JButton
+class Player
+Player <|-- BJPlayer
+BJPlayer <|-- Gambler
+BJPlayer <|-- Dealer
+Deck <|-- HandDeck
+BlackjackGame ""0..1"" -- ""0..1"" Strategy : Blackjack_Strategy
+Gambler ""0..1"" -- ""0..1"" BlackjackGame : Player_Blackjack
+Dealer ""0..1"" -- ""0..1"" BlackjackGame : Dealer_Blackjack
+BlackjackGame ""0..1"" -- ""0..1"" Deck : Blackjack_Deck
+Dealer ""1"" o-- ""1"" HandDeck : Dealer_Hand
+Gambler ""1"" o-- ""1..*"" HandDeck : Player_Hand
+HandDeck ""0..1"" o-- ""0..*"" Card : Hand_Card
+Deck ""0..1"" o-- ""0..*"" Card : Deck_Card
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9906053
