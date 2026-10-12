@@ -41,6 +41,7 @@ class NormalizedUmlElement(DomainModel):
     uml_id: str
     element_type: str
     name: str
+    plantuml_source: str | None = None
 
 
 class NormalizedUiArtifact(DomainModel):

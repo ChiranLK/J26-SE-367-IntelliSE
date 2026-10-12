@@ -2,7 +2,8 @@
 
 Component 3 is the Intelligent Development and Deployment Assistant for
 traceable software generation. The service currently provides its FastAPI
-foundation and deterministic validation of provisional C1/C2 input packages.
+foundation, deterministic validation of provisional C1/C2 input packages,
+limited-subset design understanding, and evidence-based stack selection.
 
 Generation, traceability persistence, scoped regeneration, deployment, and
 real integrations with Components 1, 2, and 4 remain future work.
@@ -81,6 +82,26 @@ The C1/C2 schemas are provisional assumptions documented in
 `contracts/README.md`. Reference fields are retained as opaque provenance;
 their presence does not prove authentic client approval or upstream
 validation.
+
+## Understand design and select a stack
+
+The versioned FR-C3-02 endpoints are:
+
+```text
+POST /api/v1/design-context
+POST /api/v1/stack-selection
+```
+
+Use Swagger UI to pass the accepted `GenerationContext` to the first endpoint,
+then include its `DesignContext` response with reviewed selection criteria in
+the second endpoint. The full parsing subset, scoring formula, policy weights,
+uncertainties, generator availability, and manual approval points are recorded
+in `docs/design-understanding-and-stack-selection.md`.
+
+Stack selection evaluates exactly React/Angular × Node.js/Spring Boot. Task 4
+does not implement a working generator, so all candidates currently report
+`NOT_IMPLEMENTED`. React + Node.js is separately identified as the sole October
+21 MVP generator target; unavailable selections are never silently substituted.
 
 ## Configuration
 

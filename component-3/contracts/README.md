@@ -15,6 +15,10 @@ replace them before real integration.
 - C2 supplies the same project ID and source SRS version, a UML version,
   release and validation states, a design validation-report reference, UML
   elements, structured UI/wireframe artifacts, and requirement-to-UML anchors.
+- A provisional UML element may carry an optional `plantuml_source`. Task 4
+  requires this source for elements labeled `CLASS` or `CLASS_DIAGRAM`; input
+  validation preserves it without claiming that Component 3 validated its
+  semantics.
 - Identifiers use letters, digits, dots, underscores, colons, and hyphens.
 - Reference strings are opaque and are preserved; Component 3 does not resolve
   them or establish their authenticity.
@@ -27,3 +31,6 @@ future integration work.
 External transport models remain separate from Component 3's internal
 `GenerationContext` domain model so confirmed contracts can later be adapted
 without redefining downstream state.
+
+The stack-selection request is a Component 3 decision input, not a C1 or C2
+contract. Its evidence references and confidence values require manual review.
