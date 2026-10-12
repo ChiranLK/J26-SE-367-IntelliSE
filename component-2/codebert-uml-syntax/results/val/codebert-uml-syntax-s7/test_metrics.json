@@ -1,0 +1,176 @@
+{
+  "test_rows": 1513,
+  "accuracy": 0.9484,
+  "macro_f1": 0.9563,
+  "weighted_f1": 0.9494,
+  "per_class": {
+    "VALID": {
+      "precision": 0.9349,
+      "recall": 0.8008,
+      "f1-score": 0.8627,
+      "support": 251.0
+    },
+    "MISSING_STARTUML": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 84.0
+    },
+    "MISSING_ENDUML": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 84.0
+    },
+    "UNMATCHED_BRACE": {
+      "precision": 0.6535,
+      "recall": 0.9022,
+      "f1-score": 0.758,
+      "support": 92.0
+    },
+    "INVALID_RELATIONSHIP": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 168.0
+    },
+    "INVALID_CLASS_DECLARATION": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 80.0
+    },
+    "INVALID_MEMBER_SYNTAX": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 76.0
+    },
+    "INVALID_MULTIPLICITY": {
+      "precision": 1.0,
+      "recall": 0.9688,
+      "f1-score": 0.9841,
+      "support": 64.0
+    },
+    "INVALID_USECASE_DECLARATION": {
+      "precision": 1.0,
+      "recall": 0.8295,
+      "f1-score": 0.9068,
+      "support": 88.0
+    },
+    "UNSUPPORTED_TOKEN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 168.0
+    },
+    "DUPLICATE_ELEMENT": {
+      "precision": 0.9171,
+      "recall": 1.0,
+      "f1-score": 0.9568,
+      "support": 166.0
+    },
+    "GENERALIZATION_CYCLE": {
+      "precision": 0.981,
+      "recall": 0.9904,
+      "f1-score": 0.9856,
+      "support": 104.0
+    },
+    "INVALID_USECASE_RELATIONSHIP": {
+      "precision": 0.9667,
+      "recall": 0.9886,
+      "f1-score": 0.9775,
+      "support": 88.0
+    }
+  },
+  "error_detection": {
+    "PlantUML only": {
+      "precision": 1.0,
+      "recall": 0.5721,
+      "f1": 0.7278
+    },
+    "Rule linter only": {
+      "precision": 1.0,
+      "recall": 0.3154,
+      "f1": 0.4795
+    },
+    "UML rules only": {
+      "precision": 1.0,
+      "recall": 0.2837,
+      "f1": 0.442
+    },
+    "Deterministic gate (PlantUML OR linter OR rules)": {
+      "precision": 1.0,
+      "recall": 0.9287,
+      "f1": 0.963
+    },
+    "CodeBERT only": {
+      "precision": 0.9615,
+      "recall": 0.9889,
+      "f1": 0.975
+    },
+    "Full gate (deterministic OR CodeBERT)": {
+      "precision": 0.9619,
+      "recall": 1.0,
+      "f1": 0.9806
+    }
+  },
+  "parser_silent_errors": {
+    "count": 540,
+    "caught_by_codebert": 539
+  },
+  "missed_by_deterministic": {
+    "count": 90,
+    "caught_by_codebert": 90
+  },
+  "codebert_after_deterministic_gate": {
+    "0.5": {
+      "precision": 0.6475,
+      "recall": 1.0,
+      "f1": 0.786,
+      "flagged": 139
+    },
+    "0.7": {
+      "precision": 0.6522,
+      "recall": 1.0,
+      "f1": 0.7895,
+      "flagged": 138
+    },
+    "0.9": {
+      "precision": 0.9474,
+      "recall": 1.0,
+      "f1": 0.973,
+      "flagged": 95
+    },
+    "0.95": {
+      "precision": 0.9474,
+      "recall": 1.0,
+      "f1": 0.973,
+      "flagged": 95
+    }
+  },
+  "macro_f1_by_diagram_type": {
+    "CLASS": 0.9404,
+    "USE_CASE": 0.9806
+  },
+  "macro_f1_by_domain": {
+    "airport": 0.9242,
+    "bank": 0.963,
+    "computer": 0.9462,
+    "computerarchitecture": 0.9449,
+    "course": 0.9647,
+    "elevator": 0.9116,
+    "eventmanagement": 0.9091,
+    "health": 1.0,
+    "recruitment": 1.0,
+    "rental": 0.9303,
+    "restaurant": 0.9651,
+    "shopping": 0.9563,
+    "smarthouse": 0.9856,
+    "store": 0.9497,
+    "ticket": 0.9715,
+    "transport": 0.8924
+  },
+  "latency_ms_per_diagram": 24.5,
+  "device": "cuda"
+}

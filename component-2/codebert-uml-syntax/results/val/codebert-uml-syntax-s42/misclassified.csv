@@ -1,0 +1,686 @@
+sample_id,diagram_id,group,diagram_type,domain,label,label_id,mutated_line,parser_status,parser_line,parser_message,text,true_err,parser_err,lint_err,rules_err,det_err,pred,confidence
+S011324,repo-genmymodel-uml/data/8e89b16c-3645-4d62-a63c-015f48416c5d.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,15,ERROR,15,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+actor Student
+usecase ""Books"" as UC1
+usecase ""Requests"" as UC2
+usecase ""Reference Books"" as UC3
+usecase ""Reminders"" as UC4
+usecase ""Foreign Resources"" as UC5
+usecase ""Music CD's"" as UC6
+usecase ""Videos"" as UC7
+usecase ""Software"" as UC8
+usecase ""Magazines"" as UC9
+use case ""Reshelving Books"" as UC10
+usecase ""Renew Magazine Subscription"" as UC11
+usecase ""Order New Resources"" as UC12
+usecase ""Computers"" as UC13
+usecase ""Internet"" as UC14
+usecase ""Acquisition"" as UC15
+usecase ""Retirement"" as UC16
+usecase ""Other Libraries' Holdings"" as UC17
+usecase ""Overdue Fine"" as UC18
+Library_Staff --> UC4
+Library_Staff --> UC7
+Library_Staff --> UC13
+Library_Staff --> UC14
+Library_Staff --> UC16
+Library_Staff --> UC15
+Library_Staff --> UC12
+Library_Staff --> UC11
+Library_Staff --> UC10
+Library_Staff --> UC5
+Library_Staff --> UC3
+Library_Staff --> UC9
+Library_Staff --> UC8
+Library_Staff --> UC2
+Library_Staff --> UC1
+Library_Staff --> UC6
+Library_Staff --> UC17
+Faculty --> UC5
+Faculty --> UC3
+Faculty --> UC2
+Student --> UC6
+Student --> UC14
+Faculty --> UC14
+Faculty --> UC6
+Faculty --> UC13
+Faculty --> UC7
+Faculty --> UC8
+Faculty --> UC9
+Faculty --> UC1
+Faculty --> UC17
+Student --> UC17
+Student --> UC1
+Student --> UC9
+Student --> UC8
+Student --> UC7
+Student --> UC13
+Student --> UC2
+Student --> UC3
+Library_Staff --> UC18
+Faculty --> UC18
+Student --> UC18
+@enduml
+",1,1,0,0,1,VALID,0.8461613
+S011363,repo-genmymodel-uml/data/_b32rMMEKEeeEXb8Dudo6PQ.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,7,ERROR,7,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Librarian
+actor Book
+usecase ""Reserve Book"" as UC1
+use case ""Check Out Book"" as UC2
+usecase ""Check In Book"" as UC3
+usecase ""Mail 2 Week Reminders"" as UC4
+usecase ""Acquisition of Books"" as UC5
+usecase ""Retirement of Books"" as UC6
+usecase ""Retired"" as UC7
+usecase ""Acquired"" as UC8
+usecase ""Checked In"" as UC9
+usecase ""Checked Out"" as UC10
+Patron --> UC2
+Patron --> UC3
+Patron --> UC1
+Librarian --> UC2
+Librarian --> UC3
+Librarian --> UC1
+Librarian --> UC4
+Librarian --> UC5
+Librarian --> UC6
+Book --> UC7
+Book --> UC8
+Book --> UC9
+Book --> UC10
+@enduml
+",1,1,0,0,1,VALID,0.81710035
+S011402,repo-genmymodel-uml/data/_b4Mf4MNvEeeWu-SLkciAbg.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Student
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+rectangle ""Library Management"" {
+  usecase ""Check In Item"" as UC1
+  use case ""Request Book"" as UC2
+  usecase ""Overdue Notification"" as UC3
+  usecase ""Check Out Item"" as UC4
+  usecase ""Charge Late Fee"" as UC5
+  usecase ""Reserve Book For Semester"" as UC6
+  usecase ""Manage Reference Materials"" as UC7
+  usecase ""Organize Books"" as UC8
+  usecase ""Renew Magazine Subscriptions"" as UC9
+  usecase ""Order New Resources"" as UC10
+  usecase ""Extended Checkout"" as UC11
+  usecase ""Manage Computer Terminals"" as UC12
+}
+Patron --> UC1
+Patron --> UC2
+Patron --> UC4
+Library_Staff --> UC6
+Faculty --> UC6
+Library_Staff --> UC7
+Library_Staff --> UC8
+Library_Staff --> UC9
+Library_Staff --> UC10
+Student --> UC11
+Faculty --> UC11
+Library_Staff --> UC12
+UC3 ..> UC4 : <<extend>>
+UC3 ..> UC5 : <<include>>
+UC11 ..> UC4 : <<extend>>
+Patron <|-- Student
+Patron <|-- Faculty
+@enduml
+",1,1,0,0,1,VALID,0.9580333
+S011403,repo-genmymodel-uml/data/_b4Mf4MNvEeeWu-SLkciAbg.xmi,f0746dea-00fc-46fa-b2f1-73b0e880e582,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,16,ERROR,16,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Patron
+actor Student
+actor Faculty
+actor ""Library Staff"" as Library_Staff
+rectangle ""Library Management"" {
+  usecase ""Check In Item"" as UC1
+  usecase ""Request Book"" as UC2
+  usecase ""Overdue Notification"" as UC3
+  usecase ""Check Out Item"" as UC4
+  usecase ""Charge Late Fee"" as UC5
+  usecase ""Reserve Book For Semester"" as UC6
+  usecase ""Manage Reference Materials"" as UC7
+  usecase ""Organize Books"" as UC8
+  use case ""Renew Magazine Subscriptions"" as UC9
+  usecase ""Order New Resources"" as UC10
+  usecase ""Extended Checkout"" as UC11
+  usecase ""Manage Computer Terminals"" as UC12
+}
+Patron --> UC1
+Patron --> UC2
+Patron --> UC4
+Library_Staff --> UC6
+Faculty --> UC6
+Library_Staff --> UC7
+Library_Staff --> UC8
+Library_Staff --> UC9
+Library_Staff --> UC10
+Student --> UC11
+Faculty --> UC11
+Library_Staff --> UC12
+UC3 ..> UC4 : <<extend>>
+UC3 ..> UC5 : <<include>>
+UC11 ..> UC4 : <<extend>>
+Patron <|-- Student
+Patron <|-- Faculty
+@enduml
+",1,1,0,0,1,VALID,0.95813555
+S012512,repo-genmymodel-uml/data/dc902674-fd02-45e5-a9ee-fb6be6d38789.xmi,fp_3d85584d52c6,CLASS,computer,VALID,0,-1,VALID,-1,,"@startuml
+class PaypalProcessor {
+  process()
+}
+class SetExpressCheckoutProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class GetExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class DoExpressCheckoutDetailsProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+interface IPaypalProcessor {
+  getPaypalRequest()
+  getPaypalResponse()
+  process()
+}
+class SetExpressCheckoutAdapter
+class GetExpressCheckoutDetailsAdapter
+class DoExpressCheckoutDetailsAdapter
+IPaypalProcessor <|.. SetExpressCheckoutProcessor
+IPaypalProcessor <|.. GetExpressCheckoutDetailsProcessor
+IPaypalProcessor <|.. DoExpressCheckoutDetailsProcessor
+PaypalProcessor ..> IPaypalProcessor
+SetExpressCheckoutProcessor ..> SetExpressCheckoutAdapter
+GetExpressCheckoutDetailsProcessor ..> GetExpressCheckoutDetailsAdapter
+DoExpressCheckoutDetailsProcessor ..> DoExpressCheckoutDetailsAdapter
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.9989203
+S012584,repo-genmymodel-uml/data/_fMJ0YG3dEeqhRdvvYtDJdw.xmi,_jnq9cg3deeqhrdvvytdjdw,CLASS,store,VALID,0,-1,VALID,-1,,"@startuml
+class OrdenesPedidos {
+  -codigo : String
+  -fecha : String
+}
+class Proveedor {
+  -nit : String
+  -nombre : String
+  -direccion : String
+  -telefono : String
+}
+class Factura {
+  -codigo : String
+  -fecha : String
+}
+class Elementos {
+  -referencia : String
+  -clasificacion : String
+}
+class SolicitudSuministros {
+  -codigo : String
+  -fecha : String
+}
+class dependencia {
+  -codigo : String
+  -nombre : String
+  -responsable : String
+}
+class Pedidos {
+  -codigo : String
+  -fecha : String
+}
+Proveedor ""1"" -- ""0..*"" OrdenesPedidos : es enviado
+Pedidos ""0..*"" -- ""1"" Proveedor : provee
+OrdenesPedidos ""0..*"" -- ""1..*"" Elementos : conforma
+SolicitudSuministros ""0..*"" -- ""1..*"" Elementos : relaciona
+SolicitudSuministros ""1..*"" -- ""0..1"" OrdenesPedidos : genera
+dependencia ""1"" -- ""1..*"" SolicitudSuministros : realiza
+Factura ""0..*"" -- ""1"" Proveedor : elabora
+Factura ""0..*"" -- ""1..*"" Elementos : factura
+@enduml
+",0,0,0,0,0,DUPLICATE_ELEMENT,0.99139625
+S014245,repo-genmymodel-uml/data/_nha88MfSEeiZ3fREAmKE6g.xmi,fp_183643fd3efd,USE_CASE,restaurant,INVALID_USECASE_DECLARATION,8,21,ERROR,21,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Registered user"" as Registered_user
+actor Admin
+actor ""Delivery person"" as Delivery_person
+actor ""Pizza chef"" as Pizza_chef
+usecase ""Create Account"" as UC1
+usecase ""Sign in"" as UC2
+usecase ""Save favourite flavour"" as UC3
+usecase ""Create your own pizza"" as UC4
+usecase ""View meal deal"" as UC5
+usecase ""View pizza flavours"" as UC6
+usecase ""Checkout"" as UC7
+usecase ""Make payment"" as UC8
+usecase ""Pay at delivery"" as UC9
+usecase ""Pay online"" as UC10
+usecase ""Order tarcking"" as UC11
+usecase ""Pre-order"" as UC12
+usecase ""Change toppings"" as UC13
+usecase ""Add item"" as UC14
+use case ""Add Address"" as UC15
+usecase ""validate account"" as UC16
+UC9 <|-- UC8
+UC10 <|-- UC8
+UC8 ..> UC7 : <<extend>>
+UC13 ..> UC4 : <<extend>>
+UC13 ..> UC14 : <<extend>>
+UC14 ..> UC5 : <<extend>>
+UC14 ..> UC6 : <<extend>>
+UC14 ..> UC7 : <<extend>>
+UC15 ..> UC7 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.84923714
+S015292,repo-genmymodel-uml/data/6006d6f5-e088-4725-8095-7c38fd415c56.xmi,fp_ef9abf4aadaf,USE_CASE,ticket,INVALID_USECASE_DECLARATION,8,20,ERROR,20,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""User / Passenger"" as User_Passenger
+actor ""Travel Agent"" as Travel_Agent
+actor ""Airline Agency"" as Airline_Agency
+usecase ""Register/ Login"" as UC1
+usecase ""Create Account"" as UC2
+usecase ""Valid"" as UC3
+usecase ""Invalid"" as UC4
+usecase ""Review Order"" as UC5
+usecase ""Check Tickets"" as UC6
+usecase ""Choose Flight"" as UC7
+usecase ""Proceed to Checkout"" as UC8
+usecase ""Make Payment / Checkout"" as UC9
+usecase ""Valid Details"" as UC10
+usecase ""Invalid Details"" as UC11
+usecase ""Pay Travel Agent"" as UC12
+usecase ""Travel Agent Fee"" as UC13
+usecase ""Reserve a Ticket"" as UC14
+use case ""Receive Payment"" as UC15
+User_Passenger --> UC1
+User_Passenger --> UC5
+User_Passenger --> UC6
+User_Passenger --> UC7
+User_Passenger --> UC8
+User_Passenger --> UC9
+User_Passenger --> UC12
+Airline_Agency --> UC14
+Airline_Agency --> UC15
+Airline_Agency --> UC5
+Travel_Agent --> UC1
+Travel_Agent --> UC5
+Travel_Agent --> UC6
+Travel_Agent --> UC7
+Travel_Agent --> UC8
+Travel_Agent --> UC9
+Travel_Agent --> UC12
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC10 ..> UC9 : <<include>>
+UC11 ..> UC9 : <<include>>
+UC12 ..> UC13 : <<include>>
+@enduml
+",1,1,0,0,1,VALID,0.84000003
+S019015,repo-genmymodel-uml/data/d6570ac2-1abd-4af4-8d0f-767cd6f637ba.xmi,fp_0c7880c799ca,USE_CASE,elevator,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor passenger
+actor ""technical/ maintenance enginee"" as technical_maintenance_enginee
+usecase ""move up / move down"" as UC1
+usecase ""call help"" as UC2
+usecase ""hold"" as UC3
+usecase ""close door"" as UC4
+use case ""start"" as UC5
+usecase ""stop"" as UC6
+usecase ""call elevator cabin"" as UC7
+usecase ""select floor"" as UC8
+usecase ""release door"" as UC9
+usecase ""open door"" as UC10
+usecase ""check load"" as UC11
+usecase ""change location"" as UC12
+passenger --> UC1
+passenger --> UC2
+passenger --> UC3
+passenger --> UC4
+technical_maintenance_enginee --> UC5
+technical_maintenance_enginee --> UC6
+UC1 ..> UC7 : <<include>>
+UC3 ..> UC9 : <<extend>>
+UC4 ..> UC11 : <<include>>
+UC8 ..> UC1 : <<extend>>
+UC9 ..> UC4 : <<include>>
+UC10 ..> UC11 : <<extend>>
+UC10 ..> UC4 : <<include>>
+UC12 ..> UC7 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8056671
+S019567,repo-genmymodel-uml/data/ea1bd4d0-e109-4c89-b830-50e10a4f345e.xmi,fp_13da401abc18,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,10,ERROR,10,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Water sensor"" as Water_sensor
+actor ""Movement sensor"" as Movement_sensor
+actor ""Door sensor"" as Door_sensor
+actor ""Window sensor"" as Window_sensor
+actor ""Heat sensor"" as Heat_sensor
+actor ""Smoke sensor"" as Smoke_sensor
+rectangle ""home security and safety system"" {
+  use case ""sound  flood  alarm"" as UC1
+  usecase ""sound  burglar  alarm"" as UC2
+  usecase ""sound  fire  alarm"" as UC3
+}
+Water_sensor --> UC1
+Window_sensor --> UC2
+Door_sensor --> UC2
+Movement_sensor --> UC2
+Heat_sensor --> UC3
+Smoke_sensor --> UC3
+@enduml
+",1,1,0,0,1,VALID,0.86660945
+S020207,repo-genmymodel-uml/data/_bMFKQLzsEeedTfUoC-GfaA.xmi,fp_20bd0a4fdc66,USE_CASE,smarthouse,INVALID_USECASE_DECLARATION,8,20,ERROR,20,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Home Owner"" as Home_Owner
+actor ""Smoke detector"" as Smoke_detector
+usecase ""Configure wireless network card"" as UC1
+usecase ""Configure mobile app/web interface"" as UC2
+usecase ""Configure system sensors"" as UC3
+usecase ""Configure smart sensors"" as UC4
+usecase ""Enable sensor"" as UC5
+usecase ""Disable sensor"" as UC6
+usecase ""Set enable/disable time of day"" as UC7
+usecase ""Set time before burglar alarm"" as UC8
+usecase ""Configure police"" as UC9
+usecase ""Configure brigade"" as UC10
+usecase ""System reset"" as UC11
+usecase ""Authenticate user"" as UC12
+usecase ""Detect smoke"" as UC13
+usecase ""Smoke alarm"" as UC14
+usecase ""Fire alarm"" as UC15
+use case ""Indicate fire"" as UC16
+usecase ""Arm burglar alarm"" as UC17
+usecase ""Disarm burglar alarm"" as UC18
+Home_Owner --> UC1
+Home_Owner --> UC2
+Home_Owner --> UC3
+Home_Owner --> UC5
+Home_Owner --> UC6
+Home_Owner --> UC7
+Home_Owner --> UC8
+Home_Owner --> UC9
+Home_Owner --> UC10
+Home_Owner --> UC11
+Smoke_detector --> UC13
+UC1 ..> UC12 : <<include>>
+UC2 ..> UC12 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC12 : <<include>>
+UC4 ..> UC12 : <<include>>
+UC5 ..> UC12 : <<include>>
+UC6 ..> UC12 : <<include>>
+UC7 ..> UC12 : <<include>>
+UC8 ..> UC12 : <<include>>
+UC9 ..> UC12 : <<include>>
+UC10 ..> UC12 : <<include>>
+UC11 ..> UC12 : <<include>>
+UC13 ..> UC14 : <<include>>
+UC14 ..> UC16 : <<include>>
+UC15 ..> UC14 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.84392196
+S023915,repo-genmymodel-uml/data/_utGxoHqSEeqeQcxm9hmzHw.xmi,fp_e0cf77e13c38,USE_CASE,shopping,INVALID_USECASE_DECLARATION,8,5,ERROR,5,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Admin
+use case ""Register"" as UC1
+usecase ""Validation"" as UC2
+usecase ""Menu Category"" as UC3
+usecase ""Login"" as UC4
+usecase ""Combo Package"" as UC5
+usecase ""General Package"" as UC6
+usecase ""Phone No."" as UC7
+usecase ""Other Requirement"" as UC8
+usecase ""Order"" as UC9
+usecase ""Location"" as UC10
+usecase ""Insert Details"" as UC11
+usecase ""Authentication"" as UC12
+usecase ""View Details"" as UC13
+usecase ""Reply"" as UC14
+usecase ""Food Received"" as UC15
+usecase ""Bill"" as UC16
+usecase ""Pay by Credit Card Only"" as UC17
+usecase ""Logout"" as UC18
+usecase ""Send Bill"" as UC19
+Customer --> UC1
+Customer --> UC4
+Customer --> UC3
+Customer --> UC11
+Customer --> UC9
+Customer --> UC15
+Customer --> UC17
+Customer --> UC18
+Admin --> UC4
+Admin --> UC18
+Admin --> UC13
+Admin --> UC14
+Admin --> UC19
+UC1 ..> UC2 : <<include>>
+UC4 ..> UC12 : <<include>>
+UC3 <|-- UC5
+UC3 <|-- UC6
+UC11 <|-- UC7
+UC11 <|-- UC8
+UC11 <|-- UC10
+UC16 ..> UC9 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.8328584
+S024413,repo-genmymodel-uml/data/81059392-9a65-4588-8f2b-b2755a4d8a5a.xmi,fp_2b79c7a27c9b,USE_CASE,rental,INVALID_USECASE_DECLARATION,8,7,ERROR,7,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Employee
+actor Manager
+rectangle ""Car Rental"" {
+  use case ""Register"" as UC1
+  usecase ""Search car"" as UC2
+  usecase ""Maintain car information"" as UC3
+  usecase ""View monthly reservation reports"" as UC4
+  usecase ""Generate bill"" as UC5
+  usecase ""Pay bill"" as UC6
+}
+usecase ""Login"" as UC7
+usecase ""View daily reservation reports"" as UC8
+usecase ""Order"" as UC9
+usecase ""Select car"" as UC10
+Customer --> UC6
+Customer --> UC7
+Customer --> UC1
+Manager --> UC4
+Employee --> UC8
+Employee --> UC3
+Employee --> UC7
+Employee --> UC5
+Employee --> UC9
+Employee <|-- Manager
+@enduml
+",1,1,0,0,1,VALID,0.82132167
+S024414,repo-genmymodel-uml/data/81059392-9a65-4588-8f2b-b2755a4d8a5a.xmi,fp_2b79c7a27c9b,USE_CASE,rental,INVALID_USECASE_DECLARATION,8,9,ERROR,9,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor Customer
+actor Employee
+actor Manager
+rectangle ""Car Rental"" {
+  usecase ""Register"" as UC1
+  usecase ""Search car"" as UC2
+  use case ""Maintain car information"" as UC3
+  usecase ""View monthly reservation reports"" as UC4
+  usecase ""Generate bill"" as UC5
+  usecase ""Pay bill"" as UC6
+}
+usecase ""Login"" as UC7
+usecase ""View daily reservation reports"" as UC8
+usecase ""Order"" as UC9
+usecase ""Select car"" as UC10
+Customer --> UC6
+Customer --> UC7
+Customer --> UC1
+Manager --> UC4
+Employee --> UC8
+Employee --> UC3
+Employee --> UC7
+Employee --> UC5
+Employee --> UC9
+Employee <|-- Manager
+@enduml
+",1,1,0,0,1,VALID,0.8257552
+S027289,repo-genmymodel-uml/data/f4c9c061-f7e1-4e5b-b44e-418effce2039.xmi,fp_2c81fcff286a,USE_CASE,sales,INVALID_USECASE_DECLARATION,8,22,ERROR,22,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Sales Manager"" as Sales_Manager
+actor ""Sales Assistant"" as Sales_Assistant
+actor Customer
+rectangle ""Sales Management System"" {
+  usecase ""login"" as UC1
+  usecase ""print receipt"" as UC2
+  usecase ""add item"" as UC3
+  usecase ""approves item"" as UC4
+  usecase ""view person details"" as UC5
+  usecase ""view details"" as UC6
+  usecase ""add person"" as UC7
+  usecase ""view item details"" as UC8
+  usecase ""update username"" as UC9
+  usecase ""update password"" as UC10
+  usecase ""update person"" as UC11
+  usecase ""search product"" as UC12
+  usecase ""change password"" as UC13
+  usecase ""view sales details"" as UC14
+  usecase ""Sales Quotes"" as UC15
+  use case ""Sales Invoice"" as UC16
+}
+Sales_Assistant --> UC13
+Sales_Manager --> UC1
+Sales_Manager --> UC13
+Sales_Manager --> UC2
+Sales_Manager --> UC7
+Sales_Manager --> UC5
+Sales_Manager --> UC8
+Sales_Manager --> UC9
+Sales_Manager --> UC11
+Sales_Manager --> UC10
+Sales_Manager --> UC12
+Sales_Assistant --> UC14
+Sales_Assistant --> UC4
+Sales_Assistant --> UC2
+Sales_Assistant --> UC1
+Sales_Manager --> UC3
+UC3 ..> UC4 : <<include>>
+UC6 <|-- UC5
+UC6 <|-- UC14
+@enduml
+",1,1,0,0,1,VALID,0.89110684
+S028333,repo-genmymodel-uml/data/_qIFmUAW6EeqkL8atiZCKNw.xmi,fp_daa20eccba28,USE_CASE,bank,INVALID_USECASE_DECLARATION,8,18,ERROR,18,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""Bank/Server"" as Bank_Server
+usecase ""Insert Card"" as UC1
+usecase ""Input PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw Cash"" as UC4
+usecase ""Deposit Money"" as UC5
+usecase ""Check Balance"" as UC6
+usecase ""Change PIN"" as UC7
+usecase ""Transfer fund"" as UC8
+usecase ""Select Ac (Saving/Checking)"" as UC9
+usecase ""Select/Enter Amount"" as UC10
+usecase ""Verify Balance"" as UC11
+usecase ""Collect Cash"" as UC12
+usecase ""Print Reciept"" as UC13
+use case ""Send SMS"" as UC14
+Existing_Customer --> UC1
+Bank_Server --> UC1
+Existing_Customer --> UC2
+Bank_Server --> UC3
+Existing_Customer --> UC9
+Existing_Customer --> UC10
+Existing_Customer --> UC12
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC8 <|-- UC3
+UC7 <|-- UC3
+UC10 ..> UC11 : <<include>>
+UC12 ..> UC13 : <<extend>>
+UC12 ..> UC14 : <<extend>>
+@enduml
+",1,1,0,0,1,VALID,0.821791
+S028451,repo-genmymodel-uml/data/d52f011a-474c-47e3-ac60-4d878c9eab83.xmi,fp_6aef2f4ea407,USE_CASE,bank,VALID,0,-1,VALID,-1,,"@startuml
+left to right direction
+actor ""Existing Customer"" as Existing_Customer
+actor ""ATM Machine"" as ATM_Machine
+usecase ""Insert the ATM Card"" as UC1
+usecase ""Enter PIN"" as UC2
+usecase ""Display MENU"" as UC3
+usecase ""Withdraw CASH"" as UC4
+usecase ""Check Balances"" as UC5
+usecase ""Deposit Cash/Cheque"" as UC6
+usecase ""Transfer Funds"" as UC7
+usecase ""Change PIN"" as UC8
+usecase ""Collect CARD"" as UC9
+usecase ""Select Account  From"" as UC10
+usecase ""Select Account  To"" as UC11
+usecase ""Confirm Account"" as UC12
+usecase ""Enter Amount to Transfer"" as UC13
+usecase ""Any other Usage/Transaction Fee"" as UC14
+usecase ""Confirm Amount"" as UC15
+usecase ""View New Balance"" as UC16
+usecase ""Print Receipt"" as UC17
+usecase ""Any more Transaction"" as UC18
+Existing_Customer --> UC1
+Existing_Customer --> UC2
+ATM_Machine --> UC1
+ATM_Machine --> UC2
+ATM_Machine --> UC3
+Existing_Customer --> UC3
+UC4 <|-- UC3
+UC5 <|-- UC3
+UC6 <|-- UC3
+UC7 <|-- UC3
+UC8 <|-- UC3
+UC10 <|-- UC7
+UC11 <|-- UC10
+UC13 <|-- UC11
+UC11 ..> UC12 : <<include>>
+UC15 <|-- UC13
+UC13 ..> UC14 : <<extend>>
+UC16 <|-- UC15
+UC15 ..> UC17 : <<extend>>
+UC18 <|-- UC16
+UC9 <|-- UC18
+@enduml
+",0,0,0,0,0,GENERALIZATION_CYCLE,0.99839944
+S028640,repo-genmymodel-uml/data/_yVsqELKMEee7sYPkE4-GPA.xmi,fp_6e1c72e0c7ab,USE_CASE,computer,INVALID_USECASE_DECLARATION,8,8,ERROR,8,Syntax Error? (Assumed diagram type: component); ,"@startuml
+left to right direction
+actor user
+usecase ""sign up"" as UC1
+usecase ""enter name"" as UC2
+usecase ""enter email"" as UC3
+usecase ""enter address"" as UC4
+use case ""enter phone"" as UC5
+usecase ""enter password"" as UC6
+usecase ""log in"" as UC7
+usecase ""email"" as UC8
+usecase ""password"" as UC9
+user --> UC1
+user --> UC7
+UC2 ..> UC1 : <<include>>
+UC3 ..> UC1 : <<include>>
+UC4 ..> UC1 : <<include>>
+UC5 ..> UC1 : <<include>>
+UC6 ..> UC1 : <<include>>
+UC7 ..> UC1 : <<include>>
+UC8 ..> UC7 : <<include>>
+UC9 ..> UC7 : <<include>>
+@enduml
+",1,1,0,0,1,VALID,0.8465963
