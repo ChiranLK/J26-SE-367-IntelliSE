@@ -190,7 +190,10 @@ class StackSelectionService:
                 "C1/C2 contracts and evidence references remain provisional.",
                 "Criteria values, confidence levels, and policy weights require review.",
                 "A human must approve the selected stack before code generation.",
-                "Task 4 provides no working generator; availability is NOT_IMPLEMENTED.",
+                (
+                    "Task 6 implements only the React + Node.js MVP generator; "
+                    "Angular and Spring Boot combinations remain NOT_IMPLEMENTED."
+                ),
             ),
             researcher_approval=ResearcherApproval(
                 decisions=(
@@ -252,7 +255,11 @@ class StackSelectionService:
             normalized_score=normalized_score,
             hard_constraint_failures=tuple(failures),
             criterion_scores=criterion_scores,
-            generator_availability=GeneratorAvailability.NOT_IMPLEMENTED,
+            generator_availability=(
+                GeneratorAvailability.IMPLEMENTED
+                if self._is_mvp_generator_target(candidate)
+                else GeneratorAvailability.NOT_IMPLEMENTED
+            ),
             october_21_mvp_generator_target=self._is_mvp_generator_target(candidate),
             decision_reason=(
                 "Eligible pending comparison."

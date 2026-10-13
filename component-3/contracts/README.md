@@ -34,3 +34,9 @@ without redefining downstream state.
 
 The stack-selection request is a Component 3 decision input, not a C1 or C2
 contract. Its evidence references and confidence values require manual review.
+
+The Task 6 `CodeGenerationRequest` is also an internal Component 3 request
+contract. Its `ProvisionalStackApproval` is an explicit workflow assertion for
+the research MVP, not authoritative evidence of the caller's identity or
+approval power. Real integration must replace that trust boundary with the
+team's approved identity and authorization mechanism.

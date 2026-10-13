@@ -1,6 +1,6 @@
 """Immutable local-LLM requests, responses, and reproducibility metadata."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator
 
@@ -27,6 +27,7 @@ class LLMInferenceRequest(DomainModel):
 
     messages: Annotated[tuple[LLMMessage, ...], Field(min_length=1)]
     prompt_template_version: Annotated[str, Field(min_length=1)]
+    structured_output_schema: dict[str, Any] | None = None
 
     @field_validator("prompt_template_version")
     @classmethod

@@ -80,7 +80,7 @@ def test_scoring_is_deterministic_and_evaluates_exactly_four_candidates(
     assert first.selected_stack.october_21_mvp_generator_target is True
     assert (
         first.selected_stack.generator_availability
-        is GeneratorAvailability.NOT_IMPLEMENTED
+        is GeneratorAvailability.IMPLEMENTED
     )
     assert sum(first.criteria_weights.model_dump().values()) == pytest.approx(1.0)
     assert [

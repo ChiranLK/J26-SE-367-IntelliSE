@@ -4,11 +4,13 @@ Component 3 is the Intelligent Development and Deployment Assistant for
 traceable software generation. The service currently provides its FastAPI
 foundation, deterministic validation of provisional C1/C2 input packages,
 limited-subset design understanding, evidence-based stack selection, and a
-reusable local-only Ollama inference client.
+reusable local-only Ollama inference client. Task 6 adds a narrow React +
+Node.js Task Management generation MVP using deterministic scaffolding and one
+locally model-generated business-logic module.
 
-Full application generation, traceability persistence, scoped regeneration,
-deployment, and real integrations with Components 1, 2, and 4 remain future
-work.
+General-purpose application generation, traceability persistence, scoped
+regeneration, deployment, and real integrations with Components 1, 2, and 4
+remain future work.
 
 ## Requirements
 
@@ -101,10 +103,51 @@ the second endpoint. The full parsing subset, scoring formula, policy weights,
 uncertainties, generator availability, and manual approval points are recorded
 in `docs/design-understanding-and-stack-selection.md`.
 
-Stack selection evaluates exactly React/Angular × Node.js/Spring Boot. Task 4
-does not implement a working generator, so all candidates currently report
-`NOT_IMPLEMENTED`. React + Node.js is separately identified as the sole October
-21 MVP generator target; unavailable selections are never silently substituted.
+Stack selection evaluates exactly React/Angular x Node.js/Spring Boot. The
+narrow React + Node.js Task Management generator now reports `IMPLEMENTED`.
+Angular + Node.js, React + Spring Boot, and Angular + Spring Boot remain
+`NOT_IMPLEMENTED`; unavailable selections are never silently substituted.
+
+## Generate the Task Management MVP
+
+Task 6 accepts matching validated/design/selection contexts plus an explicit
+provisional stack approval. That approval is a caller assertion, not
+cryptographic proof of real C1/C2 or client authorization.
+
+Run the fixed simulated-input experiment from `component-3/`:
+
+```powershell
+# Use the real configured local Ollama model for the service module
+python -m intelise_c3.scripts.generate_task_mvp --mode local-llm
+
+# Or use the explicitly labeled deterministic development mode
+python -m intelise_c3.scripts.generate_task_mvp --mode template-only
+```
+
+Outputs are written under
+`generated-workspaces/task-management-manual/<generation-run-id>/`. The
+command prints the exact workspace and manifest paths. It writes source only;
+it never installs dependencies or executes, tests, starts, or deploys the
+generated application.
+
+Manifest version 2 records canonical run-evidence hashes and precise typed
+traceability links instead of assigning every source identity to every file.
+Unjustified UI and runtime-database mappings are explicitly marked
+`UNRESOLVED` / `REVIEW_REQUIRED`. The generated runtime repository remains
+`IN_MEMORY`; `schema.sql` is design-only. SHA-256 integrity checks detect
+changes but do not authenticate upstream evidence or stop an attacker from
+recomputing hashes.
+
+The existing FastAPI application also exposes:
+
+```text
+POST /api/v1/generation-runs
+```
+
+Its body requires a `GenerationContext`, `DesignContext`,
+`StackSelectionReport`, provisional approval, mode, and safe workspace name.
+See `docs/local-llm-code-generation-mvp.md` for the trust boundary, manifest,
+template/model split, output controls, inspection commands, and limitations.
 
 ## Configuration
 
@@ -116,6 +159,7 @@ OLLAMA_MODEL=qwen2.5-coder:3b
 OLLAMA_TIMEOUT_SECONDS=120
 OLLAMA_TEMPERATURE=0.0
 OLLAMA_NUM_CTX=4096
+GENERATED_WORKSPACE_ROOT=generated-workspaces
 ```
 
 Copy `.env.example` to `.env` for local overrides. Never commit `.env` or
@@ -203,11 +247,19 @@ or model to be running.
 - Settings validation failure: use a loopback HTTP endpoint and a non-cloud
   model identifier. Component 3 intentionally refuses remote inference.
 
-## Current local-inference limitations
+## Current generation and local-inference limitations
 
-- The client provides reusable inference plumbing only; full React + Node.js
-  generation is not implemented.
-- Model output is treated as untrusted text and is never executed automatically.
+- Only the narrow simulated Task Management React + Node.js generator is
+  implemented. Angular and Spring Boot generators are not implemented.
+- Deterministic templates create the scaffold; only
+  `backend/src/services/taskService.js` is produced by Ollama in `LOCAL_LLM`
+  mode.
+- Model output is treated as untrusted, structurally constrained source and is
+  never executed automatically.
+- Generated dependencies are not installed, and the application is not built
+  or tested automatically. Direct dependency versions are pinned, but no
+  dependency audit result is claimed. Follow the restricted-environment audit
+  procedure in `docs/local-llm-code-generation-mvp.md` if separately approved.
 - Local endpoint validation, cloud-tag rejection, and remote-model metadata
   checks are MVP controls, not a complete host-level network sandbox. Ollama
   should also be configured in local-only mode by the operator.

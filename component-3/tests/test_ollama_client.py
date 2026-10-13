@@ -61,6 +61,7 @@ def _run_with_handler(
     handler: Handler,
     *,
     model_info_handler: Handler | None = None,
+    inference_request: LLMInferenceRequest | None = None,
 ):
     async def invoke():
         def routed_handler(request: httpx.Request) -> httpx.Response:
@@ -85,7 +86,7 @@ def _run_with_handler(
         async with httpx.AsyncClient(transport=transport) as http_client:
             client = OllamaLLMClient(_settings(), http_client=http_client)
             assert isinstance(client, LLMClient)
-            return await client.generate(_request())
+            return await client.generate(inference_request or _request())
 
     return asyncio.run(invoke())
 
@@ -123,6 +124,26 @@ def test_successful_response_uses_structured_local_chat_request() -> None:
     assert result.metadata.response.total_duration_ns == 2_000_000
     assert result.metadata.response.prompt_eval_count == 14
     assert result.metadata.response.eval_count == 3
+
+
+def test_structured_output_schema_is_forwarded_to_local_ollama() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"content": {"type": "string"}},
+        "required": ["content"],
+    }
+    inference_request = _request().model_copy(
+        update={"structured_output_schema": schema}
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert payload["format"] == schema
+        return httpx.Response(200, json=_valid_response())
+
+    result = _run_with_handler(handler, inference_request=inference_request)
+
+    assert result.output_text == "validated result"
 
 
 @pytest.mark.parametrize(

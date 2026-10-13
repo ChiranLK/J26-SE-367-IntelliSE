@@ -1,9 +1,12 @@
 """Environment-based settings for Component 3."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+COMPONENT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -38,6 +41,10 @@ class Settings(BaseSettings):
         le=131072,
         description="Requested Ollama context-window size.",
     )
+    generated_workspace_root: Path = Field(
+        default=COMPONENT_ROOT / "generated-workspaces",
+        description="Controlled root for generated application artifacts.",
+    )
 
     @field_validator("ollama_base_url")
     @classmethod
@@ -68,6 +75,21 @@ class Settings(BaseSettings):
         if lower_name.endswith(":cloud") or lower_name.endswith("-cloud"):
             raise ValueError("OLLAMA_MODEL must identify a local, non-cloud model.")
         return normalized
+
+    @field_validator("generated_workspace_root")
+    @classmethod
+    def require_component_workspace_root(cls, value: Path) -> Path:
+        """Keep API-created workspaces inside Component 3's controlled area."""
+        resolved = (
+            value.resolve()
+            if value.is_absolute()
+            else (COMPONENT_ROOT / value).resolve()
+        )
+        if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
+            raise ValueError(
+                "GENERATED_WORKSPACE_ROOT must be a child of component-3/."
+            )
+        return resolved
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -80,11 +80,10 @@ The service always evaluates exactly these four candidates:
 4. Angular + Spring Boot
 
 Generator availability is excluded from scoring and reported after selection.
-Task 4 does not implement a generator, so every current candidate is reported
-as `NOT_IMPLEMENTED`. React + Node.js alone is separately marked as the
-October 21 MVP generator target. When that generator is actually delivered and
-verified, its availability can be changed without altering selection scores.
-An Angular or Spring Boot selection is returned honestly and is never replaced
+Task 6 now reports React + Node.js as `IMPLEMENTED` for its narrow Task
+Management generation MVP. Angular + Node.js, React + Spring Boot, and Angular
++ Spring Boot remain `NOT_IMPLEMENTED`. Availability does not alter selection
+scores. An unavailable selection is returned honestly and is never replaced
 silently.
 
 ## Hard compatibility constraints
@@ -227,9 +226,9 @@ before treating the policy or its result as approved:
 - [ ] Inspect all four candidate calculations, hard-constraint failures, and
   selected/rejected explanations.
 - [ ] Explicitly approve the selected stack before downstream generation.
-- [ ] Stop if the selected stack reports `NOT_IMPLEMENTED`. React + Node.js
-  being the MVP target is not evidence that its generator is operational, and
-  it must never be substituted automatically for another selected stack.
+- [ ] Stop if the selected stack reports `NOT_IMPLEMENTED`. Task 6 implements
+  only the narrow React + Node.js Task Management generator, and it must never
+  be substituted automatically for another selected stack.
 
 ## API demonstration sequence
 

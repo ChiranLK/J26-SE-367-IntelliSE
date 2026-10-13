@@ -91,6 +91,8 @@ class OllamaLLMClient:
                 "num_ctx": self._settings.ollama_num_ctx,
             },
         }
+        if request.structured_output_schema is not None:
+            payload["format"] = request.structured_output_schema
         endpoint = (
             f"{str(self._settings.ollama_base_url).rstrip('/')}/api/chat"
         )
