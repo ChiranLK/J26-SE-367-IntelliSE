@@ -6,8 +6,8 @@ from textwrap import dedent
 from intelise_c3.domain.generation import GeneratedArtifactType
 
 TEMPLATE_SET_VERSION = "react-node-task-scaffold-v2"
-GENERATOR_VERSION = "react-node-task-mvp-v2"
-TRACEABILITY_MAPPING_POLICY_VERSION = "task-mvp-traceability-v1"
+GENERATOR_VERSION = "react-node-task-mvp-v3"
+TRACEABILITY_MAPPING_POLICY_VERSION = "task-mvp-traceability-v2"
 
 CAPABILITY_CREATE_LIST = "TASK_CREATE_LIST"
 CAPABILITY_UPDATE_DELETE = "TASK_UPDATE_DELETE"

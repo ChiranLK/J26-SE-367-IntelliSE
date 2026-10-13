@@ -853,15 +853,18 @@ class CodeGenerationService:
 
         for anchor in source.requirement_uml_anchors:
             add_link(
-                TraceEntityType.REQUIREMENT,
-                anchor.requirement_id,
-                TraceRelationType.DERIVED_FROM,
                 TraceEntityType.UML_ELEMENT,
                 anchor.uml_id,
+                TraceRelationType.DERIVED_FROM,
+                TraceEntityType.REQUIREMENT,
+                anchor.requirement_id,
                 evidence_kind="SOURCE_C2_ANCHOR",
-                rule="C2_REQUIREMENT_UML_ANCHOR_V1",
+                rule="C2_UML_DERIVED_FROM_REQUIREMENT_V2",
                 refs=(anchor.anchor_id,),
-                details="Preserved verbatim from the accepted C2 anchor.",
+                details=(
+                    "The C2 UML element is downstream of the accepted C1 "
+                    "requirement according to the exact C2 anchor."
+                ),
             )
 
         for record in records:

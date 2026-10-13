@@ -45,6 +45,10 @@ class Settings(BaseSettings):
         default=COMPONENT_ROOT / "generated-workspaces",
         description="Controlled root for generated application artifacts.",
     )
+    traceability_store_path: Path = Field(
+        default=COMPONENT_ROOT / "runtime" / "traceability" / "traceability.sqlite3",
+        description="Local append-only SQLite traceability snapshot store.",
+    )
 
     @field_validator("ollama_base_url")
     @classmethod
@@ -88,6 +92,25 @@ class Settings(BaseSettings):
         if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
             raise ValueError(
                 "GENERATED_WORKSPACE_ROOT must be a child of component-3/."
+            )
+        return resolved
+
+    @field_validator("traceability_store_path")
+    @classmethod
+    def require_component_traceability_store(cls, value: Path) -> Path:
+        """Keep mutable graph persistence inside Component 3."""
+        resolved = (
+            value.resolve()
+            if value.is_absolute()
+            else (COMPONENT_ROOT / value).resolve()
+        )
+        if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
+            raise ValueError(
+                "TRACEABILITY_STORE_PATH must be inside component-3/."
+            )
+        if resolved.suffix not in {".sqlite", ".sqlite3", ".db"}:
+            raise ValueError(
+                "TRACEABILITY_STORE_PATH must be a .sqlite, .sqlite3, or .db file."
             )
         return resolved
 

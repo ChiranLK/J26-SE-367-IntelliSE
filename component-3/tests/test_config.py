@@ -13,6 +13,7 @@ def test_configuration_defaults_are_valid(monkeypatch) -> None:
     monkeypatch.delenv("OLLAMA_TEMPERATURE", raising=False)
     monkeypatch.delenv("OLLAMA_NUM_CTX", raising=False)
     monkeypatch.delenv("GENERATED_WORKSPACE_ROOT", raising=False)
+    monkeypatch.delenv("TRACEABILITY_STORE_PATH", raising=False)
 
     settings = Settings(_env_file=None)
 
@@ -24,6 +25,7 @@ def test_configuration_defaults_are_valid(monkeypatch) -> None:
     assert settings.ollama_temperature == 0.0
     assert settings.ollama_num_ctx == 4096
     assert settings.generated_workspace_root.name == "generated-workspaces"
+    assert settings.traceability_store_path.name == "traceability.sqlite3"
 
 
 def test_environment_overrides_are_loaded(monkeypatch) -> None:
@@ -33,6 +35,9 @@ def test_environment_overrides_are_loaded(monkeypatch) -> None:
     monkeypatch.setenv("OLLAMA_TEMPERATURE", "0.2")
     monkeypatch.setenv("OLLAMA_NUM_CTX", "8192")
     monkeypatch.setenv("GENERATED_WORKSPACE_ROOT", "custom-workspaces")
+    monkeypatch.setenv(
+        "TRACEABILITY_STORE_PATH", "runtime/custom-traceability/graph.db"
+    )
 
     settings = Settings(_env_file=None)
 
@@ -42,6 +47,7 @@ def test_environment_overrides_are_loaded(monkeypatch) -> None:
     assert settings.ollama_temperature == 0.2
     assert settings.ollama_num_ctx == 8192
     assert settings.generated_workspace_root.name == "custom-workspaces"
+    assert settings.traceability_store_path.name == "graph.db"
 
 
 @pytest.mark.parametrize(
@@ -69,5 +75,13 @@ def test_generated_workspace_root_cannot_escape_component_directory() -> None:
     with pytest.raises(ValidationError):
         Settings(
             generated_workspace_root=COMPONENT_ROOT.parent / "outside-c3",
+            _env_file=None,
+        )
+
+
+def test_traceability_store_cannot_escape_component_directory() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            traceability_store_path=COMPONENT_ROOT.parent / "outside-c3.sqlite3",
             _env_file=None,
         )
