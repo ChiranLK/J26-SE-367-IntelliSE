@@ -279,6 +279,7 @@ class InputValidationService:
                     uml_id=element.uml_id,
                     element_type=element.element_type,
                     name=element.name,
+                    plantuml_source=element.plantuml_source,
                 )
                 for element in package.c2.uml_elements
             ),

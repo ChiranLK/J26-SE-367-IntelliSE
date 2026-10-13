@@ -78,6 +78,7 @@ class C2UmlElement(ProvisionalContractModel):
     uml_id: Identifier
     element_type: NonEmptyText
     name: NonEmptyText
+    plantuml_source: str | None = None
 
 
 class C2UiArtifact(ProvisionalContractModel):

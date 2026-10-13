@@ -5,10 +5,14 @@ or Component 2 contracts, and their reference values are not authentic client
 approval or validation evidence.
 
 - `valid_input_package.json` is the assumed C1/C2 contract version `1.0` happy
-  path used to test normalization and identity preservation.
+  path used to test normalization and identity preservation. Its
+  `UML-CLASS-001` source uses only the documented limited PlantUML subset.
 - `invalid_input_scenarios.json` contains named mutations applied to the valid
   fixture to exercise each deterministic rejection rule.
 - `malformed_input.json` is intentionally invalid JSON for the HTTP 422 test.
+- `task_management_input_package.json` is the explicitly simulated Task 6
+  input for the narrow Task Management MVP. Its approval and validation
+  references remain unauthenticated labels rather than upstream proof.
 
 The mutation format is test-only scaffolding designed to keep assumptions
 centralized and easy to revise when the C1 and C2 owners provide real schemas.
