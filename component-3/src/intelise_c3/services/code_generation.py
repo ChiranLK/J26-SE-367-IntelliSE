@@ -47,6 +47,11 @@ from intelise_c3.generation.evidence import (
     build_input_hashes,
     compute_evidence_digest,
 )
+from intelise_c3.generation.js_safety import (
+    SAFETY_CHECKED_MODULES,
+    allows_secure_uuid,
+    inspect_javascript_safety,
+)
 from intelise_c3.generation.templates import (
     API_TASK_CREATE,
     API_TASK_DELETE,
@@ -71,13 +76,6 @@ from intelise_c3.llm.client import LLMClient
 from intelise_c3.prompts.code_generation import (
     MODEL_GENERATED_PATH,
     build_task_service_prompt,
-)
-
-_FORBIDDEN_MODEL_CONTENT = re.compile(
-    r"\b(?:child_process|node:fs|fs/promises|process\.|eval\s*\(|"
-    r"new\s+Function\s*\(|import\s*(?:\(|\s)|require\s*\(|"
-    r"Object\.assign\s*\(|Math\.random\s*\()",
-    re.IGNORECASE,
 )
 
 _REQUIRED_SERVICE_PATTERNS = {
@@ -130,6 +128,12 @@ _REQUIRED_SERVICE_PATTERNS = {
     ),
     "service error code metadata": re.compile(r"error\.code\s*=\s*code"),
 }
+
+
+# Public alias reused by scoped regeneration so that a patched module must pass
+# the same interface rules as a freshly generated one. The host-access safety
+# policy is shared through ``intelise_c3.generation.js_safety``.
+REQUIRED_SERVICE_PATTERNS = _REQUIRED_SERVICE_PATTERNS
 
 
 class _ModelGeneratedArtifact(BaseModel):
@@ -410,11 +414,18 @@ class CodeGenerationService:
                 f"The model may generate only '{MODEL_GENERATED_PATH}'.",
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
-        if _FORBIDDEN_MODEL_CONTENT.search(parsed.content):
+        safety = inspect_javascript_safety(
+            parsed.content, allow_secure_uuid=allows_secure_uuid(parsed.path)
+        )
+        if not safety.accepted:
             self._fail(
                 "UNSAFE_GENERATED_CONTENT",
                 "ollama.response.content",
-                "The generated module contains a forbidden host-access construct.",
+                (
+                    "The generated module is rejected by the conservative lexical "
+                    f"safety policy ({safety.describe()}). This is not a JavaScript "
+                    "sandbox."
+                ),
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         missing_interfaces = tuple(
@@ -481,6 +492,20 @@ class CodeGenerationService:
                     f"Generated artifact '{artifact.relative_path}' is empty.",
                     status.HTTP_422_UNPROCESSABLE_CONTENT,
                 )
+            if artifact.relative_path in SAFETY_CHECKED_MODULES:
+                template_safety = inspect_javascript_safety(
+                    artifact.content,
+                    allow_secure_uuid=allows_secure_uuid(artifact.relative_path),
+                )
+                if not template_safety.accepted:
+                    self._fail(
+                        "UNSAFE_GENERATED_CONTENT",
+                        "artifacts",
+                        f"Generated artifact '{artifact.relative_path}' is rejected by "
+                        f"the conservative lexical safety policy "
+                        f"({template_safety.describe()}).",
+                        status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    )
 
     @staticmethod
     def _validate_relative_path(relative_path: str) -> None:

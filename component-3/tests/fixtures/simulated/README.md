@@ -18,5 +18,13 @@ approval or validation evidence.
   a unit-test oracle whose independent human-review status is `NOT_VERIFIED`;
   it is not Component 4 output, production evidence, or a benchmark result.
 
+- `scoped_regeneration/c4_defect_scenarios.json` holds eight SIMULATED
+  Component 4 defect scenarios for Task 9. Expected modules and statuses are
+  implementer-authored labels with review status `NOT_INDEPENDENTLY_REVIEWED`;
+  they check the impact-selection method and are not Component 4 output or a
+  benchmark. `buggy_task_service.js` is a deliberately defective baseline
+  service and `repaired_task_service.js` is the deterministic mock "model"
+  response; neither is real model output.
+
 The mutation format is test-only scaffolding designed to keep assumptions
 centralized and easy to revise when the C1 and C2 owners provide real schemas.
