@@ -1,36 +1,3 @@
-"""STEP 9 - Build a REAL-error test set with your local Qwen2.5-Coder.
-
-Mutation data (step 4) can be easier than real LLM mistakes (proposal Table 6).
-This script asks your local Qwen2.5-Coder to generate class and use-case diagrams
-from SRS requirements many times (temperature > 0 for variety), strips markdown,
-checks every output with PlantUML + the linter + the UML rules, and saves
-everything to CSV with a SUGGESTED label.
-
-Part A - collect (needs Ollama / LM Studio running):
-  python step9_collect_qwen_outputs.py --srs sample_srs.json --runs 5
-  -> data/qwen_outputs.csv
-
-Part B - review BY HAND (Excel). For every row:
-  * read 'text' (and 'problems'), decide the correct label and write it in 'label'
-    (the suggestion is already there; change it if it is wrong or '?')
-  * if a diagram has several errors, label the FIRST one (top-most line), because
-    the refinement loop also fixes one problem at a time
-  * if the error fits none of the 13 labels, write OTHER
-  * write Y in 'reviewed' when you are done with the row
-  Review the VALID rows too: a diagram can pass every check and still be broken.
-
-Part C - finalize (makes the test file step 7 can read):
-  python step9_collect_qwen_outputs.py --finalize
-  -> data/qwen_test.csv, then:
-  python step7_evaluate.py --test data/qwen_test.csv --out results/qwen
-
-Keep this data ONLY as a final test set - never train on it - and report its
-scores separately from the synthetic test set.
-
-Works with any OpenAI-compatible local server:
-  Ollama   : --base_url http://localhost:11434/v1 --model qwen2.5-coder:7b-instruct
-  LM Studio: --base_url http://localhost:1234/v1  --model qwen2.5-coder-7b-instruct
-"""
 import argparse
 import csv
 import json
@@ -41,14 +8,17 @@ from collections import Counter
 from common import LABELS, check_texts, lint, normalize, strip_llm_wrapping
 from uml_rules import check_rules
 
-PROMPTS = {
-    "CLASS": ("Generate a UML class diagram in PlantUML for the requirements below. Include classes, attributes "
-              "with types, methods, relationships and multiplicities only when the requirements support them. "
-              "Return only PlantUML code starting with @startuml and ending with @enduml.\n\nRequirements:\n{req}"),
-    "USE_CASE": ("Generate a UML use case diagram in PlantUML for the requirements below. Include actors, use cases "
-                 "inside a system rectangle, associations and <<include>>/<<extend>> only when supported. "
-                 "Return only PlantUML code starting with @startuml and ending with @enduml.\n\nRequirements:\n{req}"),
-}
+# Same prompts as run_pipeline.py, so this test set shows the mistakes the
+# real pipeline will see.
+from prompts import TEMPLATES, generation_prompt
+
+
+def srs_text(proj):
+    lines = [f"Project: {proj.get('name', proj['project_id'])}", "", "Functional Requirements:", ""]
+    lines += [f"{r['id']}: {r['text']}" for r in proj["requirements"]]
+    return "\n".join(lines)
+
+
 # linter problem -> closest label (only a suggestion; you confirm it by hand)
 LINT_TO_LABEL = {"MISSING_STARTUML": "MISSING_STARTUML", "MISSING_ENDUML": "MISSING_ENDUML",
                  "UNMATCHED_BRACE": "UNMATCHED_BRACE"}
@@ -93,12 +63,12 @@ def collect(a):
     projects = json.load(open(a.srs, encoding="utf-8"))
     rows = []
     for proj in projects:
-        req = "\n".join(f"{r['id']}: {r['text']}" for r in proj["requirements"])
-        for dtype, tpl in PROMPTS.items():
+        srs = srs_text(proj)
+        for dtype in TEMPLATES:
             for run in range(a.runs):
                 t0 = time.time()
                 try:
-                    raw = chat(a.base_url, a.model, tpl.format(req=req), a.temperature)
+                    raw = chat(a.base_url, a.model, generation_prompt(srs, dtype), a.temperature)
                 except Exception as ex:                   # server stopped / timeout: keep going
                     print(f"{proj['project_id']} {dtype} run {run}: FAILED ({ex})")
                     continue
@@ -163,7 +133,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--srs", default="sample_srs.json")
     ap.add_argument("--base_url", default="http://localhost:11434/v1")
-    ap.add_argument("--model", default="qwen2.5-coder:7b-instruct")
+    ap.add_argument("--model", default="qwen2.5-coder:7b")
     ap.add_argument("--runs", type=int, default=5)
     ap.add_argument("--temperature", type=float, default=0.8)
     ap.add_argument("--out", default="data/qwen_outputs.csv")

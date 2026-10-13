@@ -1,0 +1,8 @@
+@startuml
+left to right direction
+actor Customer
+actor Admin
+usecase "Place Order" as UC1
+Customer --> UC1
+Customer -- Admin
+@enduml

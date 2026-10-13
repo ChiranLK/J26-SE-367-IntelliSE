@@ -1,230 +1,228 @@
-"""UML well-formedness rules for Class and Use Case diagrams written in PlantUML.
-
-PlantUML happily renders all of the problems below, but the UML standard does
-not allow them. We use these checks in step 4 to keep the labels clean:
-  1. a diagram is only used as VALID if it breaks NONE of these rules, and
-  2. a rule-based mutant is only kept if the rule really detects the violation.
-
-Rules (label -> meaning)
-  DUPLICATE_ELEMENT            the same class is defined twice WITH a body ({ ... }), or the
-                               same actor / use case name is declared twice (two shapes)
-  GENERALIZATION_CYCLE         A inherits from B and B (directly or indirectly) from A
-  INVALID_USECASE_RELATIONSHIP an actor in <<include>>/<<extend>>, an association
-                               between two actors, a plain association between two
-                               use cases, or generalization between an actor and a
-                               use case
-
-Self-test on your real data (run after step 3):
-  python uml_rules.py data/clean.csv
-"""
 import csv
 import re
 import sys
 from collections import Counter, defaultdict
 
-# ----------------------------------------------------------------------------- regexes
-END = r'(?:"[^"]+"|\([^)]+\)|:[^:\s][^:]*:|[\w.$]+)'          # Name, "Name", (Use case), :Actor:
-ARROW = r'(?:<\|?|\*|o|#|x|\+|\^|\})?\|?(?:-+|\.+)(?:\[[^\]]*\]|left|right|up|down|le|ri|do|l|r|u|d)?[-.]*\|?(?:>|\*|o|#|x|\+|\^|\{)?'
-REL = re.compile(rf'^\s*(?P<a>{END})\s*(?:"[^"]*"\s*)?(?P<arrow>{ARROW})\s*(?:"[^"]*"\s*)?(?P<b>{END})\s*(?::\s*(?P<label>.*))?$')
-
-CLASS_DECL = re.compile(r'^\s*(?P<kw>abstract\s+class|abstract|class|interface|enum|annotation|entity)\s+'
-                        r'(?P<name>"[^"]+"|[\w.$]+)(?:\s+as\s+(?P<alias>[\w.$]+))?(?P<rest>.*)$', re.I)
-UC_KW_DECL = re.compile(r'^\s*(?P<kw>actor|usecase)\s+(?P<name>"[^"]+"|\([^)]+\)|:[^:]+:|[\w.$]+)'
-                        r'(?:\s+as\s+(?P<alias>"[^"]+"|\([^)]+\)|[\w.$]+))?', re.I)
-UC_INLINE = re.compile(r'^\s*(?P<name>\([^)]+\)|:[^:]+:)(?:\s+as\s+(?P<alias>[\w.$]+))?\s*$')
-SCOPE = re.compile(r'^\s*(package|namespace|rectangle|frame|folder|node|component)\b\s*(?P<name>"[^"]+"|[\w.$]+)?', re.I)
-INCLUDE_EXTEND = re.compile(r'\b(include|extend)s?\b', re.I)
+from uml_parser import CLASS_DECL, class_bodies, clean_name, display_name, endpoint_kind, kind_lookup, parse
 
 RULE_LABELS = ["DUPLICATE_ELEMENT", "GENERALIZATION_CYCLE", "INVALID_USECASE_RELATIONSHIP"]
 
 
-def clean_name(tok: str) -> str:
-    tok = tok.strip()
-    if len(tok) >= 2 and ((tok[0] == '"' and tok[-1] == '"') or (tok[0] == '(' and tok[-1] == ')')
-                          or (tok[0] == ':' and tok[-1] == ':')):
-        tok = tok[1:-1]
-    return " ".join(tok.split()).lower()
-
-
-def display_name(tok: str) -> str:
-    """Like clean_name but keeps the original letter case (used to write new lines)."""
-    tok = tok.strip()
-    if len(tok) >= 2 and tok[0] + tok[-1] in ('""', "()", "::"):
-        tok = tok[1:-1]
-    return " ".join(tok.split())
-
-
-def token_kind(tok: str):
-    tok = tok.strip()
-    if tok.startswith("(") and tok.endswith(")"):
-        return "usecase"
-    if tok.startswith(":") and tok.endswith(":") and len(tok) > 2:
-        return "actor"
-    return None
-
-
-# ----------------------------------------------------------------------------- parser
-def parse(text: str):
-    """Return (elements, relations).
-    elements : list of dicts {kind, name, ref, scope, line}
-               kind is 'class' / 'actor' / 'usecase'; ref = how other lines refer to it
-    relations: list of dicts {a, b, arrow, label, kind, line}
-               kind is 'generalization' / 'include_extend' / 'association'
-    """
-    elements, relations = [], []
-    stack = []                                      # scope stack (package names or None)
-    for no, raw in enumerate(text.split("\n"), 1):
-        s = raw.strip()
-        if not s or s.startswith("'") or s.startswith("@") or s.lower().startswith(("skinparam", "title", "hide", "show", "left to right", "top to bottom", "note")):
-            continue
-        if s == "}":
-            if stack:
-                stack.pop()
-            continue
-        scope = tuple(x for x in stack if x)
-
-        m = CLASS_DECL.match(s)
-        if m:
-            name = clean_name(m.group("name"))
-            ref = m.group("alias") or m.group("name")
-            elements.append({"kind": "class", "name": name, "display": display_name(m.group("name")), "ref": ref,
-                             "scope": scope, "line": no, "has_body": s.endswith("{")})
-            rest = m.group("rest") or ""
-            for kw in ("extends", "implements"):
-                km = re.search(rf'\b{kw}\s+([\w.$,\s]+?)(?:\{{|$|\bimplements\b|\bextends\b)', rest)
-                if km:
-                    for parent in [p.strip() for p in km.group(1).split(",") if p.strip()]:
-                        relations.append({"a": parent, "b": ref, "arrow": "<|--", "label": "",
-                                          "kind": "generalization", "line": no, "parent": clean_name(parent),
-                                          "child": clean_name(ref)})
-            if s.endswith("{"):
-                stack.append(None)
-            continue
-
-        m = UC_KW_DECL.match(s)
-        if m:
-            kind = m.group("kw").lower()
-            name_tok, alias = m.group("name"), m.group("alias")
-            # 'actor A1 as "Customer"' style: the quoted part is the display name
-            if alias and alias[0] in '"(' and name_tok[0] not in '"(:':
-                name_tok, alias = alias, name_tok
-            elements.append({"kind": kind, "name": clean_name(name_tok), "display": display_name(name_tok), "ref": alias or name_tok,
-                             "scope": scope, "line": no})
-            if s.endswith("{"):
-                stack.append(None)
-            continue
-
-        m = UC_INLINE.match(s)
-        if m:
-            tok = m.group("name")
-            elements.append({"kind": token_kind(tok), "name": clean_name(tok), "display": display_name(tok), "ref": m.group("alias") or tok,
-                             "scope": scope, "line": no})
-            continue
-
-        m = SCOPE.match(s)
-        if m and s.endswith("{"):
-            # only package/namespace create a naming scope; rectangle etc. are just boxes
-            is_ns = m.group(1).lower() in ("package", "namespace")
-            stack.append(clean_name(m.group("name") or "") if is_ns else None)
-            continue
-
-        m = REL.match(s)
-        if m and ("-" in m.group("arrow") or "." in m.group("arrow")):
-            a, b, arrow, label = m.group("a"), m.group("b"), m.group("arrow"), (m.group("label") or "")
-            if arrow.startswith("<|"):
-                kind, parent, child = "generalization", clean_name(a), clean_name(b)
-            elif arrow.endswith("|>"):
-                kind, parent, child = "generalization", clean_name(b), clean_name(a)
-            else:
-                kind, parent, child = ("include_extend" if INCLUDE_EXTEND.search(label) else "association"), None, None
-            relations.append({"a": a, "b": b, "arrow": arrow, "label": label, "kind": kind, "line": no,
-                              "parent": parent, "child": child})
-            # inline (Use case) / :Actor: endpoints also count as elements
-            for tok in (a, b):
-                if token_kind(tok):
-                    elements.append({"kind": token_kind(tok), "name": clean_name(tok), "display": display_name(tok), "ref": tok,
-                                     "scope": scope, "line": no, "inline": True})
-            continue
-
-        if s.endswith("{"):
-            stack.append(None)
-    return elements, relations
-
-
-def endpoint_kind(tok, kinds):
-    """'actor' / 'usecase' / 'class' / None for a relation endpoint"""
-    return token_kind(tok) or kinds.get(clean_name(tok))
-
-
-def _lookup(elements):
-    """map every name and alias (lower-case) -> element kind"""
-    kinds = {}
-    for e in elements:
-        kinds.setdefault(e["name"], e["kind"])
-        kinds.setdefault(clean_name(e["ref"]), e["kind"])
-    return kinds
-
-
-# ----------------------------------------------------------------------------- rules
+# ----------------------------------------------------------------------------- training-time rules
 def check_rules(text: str, diagram_type: str = None):
-    """Return a list of (label, line_no, message). Empty list = follows all rules."""
+    """Return a list of (label, line_no, message). Empty list = no rule broken."""
     elements, relations = parse(text)
     problems = []
+    problems += _duplicates(elements)
+    problems += _generalization_cycles(relations)
+    if diagram_type == "USE_CASE" or any(e["kind"] in ("actor", "usecase") for e in elements):
+        problems += _usecase_relationships(elements, relations)
+    return problems
 
-    # DUPLICATE_ELEMENT: two *declarations* with the same kind + name in the same scope
-    seen = {}
+
+def _duplicates(elements):
+    problems, seen = [], {}
     for e in elements:
         if e.get("inline"):
-            continue                                # (Use case) used inside a relation is a reference, not a definition
+            continue        # (Use case) inside a relation is a reference, not a definition
         if e["kind"] == "class" and not e.get("has_body"):
-            continue                                # 'class A' without a body is a legal forward declaration in
-                                                    # PlantUML (it renders the same class), so it is not a duplicate
+            continue        # a bare 'class A' is a legal forward declaration of the same class
         key = (e["kind"], e["scope"] if e["kind"] == "class" else (), e["name"])
         if key in seen:
             problems.append(("DUPLICATE_ELEMENT", e["line"],
                              f"{e['kind']} '{e['name']}' is already defined on line {seen[key]}"))
         else:
             seen[key] = e["line"]
+    return problems
 
-    # GENERALIZATION_CYCLE: follow child -> parent links
-    parents = defaultdict(set)
-    gen_lines = {}
+
+def _generalization_cycles(relations):
+    parents, first_line = defaultdict(set), {}
     for r in relations:
         if r["kind"] == "generalization":
             parents[r["child"]].add(r["parent"])
-            gen_lines.setdefault((r["child"], r["parent"]), r["line"])
-    reported = set()
-    for (child, parent), line in gen_lines.items():
+            first_line.setdefault((r["child"], r["parent"]), r["line"])
+
+    problems, reported = [], set()
+    for (child, parent), line in first_line.items():
+        # walk up from the parent; reaching the child again means a cycle
         todo, visited = [parent], set()
         while todo:
             n = todo.pop()
             if n == child:
-                cyc = frozenset((child, parent))
-                if cyc not in reported:
-                    problems.append(("GENERALIZATION_CYCLE", line, f"'{child}' and '{parent}' inherit from each other"))
-                    reported.add(cyc)
+                pair = frozenset((child, parent))
+                if pair not in reported:
+                    problems.append(("GENERALIZATION_CYCLE", line,
+                                     f"'{child}' and '{parent}' inherit from each other"))
+                    reported.add(pair)
                 break
             if n not in visited:
                 visited.add(n)
                 todo.extend(parents.get(n, ()))
+    return problems
 
-    # INVALID_USECASE_RELATIONSHIP (only meaningful when actors / use cases exist)
-    kinds = _lookup(elements)
-    is_uc = diagram_type == "USE_CASE" or any(e["kind"] in ("actor", "usecase") for e in elements)
-    if is_uc:
-        for r in relations:
-            ka, kb = endpoint_kind(r["a"], kinds), endpoint_kind(r["b"], kinds)
-            if ka is None or kb is None:
-                continue                            # unknown element -> do not guess
-            pair = {ka, kb}
-            if r["kind"] == "include_extend" and "actor" in pair:
-                problems.append(("INVALID_USECASE_RELATIONSHIP", r["line"], "<<include>>/<<extend>> may only connect two use cases"))
-            elif r["kind"] == "generalization" and pair == {"actor", "usecase"}:
-                problems.append(("INVALID_USECASE_RELATIONSHIP", r["line"], "an actor cannot generalize a use case (or vice versa)"))
-            elif r["kind"] == "association" and ka == kb == "actor":
-                problems.append(("INVALID_USECASE_RELATIONSHIP", r["line"], "two actors may not be associated (only generalization)"))
-            elif r["kind"] == "association" and ka == kb == "usecase":
-                problems.append(("INVALID_USECASE_RELATIONSHIP", r["line"], "two use cases need <<include>>, <<extend>> or generalization, not a plain association"))
+
+def _usecase_relationships(elements, relations):
+    kinds = kind_lookup(elements)
+    problems = []
+    for r in relations:
+        ka, kb = endpoint_kind(r["a"], kinds), endpoint_kind(r["b"], kinds)
+        if ka is None or kb is None:
+            continue        # unknown element, do not guess
+        pair = {ka, kb}
+        msg = None
+        if r["kind"] == "include_extend" and "actor" in pair:
+            msg = "<<include>>/<<extend>> may only connect two use cases"
+        elif r["kind"] == "generalization" and pair == {"actor", "usecase"}:
+            msg = "an actor cannot generalize a use case (or vice versa)"
+        elif r["kind"] == "association" and ka == kb == "actor":
+            msg = "two actors may not be associated (only generalization)"
+        elif r["kind"] == "association" and ka == kb == "usecase":
+            msg = "two use cases need <<include>>, <<extend>> or generalization, not a plain association"
+        if msg:
+            problems.append(("INVALID_USECASE_RELATIONSHIP", r["line"], msg))
+    return problems
+
+
+# ----------------------------------------------------------------------------- validator-only checks
+def check_unconnected(text: str, diagram_type: str = "USE_CASE"):
+    """Elements that take part in no relationship at all: actors and use cases in a
+    use case diagram, classes in a class diagram.
+    Returns (label, line, message, kind, ref)."""
+    elements, relations = parse(text)
+    linked = {clean_name(r["a"]) for r in relations} | {clean_name(r["b"]) for r in relations}
+    wanted = ("class",) if diagram_type == "CLASS" else ("actor", "usecase")
+
+    problems, seen = [], set()
+    for e in elements:
+        if e["kind"] not in wanted or e.get("inline") or (e["kind"], e["name"]) in seen:
+            continue
+        seen.add((e["kind"], e["name"]))
+        if clean_name(e["ref"]) not in linked and e["name"] not in linked:
+            problems.append(("UNCONNECTED_ELEMENT", e["line"],
+                             f"{e['kind']} '{e['display']}' is not connected to anything", e["kind"], e["ref"]))
+    return problems
+
+
+ATTR = re.compile(r"^[+\-#~]?\s*(\w+)\s*:\s*([\w.]+(?:\s*<\s*\w+\s*>)?(?:\[\])?)\s*$")
+
+
+def check_attribute_refs(text: str):
+    """Class diagrams: an attribute typed with another class of the diagram
+    ('customer : Customer', 'seats : List<Seat>') while the two classes have no
+    relationship line. In UML that link should be drawn as an association.
+    Returns (label, line, message, owner, attribute, target, many)."""
+    elements, relations = parse(text)
+    classes = {e["ref"].strip('"') for e in elements if e["kind"] == "class"}
+    linked_pairs = {frozenset((clean_name(r["a"]), clean_name(r["b"]))) for r in relations}
+
+    problems = []
+    for owner, lines in class_bodies(text).items():
+        for no, line in lines:
+            m = ATTR.match(line)
+            if not m:
+                continue
+            typ = m.group(2)
+            inner = re.search(r"<\s*(\w+)\s*>", typ)       # List<Seat> -> Seat
+            many = bool(inner) or typ.endswith("[]")
+            target = inner.group(1) if inner else typ.rstrip("[]")
+            if target in classes and target != owner and \
+                    frozenset((clean_name(owner), clean_name(target))) not in linked_pairs:
+                problems.append(("ATTRIBUTE_INSTEAD_OF_ASSOCIATION", no,
+                                 f"'{line}' in {owner} refers to class {target}, but there is no association line",
+                                 owner, line, target, many))
+    return problems
+
+
+def class_keywords(text: str):
+    """name -> 'class', 'abstract', 'interface' or 'enum'."""
+    kinds = {}
+    for line in text.split("\n"):
+        m = CLASS_DECL.match(line.strip())
+        if m:
+            kw = m.group("kw").lower()
+            kw = "abstract" if kw.startswith("abstract") else kw
+            kinds[clean_name(m.group("alias") or m.group("name"))] = kw
+    return kinds
+
+
+def check_generalization_direction(text: str):
+    """Generalization arrows that point the wrong way, e.g. "Student <|-- Person"
+    when Person is the abstract parent: an abstract class or an interface is
+    drawn as the CHILD of a normal class.
+    (A class with two parents is NOT flagged - real ModelSet diagrams use
+    multiple inheritance on purpose, so that sign gave too many false alarms.)
+    Returns (label, line, message)."""
+    _, relations = parse(text)
+    kinds = class_keywords(text)
+
+    problems = []
+    for r in relations:
+        if r["kind"] != "generalization" or r["parent"] not in kinds or r["child"] not in kinds:
+            continue
+        if kinds[r["child"]] in ("abstract", "interface") and kinds[r["parent"]] == "class":
+            # names as written in the diagram
+            a, b = display_name(r["a"]), display_name(r["b"])
+            parent, child = (a, b) if r["arrow"].startswith("<|") else (b, a)
+            what = "an interface" if kinds[r["child"]] == "interface" else "abstract"
+            problems.append(("REVERSED_GENERALIZATION", r["line"],
+                             f"the generalization direction looks reversed: {child} is {what} "
+                             f"but is drawn as the child of the normal class {parent}"))
+    return problems
+
+
+IS_A = re.compile(r"^\s*(is\s+an?|is\s+a\s+kind\s+of|is\s+a\s+type\s+of|kind\s+of|type\s+of|"
+                  r"extends|inherits(\s+from)?|subclass(\s+of)?|specializ\w*|generaliz\w*)\s*$", re.I)
+
+
+def check_missing_generalization(text: str):
+    """Inheritance drawn as an association labelled "is a" / "extends" / "kind of" ...
+        e.g. Person "1" -- "0..*" Student : is a      -> Person <|-- Student
+    (An abstract class with no subclass is NOT flagged: ModelSet has 11 such
+    diagrams, mostly library classes or unfinished models, and Qwen would
+    invent a subclass to "fix" it.)
+    Returns (label, line, message)."""
+    _, relations = parse(text)
+    kinds = class_keywords(text)
+    is_a = [r for r in relations if r["kind"] == "association" and IS_A.match(r["label"] or "")]
+
+    # the parent is the abstract side; otherwise the class that shows up in
+    # several "is a" lines (Person -- Student, Person -- Lecturer)
+    count = Counter()
+    for r in is_a:
+        count[clean_name(r["a"])] += 1
+        count[clean_name(r["b"])] += 1
+
+    problems = []
+    for r in is_a:
+        a, b = display_name(r["a"]), display_name(r["b"])
+        ka, kb = kinds.get(clean_name(a)), kinds.get(clean_name(b))
+        if kb in ("abstract", "interface") and ka not in ("abstract", "interface"):
+            parent, child = b, a
+        elif ka in ("abstract", "interface") or count[clean_name(a)] >= count[clean_name(b)]:
+            parent, child = a, b
+        else:
+            parent, child = b, a
+        arrow = "<|.." if kinds.get(clean_name(parent)) == "interface" else "<|--"
+        problems.append(("MISSING_GENERALIZATION", r["line"],
+                         f"inheritance is written as an association; write it as \"{parent} {arrow} {child}\""))
+
+    return sorted(problems, key=lambda p: p[1])
+
+
+def check_enum_in_class(text: str):
+    """'class Grade { enum { A, B, C } }' - an enum written inside a class.
+    PlantUML draws it, but Grade is then a normal class. It must be 'enum Grade'.
+    Returns (label, line, message)."""
+    problems = []
+    for owner, lines in class_bodies(text).items():
+        for no, line in lines:
+            m = re.match(r"^enum\s*\{?\s*([^}]*)\}?\s*$", line.strip(), re.I)
+            if m:
+                values = [v.strip() for v in re.split(r"[,\s]+", m.group(1)) if v.strip()]
+                problems.append(("ENUM_WRITTEN_AS_CLASS", no,
+                                 f"{owner} is a list of fixed values, so it must be declared as "
+                                 f"\"enum {owner}\" with values {', '.join(values)}"))
     return problems
 
 
@@ -235,23 +233,36 @@ def _selftest(path):
     for r in rows:
         dt = r.get("diagram_type", "")
         per_type[dt] += 1
-        els, rels = parse(r["text"])
-        if not els:
+        elements, _ = parse(r["text"])
+        if not elements:
             empty[dt] += 1
         probs = check_rules(r["text"], dt)
         found = {p[0] for p in probs}
         for lab in found:
             viol[(dt, lab)] += 1
             if len(examples[lab]) < 2:
-                msg = next(p[2] for p in probs if p[0] == lab)          # message of THIS rule
+                msg = next(p[2] for p in probs if p[0] == lab)
                 examples[lab].append((r.get("diagram_id", "?"), msg))
         if found:
             viol[(dt, "ANY")] += 1
+        for lab, check in (("MISSING_GENERALIZATION", check_missing_generalization),
+                           ("ENUM_WRITTEN_AS_CLASS", check_enum_in_class)):
+            found_extra = check(r["text"]) if dt == "CLASS" else []
+            if found_extra:
+                viol[(dt, lab)] += 1
+                if len(examples[lab]) < 3:
+                    examples[lab].append((r.get("diagram_id", "?"), found_extra[0][2]))
+        if dt == "CLASS" and check_generalization_direction(r["text"]):
+            viol[(dt, "REVERSED_GENERALIZATION")] += 1
+            if len(examples["REVERSED_GENERALIZATION"]) < 3:
+                examples["REVERSED_GENERALIZATION"].append(
+                    (r.get("diagram_id", "?"), check_generalization_direction(r["text"])[0][2]))
+
     print("diagrams per type:", dict(per_type))
     print("diagrams where NO element was recognised (parser mismatch?):", dict(empty))
     for dt in per_type:
         print(f"\n{dt}: rule violations in clean data")
-        for lab in RULE_LABELS + ["ANY"]:
+        for lab in RULE_LABELS + ["ANY", "REVERSED_GENERALIZATION", "MISSING_GENERALIZATION", "ENUM_WRITTEN_AS_CLASS"]:
             n = viol[(dt, lab)]
             print(f"  {lab:30s} {n:6d}  ({100 * n / max(per_type[dt], 1):5.1f}%)")
     for lab, ex in examples.items():

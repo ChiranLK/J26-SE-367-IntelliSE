@@ -1,0 +1,22 @@
+﻿Project: University Course Management System
+
+Functional Requirements:
+
+FR-01: The system shall allow a student to enroll in courses.
+FR-02: The system shall allow a lecturer to teach courses and record grades.
+FR-03: The system shall send notifications to students and lecturers.
+FR-04: The system shall generate a course report for the administration.
+
+Data Requirements:
+
+DR-01: A Person has a name and an email. Person is abstract.
+DR-02: Student is a kind of Person and has a student ID.
+DR-03: Lecturer is a kind of Person and has a staff ID.
+DR-04: A student enrolls in many courses, and a course has many students. Each enrollment has an enrollment date and a grade.
+DR-05: A Grade is one of the fixed values A, B, C, D or F.
+DR-06: A lecturer teaches one or more courses. Each course is taught by exactly one lecturer.
+DR-07: A Course has a course code, a title and credits. A course contains one or more lessons. A lesson cannot exist without its course.
+DR-08: A Lesson has a title and a duration in minutes.
+DR-09: A Department groups many lecturers. A lecturer can exist even if the department is closed.
+DR-10: Notifiable is an interface with the method notify(message). Student and Lecturer implement the Notifiable interface.
+DR-11: A ReportGenerator uses a Course only to create a report. It does not keep the course.
