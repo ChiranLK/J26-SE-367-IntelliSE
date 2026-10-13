@@ -5,6 +5,7 @@ from intelise_c3.domain.generation import GenerationManifest, GenerationRunResul
 from intelise_c3.domain.generation_context import GenerationContext
 from intelise_c3.domain.llm import LLMInferenceRequest, LLMInferenceResponse
 from intelise_c3.domain.stack_selection import StackSelectionReport
+from intelise_c3.domain.structural_verification import StructuralVerificationReport
 from intelise_c3.domain.traceability import TraceGraphSnapshot
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "LLMInferenceRequest",
     "LLMInferenceResponse",
     "StackSelectionReport",
+    "StructuralVerificationReport",
     "TraceGraphSnapshot",
 ]
