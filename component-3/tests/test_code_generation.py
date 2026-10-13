@@ -49,6 +49,7 @@ from intelise_c3.generation.templates import (
     DB_TASK_ID_COLUMN,
     DB_TASK_TITLE_COLUMN,
     DB_TASKS_TABLE,
+    GENERATOR_VERSION,
     TASK_REPOSITORY_SEAM,
     task_management_templates,
     template_task_service,
@@ -333,7 +334,7 @@ def test_run_evidence_binds_inputs_prompt_model_and_artifacts(
         client.requests[0]
     )
     assert evidence.prompt_template_version == "react-node-task-service-v4"
-    assert evidence.generator_version == "react-node-task-mvp-v2"
+    assert evidence.generator_version == GENERATOR_VERSION
     assert evidence.template_set_version == "react-node-task-scaffold-v2"
     assert evidence.authenticity_claim is False
 

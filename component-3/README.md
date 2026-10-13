@@ -6,11 +6,11 @@ foundation, deterministic validation of provisional C1/C2 input packages,
 limited-subset design understanding, evidence-based stack selection, and a
 reusable local-only Ollama inference client. Task 6 adds a narrow React +
 Node.js Task Management generation MVP using deterministic scaffolding and one
-locally model-generated business-logic module.
+locally model-generated business-logic module. Task 7 adds persistent,
+versioned living requirement traceability over verified generation manifests.
 
-General-purpose application generation, traceability persistence, scoped
-regeneration, deployment, and real integrations with Components 1, 2, and 4
-remain future work.
+General-purpose application generation, scoped regeneration, deployment, and
+real integrations with Components 1, 2, and 4 remain future work.
 
 ## Requirements
 
@@ -149,6 +149,26 @@ Its body requires a `GenerationContext`, `DesignContext`,
 See `docs/local-llm-code-generation-mvp.md` for the trust boundary, manifest,
 template/model split, output controls, inspection commands, and limitations.
 
+## Build and inspect living traceability
+
+Task 7 verifies a Task 6 manifest and every referenced generated file before
+building typed Requirement → UML/Anchor → Code/API/Database/Test/UI evidence.
+Snapshots are append-only in local SQLite, retain retired link history, and
+produce coverage and change reports. Uncertain evidence remains
+`REVIEW_REQUIRED`; no filename-similarity inference is used.
+
+The endpoints are grouped under:
+
+```text
+/api/v1/traceability/graphs
+```
+
+Swagger documents graph creation, latest/version retrieval, comparison,
+update, and researcher-ground-truth evaluation operations. See
+`docs/living-requirement-traceability.md` for the precise data model,
+algorithm, coverage policy, trust boundary, and decisions requiring manual
+research approval.
+
 ## Configuration
 
 The defaults are safe for a locally running Ollama instance:
@@ -160,6 +180,7 @@ OLLAMA_TIMEOUT_SECONDS=120
 OLLAMA_TEMPERATURE=0.0
 OLLAMA_NUM_CTX=4096
 GENERATED_WORKSPACE_ROOT=generated-workspaces
+TRACEABILITY_STORE_PATH=runtime/traceability/traceability.sqlite3
 ```
 
 Copy `.env.example` to `.env` for local overrides. Never commit `.env` or
@@ -267,5 +288,6 @@ or model to be running.
   stochastic output is perfectly reproducible.
 - The LLM cannot validate C1/C2 approval authenticity, authorize deployment, or
   provide Component 4's XAI defect explanations.
-- Living traceability and defect-feedback-driven scoped regeneration remain
+- Living traceability is implemented for verified Task 6 manifests using a
+  local SQLite MVP store. Defect-feedback-driven scoped regeneration remains
   future work.
