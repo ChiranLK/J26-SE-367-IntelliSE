@@ -291,3 +291,9 @@ or model to be running.
 - Living traceability is implemented for verified Task 6 manifests using a
   local SQLite MVP store. Defect-feedback-driven scoped regeneration remains
   future work.
+- Deterministic design-to-code structural verification is available at
+  `POST /api/v1/structural-verifications`. It verifies manifest/file integrity,
+  binds the supplied DesignContext to the generation evidence, and checks the
+  supported React/Node Task module, API, layering, repository, UI-client, and
+  SQL structures without executing generated code. See
+  `docs/design-to-code-structural-verification.md` for rules and limitations.
