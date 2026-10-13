@@ -169,6 +169,39 @@ update, and researcher-ground-truth evaluation operations. See
 algorithm, coverage policy, trust boundary, and decisions requiring manual
 research approval.
 
+## Defect-feedback-driven scoped regeneration
+
+Task 9 turns a structured defect report into a minimal, justified patch scope
+over the verified traceability graph, patches only the selected modules with
+the local model, proves every other file is byte-identical, and publishes a new
+immutable run and graph version. It returns a Component 4 retest handoff that
+is always `PENDING`; Component 3 never claims a defect is fixed or that C4
+testing occurred. Defect reports are currently **SIMULATED** fixtures.
+
+Every defect report must carry a strict positive-integer `source_graph_version`
+that equals the exact graph snapshot used for impact selection (missing, null,
+invalid, or stale versions are rejected). The stored graph is verified against a
+rebuild from the verified manifest, comparing every ACTIVE node and link (ID,
+endpoints, relation, resolution, review status, lifecycle, provenance, file
+hashes), not only identifier sets. Local-model patches pass a conservative
+JavaScript **lexical** policy (network and dynamic-code APIs, `globalThis`,
+constructor and prototype access, timers, escape-obfuscated identifiers);
+syntax that cannot be inspected is escalated to `REVIEW_REQUIRED`. That policy
+is not a sandbox and not a proof of safety.
+
+```text
+POST /api/v1/impact-selections        # read-only, no model call
+POST /api/v1/scoped-regenerations     # patches only an authorized, verified scope
+```
+
+```powershell
+python -m intelise_c3.scripts.scoped_regeneration_experiment --model mock
+python -m intelise_c3.scripts.scoped_regeneration_experiment --model ollama
+```
+
+See `docs/defect-feedback-scoped-regeneration.md` for the algorithm, worked
+example, metric status, and limitations.
+
 ## Configuration
 
 The defaults are safe for a locally running Ollama instance:
@@ -289,8 +322,11 @@ or model to be running.
 - The LLM cannot validate C1/C2 approval authenticity, authorize deployment, or
   provide Component 4's XAI defect explanations.
 - Living traceability is implemented for verified Task 6 manifests using a
-  local SQLite MVP store. Defect-feedback-driven scoped regeneration remains
-  future work.
+  local SQLite MVP store.
+- Defect-feedback-driven scoped regeneration is implemented for simulated
+  defect reports, the service/controller/repository allowlist, and at most two
+  modules. Repair success, XAI, and semantic preservation are not evaluated by
+  Component 3 and remain pending independent Component 4 retesting.
 - Deterministic design-to-code structural verification is available at
   `POST /api/v1/structural-verifications`. It verifies manifest/file integrity,
   binds the supplied DesignContext to the generation evidence, and checks the
