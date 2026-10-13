@@ -1,31 +1,3 @@
-"""STEP 4 - Build the labelled syntax dataset with controlled error injection.
-
-Input : data/clean.csv (parser-valid diagrams from step 3)
-Output: data/syntax_dataset.csv with columns
-        sample_id, diagram_id, group, diagram_type, domain, label, label_id,
-        mutated_line, parser_status, parser_line, parser_message, text
-
-For every clean diagram we write
-  * the original                       -> VALID
-  * some *valid* augmentations         -> VALID  (comments, skinparams, title,
-    reordered relationships ...). These teach CodeBERT that "unusual but legal"
-    is still VALID, so it does not flag every change as an error.
-  * mutants for every applicable operator -> that operator's label
-
-LABEL QUALITY RULES (new)
-  1. A clean diagram is only used if it already follows the UML rules in
-     uml_rules.py and the linter finds nothing. Otherwise "VALID" would be a lie.
-  2. PARSER_CONFIRMED labels: mutant kept only if PlantUML rejects it.
-  3. RULE_VERIFIED labels: mutant kept only if uml_rules.check_rules() finds
-     exactly that violation.
-  4. Other labels are wrong by definition (missing markers, unbalanced braces /
-     parentheses, prose inside the diagram) even when PlantUML silently accepts
-     them. These are the "silent defects"; step 7 reports them separately.
-     Use --strict to make every label parser-confirmed (ablation experiment).
-
-Usage: python step4_make_mutations.py
-       python step4_make_mutations.py --strict --out data/syntax_dataset_strict.csv
-"""
 import argparse
 import csv
 import random
@@ -34,7 +6,8 @@ from collections import Counter
 from pathlib import Path
 
 from common import LABEL2ID, check_texts, lint, normalize
-from uml_rules import _lookup, check_rules, endpoint_kind, parse
+from uml_parser import endpoint_kind, kind_lookup, parse
+from uml_rules import check_rules
 from step3_check_and_filter import get_token_counter
 
 REL_ARROW = re.compile(r"(<\|--|<\|\.\.|\*--|o--|\.\.>|-->|--)")
@@ -250,7 +223,7 @@ def m_invalid_usecase_relationship(t, dt, rng):
         return None
     ls = lines_of(t); _, e = body_range(ls)
     els, rels = parse(t)
-    kinds = _lookup(els)
+    kinds = kind_lookup(els)
     refs = {}
     for x in els:                                    # one reference token per element (prefer declarations)
         if x["kind"] in ("actor", "usecase") and (x["name"] not in refs or not x.get("inline")):

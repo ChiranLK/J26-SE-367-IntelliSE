@@ -1,0 +1,25 @@
+Pet Clinic System - Software Requirements Specification
+
+1. Introduction
+The Pet Clinic System helps a small veterinary clinic keep records of pet owners,
+their pets and the visits the pets make to the clinic.
+
+2. Functional Requirements
+FR-01: The system shall let the receptionist register a pet owner.
+FR-02: The system shall let the receptionist add pets to an owner.
+FR-03: The system shall let a vet record a visit for a pet.
+FR-04: The system shall let a vet add treatments to a visit.
+FR-05: The system shall print a bill for a visit.
+
+3. Data Requirements
+DR-01: An Owner has a name and a phone number. An owner can have one or more pets.
+DR-02: Pet is an abstract class with a name and an age. Dog and Cat are kinds of Pet.
+DR-03: A Dog has a breed. A Cat has an indoor flag (true or false).
+DR-04: A Visit has a date and a status. A pet can have many visits; each visit is for one pet.
+DR-05: The status of a visit is one of: BOOKED, DONE, CANCELLED.
+DR-06: A Visit contains one or more Treatments. A treatment cannot exist without its visit.
+        A treatment has a description and a cost.
+DR-07: A Clinic groups Vets. A vet can exist without the clinic. A vet has a name.
+DR-08: A vet handles many visits; each visit is handled by one vet.
+DR-09: Printable is an interface with a print() method. Visit implements Printable.
+DR-10: A BillPrinter uses Visit to print a bill.

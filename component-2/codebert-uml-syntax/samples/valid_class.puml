@@ -1,0 +1,10 @@
+@startuml
+class Customer {
+  - name : String
+  + placeOrder() : void
+}
+class Order {
+  - id : int
+}
+Customer "1" -- "*" Order : places
+@enduml
