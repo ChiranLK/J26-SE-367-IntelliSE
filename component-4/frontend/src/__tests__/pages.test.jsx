@@ -2,8 +2,11 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import DashboardPage from '../pages/DashboardPage';
 import ManualSubmissionPage from '../pages/ManualSubmissionPage';
 import FileUploadPage from '../pages/FileUploadPage';
+import SubmissionHistoryPage from '../pages/SubmissionHistoryPage';
+import VerificationRunsPage from '../pages/VerificationRunsPage';
 import DefectReportsPage from '../pages/DefectReportsPage';
 import XaiExplanationsPage from '../pages/XaiExplanationsPage';
 import FeedbackHistoryPage from '../pages/FeedbackHistoryPage';
@@ -13,6 +16,20 @@ function renderWithRouter(ui) {
 }
 
 describe('Frontend Pages Requirements', () => {
+  it('renders DashboardPage without runtime reference errors', async () => {
+    renderWithRouter(<DashboardPage />);
+    expect(screen.getByText('Operational Telemetry')).toBeInTheDocument();
+  });
+
+  it('renders SubmissionHistoryPage without errors', () => {
+    renderWithRouter(<SubmissionHistoryPage />);
+    expect(screen.getByText('Submission Repository')).toBeInTheDocument();
+  });
+
+  it('renders VerificationRunsPage without errors', () => {
+    renderWithRouter(<VerificationRunsPage />);
+    expect(screen.getByText('Verification Pipelines')).toBeInTheDocument();
+  });
   it('renders ManualSubmissionPage with language selection and prevents empty submission', async () => {
     renderWithRouter(<ManualSubmissionPage />);
     expect(screen.getByText('Manual Code Submission')).toBeInTheDocument();
