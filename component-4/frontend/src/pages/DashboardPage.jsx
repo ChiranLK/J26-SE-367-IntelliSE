@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Check,
   Copy,
+  Upload,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import StatCard from '../components/common/StatCard';
