@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from intelise_c3.api.routes.demo import router as demo_router
 from intelise_c3.api.routes.design_selection import router as design_selection_router
 from intelise_c3.api.routes.generation import router as generation_router
 from intelise_c3.api.routes.health import router as health_router
@@ -20,3 +21,4 @@ api_router.include_router(generation_router)
 api_router.include_router(traceability_router)
 api_router.include_router(structural_verification_router)
 api_router.include_router(scoped_regeneration_router)
+api_router.include_router(demo_router)
