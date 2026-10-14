@@ -1,0 +1,94 @@
+from datetime import datetime, timezone
+from typing import List, Optional
+from pydantic import BaseModel, Field, model_validator
+from app.schemas.common import TestType, VerificationStatus
+from app.schemas.defect_report import DefectReport
+from app.schemas.feedback import FeedbackIteration
+from app.schemas.test_result import TestResult
+
+
+class VerificationRunCreate(BaseModel):
+    """Payload to initiate a new verification run for an existing submission."""
+
+    submission_id: str = Field(
+        min_length=1,
+        description="ID of the code submission to verify",
+    )
+    triggered_by: str = Field(
+        default="manual",
+        description="Source entity that triggered the run (e.g. 'manual', 'component_3_pipeline')",
+    )
+    test_types: List[TestType] = Field(
+        default_factory=lambda: [TestType.UNIT, TestType.INTEGRATION, TestType.PERFORMANCE],
+        description="Requested test types for this verification run",
+    )
+
+
+class VerificationStatusResponse(BaseModel):
+    """Lightweight response indicating the current status of a verification run."""
+
+    id: str = Field(description="Unique verification run identifier")
+    submission_id: str = Field(description="Associated submission identifier")
+    status: VerificationStatus = Field(description="Current status (PENDING, RUNNING, PASSED, FAILED, ERROR)")
+    error_message: Optional[str] = Field(
+        default=None,
+        description="Error message if run status is ERROR",
+    )
+    created_at: datetime = Field(description="Run creation timestamp")
+    updated_at: datetime = Field(description="Run last update timestamp")
+
+
+class VerificationRunResponse(BaseModel):
+    """Full detail response for a verification run."""
+
+    id: str = Field(description="Unique verification run identifier (e.g. run-...)")
+    submission_id: str = Field(description="Associated submission identifier")
+    status: VerificationStatus = Field(
+        default=VerificationStatus.PENDING,
+        description="Current verification status",
+    )
+    triggered_by: str = Field(default="manual", description="Triggering agent or entity")
+    requested_test_types: List[TestType] = Field(
+        default_factory=list,
+        description="Test types requested for this run",
+    )
+    test_results: List[TestResult] = Field(
+        default_factory=list,
+        description="Individual test outcomes (populated when test agents execute in Phase 2)",
+    )
+    defect_reports: List[DefectReport] = Field(
+        default_factory=list,
+        description="Structured defects communicated to Component 3",
+    )
+    feedback_iterations: List[FeedbackIteration] = Field(
+        default_factory=list,
+        description="Feedback loop history with Component 3",
+    )
+    error_message: Optional[str] = Field(
+        default=None,
+        description="Diagnostic details if status is ERROR",
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="UTC creation timestamp",
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="UTC last update timestamp",
+    )
+
+    @model_validator(mode="after")
+    def validate_passed_status_requires_evidence(self) -> "VerificationRunResponse":
+        """Enforces that a verification run cannot be marked PASSED without test results."""
+        if self.status == VerificationStatus.PASSED and not self.test_results:
+            raise ValueError(
+                "Verification run cannot be marked PASSED without real test evidence."
+            )
+        return self
+
+
+class VerificationRunListResponse(BaseModel):
+    """Paginated or listed view of verification runs."""
+
+    total: int = Field(description="Total count of verification runs")
+    items: List[VerificationRunResponse] = Field(description="List of verification runs")

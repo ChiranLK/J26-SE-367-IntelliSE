@@ -6,6 +6,7 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+*.log
 .pytest_cache/
 
 # Environment variables and secrets
