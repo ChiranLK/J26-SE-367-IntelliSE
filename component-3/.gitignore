@@ -27,3 +27,8 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Demo dashboard (npm install / vite build output)
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/

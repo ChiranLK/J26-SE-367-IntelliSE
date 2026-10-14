@@ -47,31 +47,7 @@ def build_simulated_request(mode: GenerationMode) -> CodeGenerationRequest:
     package = ProvisionalInputPackage.model_validate(payload)
     generation_context = InputValidationService().validate(package)
     design_context = DesignUnderstandingService().build(generation_context)
-    evidence = CriterionEvidence(
-        reference="SIMULATED-TASK6-MANUAL-EVIDENCE",
-        confidence=1.0,
-        uncertainty_notes="Manual local MVP experiment only",
-    )
-    criteria = StackSelectionCriteria(
-        required_frontend=FrontendTechnology.REACT,
-        required_backend=BackendTechnology.NODE_JS,
-        architecture_style=ArchitectureStyle.REST_SPA,
-        team_proficiency=TeamProficiency(
-            react=0.8,
-            angular=0.5,
-            node_js=0.8,
-            spring_boot=0.5,
-        ),
-        available_backend_runtimes=(BackendRuntime.NODE,),
-        supports_static_spa=True,
-        preferred_backend_runtime=BackendRuntime.NODE,
-        evidence=SelectionEvidence(
-            requirements=evidence,
-            architecture=evidence,
-            team=evidence,
-            deployment=evidence,
-        ),
-    )
+    criteria = build_simulated_stack_criteria()
     report = StackSelectionService().select(
         StackSelectionRequest(
             design_context=design_context,
@@ -90,6 +66,35 @@ def build_simulated_request(mode: GenerationMode) -> CodeGenerationRequest:
         ),
         mode=mode,
         workspace_name="task-management-manual",
+    )
+
+
+def build_simulated_stack_criteria() -> StackSelectionCriteria:
+    """Fixed SIMULATED manual criteria shared by the experiment scripts and the demo UI."""
+    evidence = CriterionEvidence(
+        reference="SIMULATED-TASK6-MANUAL-EVIDENCE",
+        confidence=1.0,
+        uncertainty_notes="Manual local MVP experiment only",
+    )
+    return StackSelectionCriteria(
+        required_frontend=FrontendTechnology.REACT,
+        required_backend=BackendTechnology.NODE_JS,
+        architecture_style=ArchitectureStyle.REST_SPA,
+        team_proficiency=TeamProficiency(
+            react=0.8,
+            angular=0.5,
+            node_js=0.8,
+            spring_boot=0.5,
+        ),
+        available_backend_runtimes=(BackendRuntime.NODE,),
+        supports_static_spa=True,
+        preferred_backend_runtime=BackendRuntime.NODE,
+        evidence=SelectionEvidence(
+            requirements=evidence,
+            architecture=evidence,
+            team=evidence,
+            deployment=evidence,
+        ),
     )
 
 
