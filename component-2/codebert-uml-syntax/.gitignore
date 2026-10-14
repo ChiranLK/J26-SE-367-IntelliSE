@@ -6,4 +6,4 @@ tools/plantuml.jar
 __pycache__/
 outputs/
 demo_backup/
-*.pyc
+*.pyccomponent2.db

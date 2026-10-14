@@ -1,5 +1,3 @@
-"""Prompt templates for diagram generation."""
-
 USE_CASE = """You are a UML modeling expert.
 
 Analyze the following Software Requirements Specification (SRS) and generate a UML Use Case Diagram using PlantUML.

@@ -1,0 +1,115 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+/* colours and fonts used everywhere - change them here */
+:root {
+  --ink: #14213d;      /* sidebar, headings */
+  --paper: #f5f7fa;    /* page background */
+  --grid: #e2e8f0;     /* drafting-board grid lines */
+  --line: #cbd5e1;     /* borders */
+  --text: #1e293b;
+  --muted: #64748b;
+  --blue: #1f6fb2;     /* buttons, selected things */
+  --ok: #237a57;
+  --bad: #b42318;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--text);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); }
+h1 { font-size: 1.5rem; font-weight: 600; color: var(--ink); margin: 0 0 0.25rem; }
+h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* ---------- layout: sidebar + page ---------- */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 230px; background: var(--ink); padding: 1.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.brand { color: white; font-size: 1.35rem; font-weight: 600; padding: 0 0.75rem 1.5rem; }
+.brand span { display: block; font-size: 0.8rem; font-weight: 400; color: #9fb3d1; }
+.nav { display: flex; align-items: center; gap: 0.6rem; background: none; border: 0; color: #c9d6ea; padding: 0.6rem 0.75rem; border-radius: 6px; text-align: left; }
+.nav:hover { background: #ffffff14; }
+.nav.active { background: var(--blue); color: white; }
+.nav em { margin-left: auto; font-style: normal; font-size: 0.7rem; color: #9fb3d1; }
+.content { flex: 1; padding: 2rem; min-width: 0; }
+
+.split { display: grid; grid-template-columns: 360px 1fr; gap: 2rem; align-items: start; }
+.panel { display: flex; flex-direction: column; gap: 0.75rem; }
+.panel.narrow { max-width: 60ch; }
+.workspace { min-width: 0; }
+
+/* ---------- form controls ---------- */
+.hint { color: var(--muted); margin: 0; line-height: 1.5; }
+.error { color: var(--bad); margin: 0; }
+textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--line); border-radius: 6px; font: inherit; resize: vertical; background: white; }
+textarea.mono, pre { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+.file { border: 1px dashed var(--line); border-radius: 6px; padding: 0.6rem; color: var(--blue); cursor: pointer; text-align: center; }
+.file input { display: none; }
+.toggle { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.toggle button { flex: 1; border: 0; padding: 0.55rem; background: white; color: var(--muted); }
+.toggle button.on { background: var(--ink); color: white; }
+.primary { background: var(--blue); color: white; border: 0; border-radius: 6px; padding: 0.75rem; font-weight: 500; }
+.primary:disabled { background: var(--line); cursor: default; }
+
+/* ---------- the drafting board (the diagram) ---------- */
+.board {
+  background-color: white;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+}
+.board img { max-width: 100%; background: white; }
+.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 4rem 2rem; text-align: center; color: var(--muted); margin: 0; }
+
+/* repair rounds shown as drafts: 0 -> 1 -> 2 */
+.drafts { list-style: none; padding: 0; margin: 0 0 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.draft { display: grid; grid-template-columns: auto 1fr; column-gap: 0.6rem; text-align: left; background: white; border: 1px solid var(--line); border-left: 4px solid var(--bad); border-radius: 6px; padding: 0.5rem 0.9rem 0.5rem 0.6rem; }
+.draft.ok { border-left-color: var(--ok); }
+.draft b { grid-row: span 2; font-size: 1.4rem; color: var(--ink); align-self: center; }
+.draft small { color: var(--bad); font-size: 0.75rem; }
+.draft.ok small { color: var(--ok); }
+.draft.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+
+.feedback { margin-top: 1rem; background: #fef3f2; border-left: 4px solid var(--bad); border-radius: 6px; padding: 0.9rem 1.1rem; }
+.feedback ul { margin: 0; padding-left: 1.2rem; line-height: 1.6; }
+.code { margin-top: 1rem; }
+.code summary { cursor: pointer; color: var(--blue); }
+pre { background: white; border: 1px solid var(--line); border-radius: 6px; padding: 1rem; overflow: auto; }
+
+.verdict { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.9rem 1.1rem; border-radius: 6px; margin-bottom: 1rem; background: white; border-left: 4px solid var(--bad); }
+.verdict.ok { border-left-color: var(--ok); }
+.verdict strong { font-size: 1.15rem; color: var(--bad); }
+.verdict.ok strong { color: var(--ok); }
+.verdict span { color: var(--muted); }
+
+/* the four checks: PlantUML, linter, UML rules, CodeBERT */
+.checks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+.check { display: flex; flex-direction: column; gap: 0.15rem; background: white; border: 1px solid var(--line); border-top: 4px solid var(--ok); border-radius: 6px; padding: 0.6rem 0.75rem; }
+.check.bad { border-top-color: var(--bad); }
+.check small { color: var(--muted); font-size: 0.78rem; }
+.check span { font-weight: 500; color: var(--ok); }
+.check.bad span { color: var(--bad); }
+.checks .wide { grid-column: 1 / -1; }
+
+/* ---------- history list ---------- */
+.run { display: grid; grid-template-columns: 1fr auto; text-align: left; background: white; border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.8rem; }
+.run small { color: var(--muted); grid-column: 1; }
+.run em { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-style: normal; font-size: 0.8rem; }
+.run.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+
+/* ---------- small screens ---------- */
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .sidebar { width: auto; flex-direction: row; flex-wrap: wrap; padding: 0.75rem; }
+  .brand { padding: 0.25rem 0.75rem; width: 100%; }
+  .split { grid-template-columns: 1fr; }
+  .checks { grid-template-columns: 1fr 1fr; }
+  .content { padding: 1rem; }
+}
