@@ -16,10 +16,17 @@
       "type": "string"
     },
     "source_project_id": {
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Source Project Id",
-      "type": "string"
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Project Id"
     },
     "source_reference": {
       "maxLength": 2000,

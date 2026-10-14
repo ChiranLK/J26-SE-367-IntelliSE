@@ -2,16 +2,22 @@
 
 This is a **TF-IDF + logistic regression** baseline implemented with a
 scikit-learn `Pipeline`. It is not BERT, not the final proposed model, and not
-an established research result. There is currently **no suitable real labeled
-FR/NFR dataset in this repository**, so research training/evaluation is blocked.
-Unreviewed extraction candidates do not supply ground-truth FR/NFR labels.
+an established research result. The user-supplied DCAI24 CSV has now been imported
+and the initial baseline trained using the existing pipeline. See
+[DCAI preparation and evaluation report](dcai-baseline-report.md) for actual counts,
+measured results, artifacts, checks and commands.
 
-The only included labeled file is `tests/fixtures/fr_nfr_test.jsonl`: twelve
-clearly fictional examples from six fictional documents, with test-only
-provenance. Automated tests can fit a temporary test-purpose pipeline to verify
-mechanics. The research training CLI and API loader reject test-purpose data and
-artifacts. No trained research model, held-out research metrics, or accuracy
-claim is supplied.
+The raw CSV contains 3,482 rows. After quarantining 517 unsupported `#N/A` labels,
+36 conflicting-label rows and 357 redundant same-label rows, 2,572 unique labeled
+requirements remain (866 FR, 1,706 NFR). Original text and source fields are retained.
+The supplied export has no project IDs. `Dataset_Name` names collections, not
+individual projects. This run uses an explicitly documented stratified
+normalized-text holdout; its scores do **not** establish unseen-project performance.
+Original annotation protocol, annotator identities and corpus license were not
+provided; no independent annotation review or agreement is claimed.
+
+The twelve fictional examples in `tests/fixtures/fr_nfr_test.jsonl` remain test-only.
+They verify mechanics, never train the research model or supply its reported metrics.
 
 ## Provenance and annotation
 
@@ -24,11 +30,11 @@ line, conforming to `dataset.schema.json`:
 | `example_id` | Unique stable annotation/example identifier, 1–200 characters |
 | `text` | Original atomic requirement text, nonblank, 1–10,000 characters |
 | `label` | Exactly `FR` or `NFR`, provided by human annotation or a verified labeled source |
-| `source_project_id` | Explicit canonical source project/document identifier, 1–200 characters |
+| `source_project_id` | Genuine canonical project/document ID, 1–200 characters; explicit null accepted only with the documented `--grouping normalized_text` fallback |
 | `source_reference` | Traceable original location: dataset row, document/page/paragraph, or saved extraction run + requirement/evidence IDs; 1–2,000 characters |
 
 All fields are required. Unknown fields, missing/blank text, unsupported labels,
-missing source groups, and padded IDs are rejected. The tooling never invents
+missing source groups under the default project holdout, and padded IDs are rejected. The tooling never invents
 IDs, fills missing groups, predicts annotation labels, or infers grouping from
 row numbers. A source document can be the group when no project identifier
 exists, using its **actual canonical document identifier**, recorded explicitly
@@ -39,8 +45,10 @@ splitting: a grouping column cannot establish genuine independence by itself.
 Include a separate provenance JSON conforming to `provenance.schema.json` with
 `purpose: "research"`, `dataset_name`, `dataset_version`, `source_description`,
 `license_or_permission`, `annotation_protocol`, nonempty `annotators`, and
-`label_review`. These must describe actual sources, permission, annotation and
-review, not placeholders. The tooling validates required metadata but cannot
+`label_review`. These must truthfully describe actual sources, permission, annotation and
+review. If source identities/protocol/license are unavailable, record that absence
+explicitly rather than inventing metadata. The DCAI import records user authorization
+for local training, not an unverified redistribution license. The tooling validates required metadata but cannot
 independently authenticate its claims. Do not commit private discussions,
 personal information, licensed corpora, or unapproved source documents.
 
@@ -70,6 +78,40 @@ Annotation procedure:
    case folding and whitespace collapse, not paraphrases/semantic similarity.
    This normalization is for duplicate detection only; saved example text stays
    unchanged.
+
+## DCAI CSV import
+
+The adapter supplements the existing preparation/training tools rather than replacing
+them. It reads `Requirement` as unchanged text and `Type` as unchanged FR/NFR labels.
+It preserves a byte-identical raw copy, all original fields in
+`source_metadata.jsonl`/`quarantine.jsonl`, logical CSV record references,
+`row_assignments.json`, `exclusion_report.json` and truthful `provenance.json`.
+No model supplies labels. Invalid targets/text and every conflicting FR/NFR group
+are quarantined. For same-label duplicates, the first original source row is the
+representative and all original occurrences remain traceable. Duplicate comparison
+uses existing NFKC/casefold/whitespace normalization; training text stays unchanged.
+
+```sh
+python -m intelise_c1.baseline import-dcai \
+  --input '/Users/chiranserasinghe/Documents/AI-SDLC AGILE/Data Set/FR:NFR/dcai24_src_dataset.xlsx - Sheet1.csv' \
+  --output research/raw/dcai-v1
+python -m intelise_c1.baseline prepare \
+  --input research/raw/dcai-v1/examples.jsonl \
+  --provenance research/raw/dcai-v1/provenance.json \
+  --output research/prepared/dcai-v1 --seed 42 \
+  --validation-fraction 0.2 --test-fraction 0.2 --grouping normalized_text
+```
+
+These outputs already exist locally and are never overwritten. Use new versioned
+paths for an intentional fresh import/run. Data and models remain ignored by Git.
+The explicit fallback stratifies normalized-text hashes by FR/NFR with seed 42;
+validation/test each receive ceil(20% of each class's groups), training the remainder.
+It records `group_key: normalized_text`, the evaluation method and grouping limitation,
+and revalidates them when loaded. It never fills in fabricated project IDs.
+The raw export and adjacent source note contain no per-project mapping; no genuine
+IDs were recovered. Related requirements and paraphrases from the same unknown
+project may still occur across splits. Genuine project grouping is the default
+for new annotated data; normalized-text splitting requires explicit selection.
 
 ## Install and prepare
 
@@ -111,7 +153,8 @@ invalidate it. The manifest records seed 42, split identifiers and example IDs,
 source groups, counts and fractions. Existing output directories are never
 overwritten.
 
-Splits operate on whole `source_project_id` groups, not random rows. Validation
+Default splits operate on whole genuine `source_project_id` groups. The explicit
+DCAI fallback is the normalized-text method documented above. Validation
 and test each use `ceil(group_count * fraction)` groups; the rest are training.
 These are **group fractions**, not promised row fractions. There must be enough
 independent groups for all three splits, and every split must contain both
@@ -167,9 +210,9 @@ The marker/report are procedural controls, not protection against deliberate
 operator changes. Do not remove them or train new variants based on test scores.
 Retain all artifacts and the agreed evaluation protocol for reproducibility.
 
-**Current measured research results: unavailable.** Run these commands only
-when a suitable real annotated dataset has passed preparation. The test fixture
-is not a substitute and must not be cited as a corpus/evaluation result.
+Measured results for the supplied DCAI labels are recorded in the linked report.
+They come from held-out data under the documented grouping limitation. The test
+fixture is not a corpus/evaluation substitute.
 
 ## Trusted local model loading
 
@@ -261,8 +304,8 @@ missing project/extraction/model, database failures, latest ordering and
 append-only runs. Real-MongoDB restart persistence tests use mocked classifiers
 and skip without `TEST_MONGODB_URI`. Fixed-prediction metric arithmetic checks
 are tests of reporting code, not scientific model evaluation. Existing project,
-extraction, health and CORS tests still run. No real trained classifier or live
-classification verification is possible until real annotated data is available.
+extraction, health and CORS tests still run. The DCAI artifact is now loaded through the same API classifier; real-model
+classification route checks use collection doubles, not live MongoDB.
 
 TF-IDF/logistic regression lacks contextual representations and may misread
 negation, ambiguity, domain shifts and mixed requirements. Binary labels depend
@@ -276,7 +319,7 @@ on the same untouched final test under a predeclared protocol. Document tokenize
 architecture/checkpoint, training settings, seeds, resources and model versions.
 No BERT model or comparison findings are implemented or claimed here.
 
-**Exact next action:** acquire an authorized real requirement corpus, supply
-reviewed FR/NFR annotations with genuine canonical source groups/references and
-provenance, then run the preparation command above. If all splits pass class and
-leakage checks, proceed with validation-only baseline training and model selection.
+**Exact next action:** restart the backend with the configured DCAI model and classify
+a saved extraction through the existing API; manually review predictions. Before
+claiming project generalization, recover/adjudicate genuine project mappings and
+source annotation provenance and prepare a new project-separated evaluation.

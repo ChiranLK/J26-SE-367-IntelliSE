@@ -10,10 +10,15 @@ from intelise_c1.baseline.data import DatasetError, DEFAULT_SEED, prepare
 def main(argv=None):
     parser = argparse.ArgumentParser(description="IntelliSE TF-IDF/logistic FR/NFR baseline (not BERT)")
     commands = parser.add_subparsers(dest="command", required=True)
+    importing = commands.add_parser("import-dcai")
+    importing.add_argument("--input", required=True, type=Path)
+    importing.add_argument("--output", required=True, type=Path)
     preparation = commands.add_parser("prepare")
     preparation.add_argument("--input", required=True, type=Path)
     preparation.add_argument("--provenance", required=True, type=Path)
     preparation.add_argument("--output", required=True, type=Path)
+    preparation.add_argument("--grouping", choices=["source_project_id", "normalized_text"], default="source_project_id",
+                             help="normalized_text is an explicit within-corpus holdout, NOT project-separated")
     preparation.add_argument("--seed", type=int, default=DEFAULT_SEED)
     preparation.add_argument("--validation-fraction", type=float, default=.2)
     preparation.add_argument("--test-fraction", type=float, default=.2)
@@ -29,8 +34,12 @@ def main(argv=None):
             command.add_argument("--prepared", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        if args.command == "prepare":
-            manifest = prepare(args.input, args.provenance, args.output, args.seed, args.validation_fraction, args.test_fraction)
+        if args.command == "import-dcai":
+            from intelise_c1.baseline.dcai import import_dcai
+            report = import_dcai(args.input, args.output)
+            print(f"Imported {report['usable_rows']} requirements; classes={report['final_class_counts']}. Project IDs unavailable; inspect exclusion_report.json.")
+        elif args.command == "prepare":
+            manifest = prepare(args.input, args.provenance, args.output, args.seed, args.validation_fraction, args.test_fraction, args.grouping)
             print(f"Prepared {manifest['purpose']} data; dataset_version={manifest['dataset_version']}; split_id={manifest['split_id']}")
         else:
             from intelise_c1.baseline.model import BaselineConfig, evaluate, freeze, train

@@ -16,10 +16,12 @@ The health endpoint works
 without MongoDB, an LLM API key, downloaded models, or any external service.
 It confirms application availability only, not database or AI readiness.
 
-FR/NFR baseline classification requires a trusted locally trained model. No real
-labeled dataset or trained research classifier is supplied. Quality validation,
+FR/NFR baseline classification requires a trusted locally trained model. The supplied
+DCAI labels now have a locally trained TF-IDF/logistic baseline; see
+[the measured evaluation report](research/dcai-baseline-report.md). Project IDs and
+independent label review remain unavailable. Quality validation,
 RAG, LangGraph, audio processing, and SRS generation remain future
-work. No frontend or research results are included.
+work. Measured baseline results and their limitations are documented in the report.
 
 ## macOS setup
 
@@ -503,7 +505,9 @@ Classification is separate from extraction and operates on a saved run:
 Install the optional `requirements-baseline.lock`, prepare genuine reviewed
 labels with canonical source groups, train offline, then explicitly configure
 `C1_CLASSIFIER_MODEL_DIR` to your operator-trusted local artifact directory.
-Missing/invalid models return 503; health still works without a classifier.
+The DCAI baseline uses the existing loader and is configured in the ignored local
+`.env`; the example keeps model configuration explicit. Missing/invalid models
+return 503; health still works without a classifier.
 Previous classification runs and original extraction text/evidence/status are
 preserved. Predictions contain FR/NFR labels without probability scores or an
 approval claim. Nothing trains automatically on API startup.

@@ -34,6 +34,7 @@ class ArtifactMetadata(BaseModel):
     model_version: str = Field(pattern=r"^[a-f0-9]{64}$")
     dataset_version: str = Field(pattern=r"^[a-f0-9]{64}$")
     split_id: str = Field(pattern=r"^[a-f0-9]{64}$")
+    evaluation_method: Literal["source_project_holdout", "stratified_normalized_text_holdout"] = "source_project_holdout"
     configuration: BaselineConfig
     label_mapping: dict[str, str]
     dependencies: dict[str, str]
@@ -73,7 +74,7 @@ def metrics(pipeline, examples):
     truth = [item.label for item in examples]
     predictions = pipeline.predict([item.text for item in examples])
     report = classification_report(truth, predictions, labels=list(LABELS), output_dict=True, zero_division=0)
-    return {"examples": len(examples), "source_project_count": len({item.source_project_id for item in examples}),
+    return {"examples": len(examples), "source_project_count": len({item.source_project_id for item in examples if item.source_project_id is not None}),
             "class_counts": {label: truth.count(label) for label in LABELS},
             "per_class": {label: {key: report[label][key] for key in ("precision", "recall", "f1-score", "support")} for label in LABELS},
             "macro_f1": float(f1_score(truth, predictions, labels=list(LABELS), average="macro", zero_division=0)),
@@ -91,6 +92,7 @@ def save_artifact(pipeline, directory: Path, manifest: dict, config: BaselineCon
     metadata = ArtifactMetadata(
         format_version=1, producer=PRODUCER, purpose=manifest["purpose"], model_identifier="tfidf-logistic-regression",
         model_version=sha256(blob).hexdigest(), dataset_version=manifest["dataset_version"], split_id=manifest["split_id"],
+        evaluation_method=manifest.get("evaluation_method", "source_project_holdout"),
         configuration=config, label_mapping=LABEL_MAPPING, dependencies=dependency_versions(),
         python_version=platform.python_version(), created_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -130,6 +132,8 @@ def load_artifact(directory: Path, *, allow_test=False):
         or split_manifest["purpose"] != metadata.purpose or split_manifest["seed"] != metadata.configuration.seed
         or digest(split_manifest["splits"]) != metadata.split_id):
         raise DatasetError("Artifact split manifest does not match model metadata.")
+    if metadata.evaluation_method != split_manifest.get("evaluation_method", "source_project_holdout"):
+        raise DatasetError("Artifact evaluation method differs from its split manifest.")
     blob = paths[1].read_bytes()
     if sha256(blob).hexdigest() != metadata.model_version or sio.get_untrusted_types(data=blob):
         raise DatasetError("Artifact hash/type validation failed.")
