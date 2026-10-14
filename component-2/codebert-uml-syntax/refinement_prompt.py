@@ -1,8 +1,3 @@
-"""Builds the repair prompt that goes back to the local LLM (proposal section 3.7.4).
-
-The diagram comes first and the things to fix come LAST, right before the
-answer. Small models pay most attention to the end of the prompt.
-"""
 from validator_messages import ALLOWED_CHANGE
 
 

@@ -3,7 +3,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 
-from uml_parser import CLASS_DECL, class_bodies, clean_name, display_name, endpoint_kind, kind_lookup, parse
+from uml_parser import ARROW, CLASS_DECL, END, REL, class_bodies, clean_name, display_name, endpoint_kind, kind_lookup, parse
 
 RULE_LABELS = ["DUPLICATE_ELEMENT", "GENERALIZATION_CYCLE", "INVALID_USECASE_RELATIONSHIP"]
 
@@ -174,6 +174,8 @@ def check_generalization_direction(text: str):
 IS_A = re.compile(r"^\s*(is\s+an?|is\s+a\s+kind\s+of|is\s+a\s+type\s+of|kind\s+of|type\s+of|"
                   r"extends|inherits(\s+from)?|subclass(\s+of)?|specializ\w*|generaliz\w*)\s*$", re.I)
 
+BARE_IS = re.compile(r"^\s*(is|are)\s*$", re.I)
+
 
 def check_missing_generalization(text: str):
     """Inheritance drawn as an association labelled "is a" / "extends" / "kind of" ...
@@ -185,6 +187,12 @@ def check_missing_generalization(text: str):
     _, relations = parse(text)
     kinds = class_keywords(text)
     is_a = [r for r in relations if r["kind"] == "association" and IS_A.match(r["label"] or "")]
+    # a bare "is" is too vague on its own ("Room -- Session : is"), so it only counts
+    # when one end is abstract or an interface ("Person -- Member : is")
+    for r in relations:
+        if r["kind"] == "association" and BARE_IS.match(r["label"] or "") and \
+                {kinds.get(clean_name(r["a"])), kinds.get(clean_name(r["b"]))} & {"abstract", "interface"}:
+            is_a.append(r)
 
     # the parent is the abstract side; otherwise the class that shows up in
     # several "is a" lines (Person -- Student, Person -- Lecturer)
@@ -226,6 +234,62 @@ def check_enum_in_class(text: str):
     return problems
 
 
+# "..> Course : uses" written inside a class, without the class name in front
+ARROW_FIRST = re.compile(rf"^(?P<arrow>{ARROW})\s*(?P<b>{END})\s*(?::\s*(?P<label>.*))?$")
+
+
+def check_relation_in_body(text: str):
+    """A relationship line written INSIDE a class block:
+        class Visit {
+          VisitStatus "1" -- "0..*" Visit : has      <- PlantUML shows this as text
+        }
+    Returns (label, line, message)."""
+    problems = []
+    for owner, lines in class_bodies(text).items():
+        for no, line in lines:
+            # check "..> Course" first: REL would read the ".." as a class name
+            m = ARROW_FIRST.match(line)
+            if m and len(m.group("arrow")) >= 2:      # 2+ characters, so "- name : String" never matches
+                moved = f"{owner} {line}"
+            else:
+                m = REL.match(line)
+                if not m or len(m.group("arrow")) < 2 or not ("-" in m.group("arrow") or "." in m.group("arrow")):
+                    continue
+                moved = line
+            problems.append(("RELATIONSHIP_INSIDE_CLASS", no,
+                             f"a relationship is written inside class {owner}; write it after all the "
+                             f"class blocks as \"{moved}\""))
+    return problems
+
+
+def check_realization(text: str):
+    """A class that implements an interface must use the dashed arrow:
+    "Printable <|.. Visit", not "Printable <|-- Visit".
+    Returns (label, line, message)."""
+    _, relations = parse(text)
+    kinds = class_keywords(text)
+    src_lines = text.split("\n")
+    problems = []
+    for r in relations:
+        if r["kind"] != "generalization" or "." in r["arrow"]:
+            continue
+        if CLASS_DECL.match(src_lines[r["line"] - 1].strip()):
+            continue    # "class Student implements Notifiable" - the keyword is fine
+        if kinds.get(r["parent"]) == "interface" and kinds.get(r["child"]) in ("class", "abstract"):
+            arrow = r["arrow"].replace("-", ".")
+            fixed = f'{display_name(r["a"])} {arrow} {display_name(r["b"])}'
+            problems.append(("INVALID_REALIZATION", r["line"],
+                             f"a class implements an interface with a solid arrow; write it as \"{fixed}\""))
+    return problems
+
+
+
+def check_class_extras(text: str):
+    """All validator-only class diagram checks in one call. A new class rule is
+    added HERE only - uml_syntax_validator.py does not need to change."""
+    return (check_generalization_direction(text) + check_missing_generalization(text)
+            + check_enum_in_class(text) + check_relation_in_body(text) + check_realization(text))
+
 # ----------------------------------------------------------------------------- self-test
 def _selftest(path):
     rows = list(csv.DictReader(open(path, encoding="utf-8")))
@@ -246,7 +310,9 @@ def _selftest(path):
         if found:
             viol[(dt, "ANY")] += 1
         for lab, check in (("MISSING_GENERALIZATION", check_missing_generalization),
-                           ("ENUM_WRITTEN_AS_CLASS", check_enum_in_class)):
+                           ("ENUM_WRITTEN_AS_CLASS", check_enum_in_class),
+                           ("RELATIONSHIP_INSIDE_CLASS", check_relation_in_body),
+                           ("INVALID_REALIZATION", check_realization)):
             found_extra = check(r["text"]) if dt == "CLASS" else []
             if found_extra:
                 viol[(dt, lab)] += 1
@@ -262,7 +328,8 @@ def _selftest(path):
     print("diagrams where NO element was recognised (parser mismatch?):", dict(empty))
     for dt in per_type:
         print(f"\n{dt}: rule violations in clean data")
-        for lab in RULE_LABELS + ["ANY", "REVERSED_GENERALIZATION", "MISSING_GENERALIZATION", "ENUM_WRITTEN_AS_CLASS"]:
+        for lab in RULE_LABELS + ["ANY", "REVERSED_GENERALIZATION", "MISSING_GENERALIZATION", "ENUM_WRITTEN_AS_CLASS",
+                               "RELATIONSHIP_INSIDE_CLASS", "INVALID_REALIZATION"]:
             n = viol[(dt, lab)]
             print(f"  {lab:30s} {n:6d}  ({100 * n / max(per_type[dt], 1):5.1f}%)")
     for lab, ex in examples.items():

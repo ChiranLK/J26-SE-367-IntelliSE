@@ -1,0 +1,23 @@
+Gym Membership System - Software Requirements Specification
+
+1. Introduction
+The Gym Membership System keeps records of gym members, trainers,
+memberships, training sessions and payments.
+
+2. Functional Requirements
+FR-01: The system shall let staff register a new member.
+FR-02: The system shall let a member buy a membership.
+FR-03: The system shall let a trainer create training sessions.
+FR-04: The system shall let a member book a training session.
+FR-05: The system shall record every payment a member makes.
+
+3. Data Requirements
+DR-01: Person is an abstract class with a name and an email.
+DR-02: Member and Trainer are kinds of Person.
+DR-03: A Member has a member id. A Trainer has a speciality.
+DR-04: A Membership has a start date and an end date. A member can have many memberships;
+       each membership belongs to one member.
+DR-05: The type of a membership is one of: BASIC, PREMIUM.
+DR-06: A Session has a date and a room. A trainer runs many sessions; each session is run by one trainer.
+DR-07: A member can book many sessions and a session can have many members.
+DR-08: A Payment has an amount and a date. A member makes many payments; each payment is made by one member.

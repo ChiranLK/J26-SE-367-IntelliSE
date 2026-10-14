@@ -32,6 +32,8 @@ KEEP_ALIVE = "30m"
 MAX_ANSWER_TOKENS = 1500
 
 
+
+
 def ask(prompt, model=DEFAULT_MODEL, temperature=0.2, url=OLLAMA_URL, timeout=900, num_ctx=NUM_CTX):
     """Send one prompt, return the model's reply as text."""
     body = {
