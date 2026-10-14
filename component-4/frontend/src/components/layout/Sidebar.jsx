@@ -9,9 +9,8 @@ import {
   AlertOctagon,
   BrainCircuit,
   RefreshCw,
-  Cpu,
-  Layers,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 function InteliseBrandIcon({ size = 32 }) {
@@ -44,7 +43,7 @@ function InteliseBrandIcon({ size = 32 }) {
   );
 }
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse }) {
   const navSections = [
     {
       section: 'Platform',
@@ -78,23 +77,49 @@ export default function Sidebar({ isOpen, onClose }) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-brand-lockup">
-            <InteliseBrandIcon size={32} />
-            <div className="sidebar-brand-text">
-              <div className="sidebar-brand-title-row">
-                <span className="sidebar-brand-name">INTELISE</span>
+          {!isCollapsed ? (
+            <>
+              <div className="sidebar-brand-lockup">
+                <InteliseBrandIcon size={32} />
+                <div className="sidebar-brand-text">
+                  <div className="sidebar-brand-title-row">
+                    <span className="sidebar-brand-name">INTELISE</span>
+                  </div>
+                  <span className="sidebar-brand-desc">Testing & Feedback Engine</span>
+                </div>
               </div>
-              <span className="sidebar-brand-desc">Testing & Feedback Engine</span>
-            </div>
-          </div>
+              <button
+                type="button"
+                className="sidebar-collapse-btn"
+                onClick={onToggleCollapse}
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <PanelLeftClose size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="sidebar-expand-btn-rail"
+              onClick={onToggleCollapse}
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+            >
+              <InteliseBrandIcon size={32} />
+              <span className="sidebar-expand-rail-hover-icon" aria-hidden="true">
+                <PanelLeftOpen size={16} />
+              </span>
+            </button>
+          )}
         </div>
 
         <nav className="sidebar-nav">
           {navSections.map((sec, idx) => (
-            <div key={idx} style={{ marginBottom: '0.5rem' }}>
-              <div className="nav-section-title">{sec.section}</div>
+            <div key={idx} className="nav-section-group">
+              <div className="nav-section-title" title={sec.section}>{sec.section}</div>
               {sec.items.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -103,6 +128,7 @@ export default function Sidebar({ isOpen, onClose }) {
                     to={item.to}
                     end={item.end || false}
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    title={item.label}
                     onClick={() => {
                       if (window.innerWidth <= 768) {
                         onClose();
@@ -110,7 +136,7 @@ export default function Sidebar({ isOpen, onClose }) {
                     }}
                   >
                     <Icon className="nav-item-icon" />
-                    <span>{item.label}</span>
+                    <span className="nav-item-label">{item.label}</span>
                     {item.badge && <span className="nav-item-badge">{item.badge}</span>}
                   </NavLink>
                 );
