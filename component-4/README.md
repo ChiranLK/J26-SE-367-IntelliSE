@@ -66,51 +66,54 @@ FastAPI Endpoints ──▶ Services (SubmissionService, VerificationService)
 
 ```
 component-4/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                     # FastAPI application factory, CORS, lifespan
-│   ├── api/
+├── backend/
+│   ├── app/
 │   │   ├── __init__.py
-│   │   ├── deps.py                 # Dependency injection providers
-│   │   └── v1/
+│   │   ├── main.py                     # FastAPI application factory, CORS, lifespan
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── deps.py                 # Dependency injection providers
+│   │   │   └── v1/
+│   │   │       ├── __init__.py
+│   │   │       ├── router.py           # Combined v1 router
+│   │   │       ├── health.py           # /health endpoint
+│   │   │       ├── submissions.py      # Manual submission & file upload routes
+│   │   │       └── verifications.py    # Verification run routes
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py               # pydantic-settings configuration
+│   │   │   ├── errors.py               # Custom exceptions & global exception handlers
+│   │   │   └── logging.py              # Structured logging configuration
+│   │   ├── repositories/
+│   │   │   ├── __init__.py             # Repository factories
+│   │   │   ├── base.py                 # Abstract base repository interfaces
+│   │   │   ├── in_memory.py            # Temporary in-memory stores
+│   │   │   └── mongo.py                # PyMongo / Atlas implementations
+│   │   ├── schemas/
+│   │   │   ├── __init__.py
+│   │   │   ├── common.py               # Common enums (Language, Status, Severity)
+│   │   │   ├── submission.py           # Code submission Pydantic schemas
+│   │   │   ├── verification.py         # Verification run Pydantic schemas
+│   │   │   ├── test_result.py          # Test result schemas (Phase 2+ ready)
+│   │   │   ├── defect_report.py        # Defect report schemas (Phase 2+ ready)
+│   │   │   └── feedback.py             # Feedback loop iteration schemas
+│   │   └── services/
 │   │       ├── __init__.py
-│   │       ├── router.py           # Combined v1 router
-│   │       ├── health.py           # /health endpoint
-│   │       ├── submissions.py      # Manual submission & file upload routes
-│   │       └── verifications.py    # Verification run routes
-│   ├── core/
+│   │       ├── submission_service.py   # Submission validation & safe file upload
+│   │       └── verification_service.py # Verification run management
+│   ├── tests/
 │   │   ├── __init__.py
-│   │   ├── config.py               # pydantic-settings configuration
-│   │   ├── errors.py               # Custom exceptions & global exception handlers
-│   │   └── logging.py              # Structured logging configuration
-│   ├── repositories/
-│   │   ├── __init__.py             # Repository factories
-│   │   ├── base.py                 # Abstract base repository interfaces
-│   │   ├── in_memory.py            # Temporary in-memory stores
-│   │   └── mongo.py                # PyMongo / Atlas implementations
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   ├── common.py               # Common enums (Language, Status, Severity)
-│   │   ├── submission.py           # Code submission Pydantic schemas
-│   │   ├── verification.py         # Verification run Pydantic schemas
-│   │   ├── test_result.py          # Test result schemas (Phase 2+ ready)
-│   │   ├── defect_report.py        # Defect report schemas (Phase 2+ ready)
-│   │   └── feedback.py             # Feedback loop iteration schemas
-│   └── services/
-│       ├── __init__.py
-│       ├── submission_service.py   # Submission validation & safe file upload
-│       └── verification_service.py # Verification run management
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py                 # Fixtures & repository state resets
-│   ├── test_file_upload.py         # File upload security and validation tests
-│   ├── test_health.py              # Health check endpoint tests
-│   ├── test_submissions.py         # Manual submission endpoint tests
-│   └── test_verifications.py       # Verification lifecycle tests
-├── .env.example                    # Environment template
-├── .gitignore                      # Git ignore configuration
-├── README.md                       # Documentation
-└── requirements.txt                # Exact pinned dependencies
+│   │   ├── conftest.py                 # Fixtures & repository state resets
+│   │   ├── test_file_upload.py         # File upload security and validation tests
+│   │   ├── test_health.py              # Health check endpoint tests
+│   │   ├── test_submissions.py         # Manual submission endpoint tests
+│   │   └── test_verifications.py       # Verification lifecycle tests
+│   ├── .env.example                    # Backend environment template
+│   └── requirements.txt                # Pinned backend dependencies
+├── frontend/                           # (To be added in future frontend task)
+├── .venv/                              # Root Python 3.12 virtual environment
+├── .gitignore                          # Git ignore configuration
+└── README.md                           # Documentation
 ```
 
 ---
@@ -139,17 +142,19 @@ source .venv/bin/activate
 
 ### 2. Install Dependencies
 
+Install backend dependencies from `backend/requirements.txt`:
+
 ```bash
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 3. Configure Environment Variables
 
-Copy `.env.example` to create your local `.env`:
+Copy `backend/.env.example` to create your local `backend/.env`:
 
 ```bash
-cp .env.example .env    # Linux / macOS
-copy .env.example .env  # Windows PowerShell / CMD
+cp backend/.env.example backend/.env    # Linux / macOS
+copy backend\.env.example backend\.env  # Windows PowerShell / CMD
 ```
 
 Default settings in `.env.example` enable in-memory storage (`STORAGE_BACKEND=memory`), allowing immediate local development without a database connection.
@@ -158,10 +163,16 @@ Default settings in `.env.example` enable in-memory storage (`STORAGE_BACKEND=me
 
 ## 6. Running the Application
 
-Start the development server with Uvicorn:
+Navigate to the `backend/` directory or run directly using the root virtual environment:
 
+**From `component-4/backend`:**
 ```bash
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**From `component-4` root:**
+```bash
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 0.0.0.0 --port 8000
 ```
 
 Once running:
@@ -232,18 +243,25 @@ Once running:
 
 ## 8. Running Automated Tests
 
-Run the complete test suite with pytest:
+Run the complete test suite with pytest from either `component-4` root or `backend/`:
 
+**From `component-4` root:**
 ```bash
-pytest -v
+.\.venv\Scripts\python.exe -m pytest -v backend
 ```
 
-All 24 automated unit and integration tests validate:
+**From `component-4/backend`:**
+```bash
+..\.venv\Scripts\python.exe -m pytest -v
+```
+
+All 30 automated unit and integration tests validate:
 - Root, health-check, and versioned health-check endpoints.
 - Manual submission validation (empty code rejection, language enum enforcement, metadata storage).
-- File upload safety (extension allowlists, file size boundaries, path traversal sanitization, UTF-8 validation).
+- File upload safety (extension allowlists, bounded 64KB chunk reading, file size boundaries, path traversal sanitization, null byte rejection, UTF-8 validation).
 - Verification run initialization (ensuring strictly `PENDING` status without fake test runs).
 - Verification run retrieval, status retrieval, and filtered listings.
+- In-memory startup independence and strict MongoDB fail-fast error behavior.
 
 ---
 
