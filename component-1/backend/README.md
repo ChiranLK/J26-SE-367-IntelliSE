@@ -327,16 +327,39 @@ No shared repository files or other components are required to run this service.
 
 ## Source-grounded requirement extraction
 
-Configure `C1_ANTHROPIC_API_KEY` and `C1_LLM_MODEL` in the local ignored `.env`,
-then restart. No model is selected by default. Use a model supporting JSON outputs
-in your Anthropic account. The adapter uses HTTPS `POST https://api.anthropic.com/v1/messages`
+Select the provider explicitly in the local ignored `.env`, then restart:
+
+```dotenv
+C1_LLM_PROVIDER=ollama
+C1_OLLAMA_BASE_URL=http://localhost:11434
+C1_OLLAMA_MODEL=llama3.2:1b
+C1_OLLAMA_CONTEXT_LENGTH=2048
+C1_OLLAMA_MAX_TOKENS=256
+C1_LLM_TIMEOUT_SECONDS=60
+C1_LLM_MAX_TOKENS=8192
+```
+
+Ollama must already be running and the requested model must already be installed.
+Inspect installed models with `ollama list` and start the server with `ollama serve`
+if needed. Install models manually according to your environment; the application
+never downloads models, retries generation, or silently changes providers.
+The adapter uses non-streaming `POST /api/chat`, JSON Schema in `format`,
+`temperature: 0`, `num_ctx` and `num_predict`. Ollama requests only
+`{"quotes": ["exact source statement"]}`; requirement text/evidence reuse those
+quotes, actor/action are null, and IDs, offsets and review metadata are generated
+in backend code. `C1_OLLAMA_MAX_TOKENS` controls Ollama output independently of
+Anthropic's `C1_LLM_MAX_TOKENS`. See the official
+[chat API](https://docs.ollama.com/api/chat) and
+[structured output documentation](https://docs.ollama.com/capabilities/structured-outputs).
+The base URL accepts an HTTP(S) origin without credentials or paths.
+
+The default `C1_LLM_PROVIDER=anthropic` preserves existing external-provider setup.
+Set `C1_ANTHROPIC_API_KEY` and `C1_LLM_MODEL` for a model supporting JSON outputs
+in your account. It uses HTTPS `POST https://api.anthropic.com/v1/messages`
 with `anthropic-version: 2023-06-01` and `output_config.format` JSON Schema.
 See [Anthropic structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs).
-`httpx` is now a runtime dependency; its existing lock pin is unchanged.
-There is no existing provider integration in this repository to reuse.
-The saved discussion is sent to Anthropic as JSON data in a user message; the
-separate system prompt directs extraction and treats embedded instructions as untrusted.
-No tools, agent execution, retries, or fake fallback results are provided.
+Provider clients are created only for extraction requests; health requires neither
+provider, credentials, models nor MongoDB.
 
 ```sh
 curl --fail-with-body -i -X POST \
@@ -346,80 +369,122 @@ curl --fail-with-body -i \
 ```
 
 POST reads the project's saved original discussion and returns **201** only
-when the entire result has validated and MongoDB acknowledged the new run.
-It takes no extraction text from the request. GET latest returns **200** without
-requiring provider credentials. Each run contains `run_id`, `project_id`,
-`source_discussion_hash` (SHA-256 of unchanged UTF-8 discussion), `created_at`
-(UTC, millisecond precision), `model_identifier` (configured requested model),
-`prompt_version` (`c1-atomic-evidence-v1`), and `candidates`.
+when the entire result has validated and MongoDB acknowledged a new run.
+GET latest reads existing runs without contacting a model. Each run contains
+`run_id`, `project_id`, `source_discussion_hash` (SHA-256 of unchanged UTF-8
+source), `created_at` (UTC, millisecond precision), `provider`,
+`model_identifier` (requested model), `prompt_version` (`c1-ollama-quotes-v3` for Ollama, `c1-exact-source-v2` for Anthropic)
+and `candidates`. Old runs without `provider` read as `anthropic`, the sole
+previous adapter; they are neither rewritten nor revalidated under the new policy.
 
-Candidate fields are `requirement_id` (server-generated UUID), `requirement_text`,
+Candidate fields remain `requirement_id` (server UUID), `requirement_text`,
 `evidence` (one or more `{quote, start, end}` spans), nullable `actor`/`action`,
-and `review_status: "unreviewed"`. Actor/action must be exact substrings of
-supporting evidence or null. Offsets count Unicode code points as Python does,
-not UTF-8 bytes or JavaScript UTF-16 units; start is inclusive and end exclusive.
-Each quote must equal `discussion_text[start:end]`, with whitespace, CRLF and
-Unicode retained exactly. There is no fuzzy matching or offset repair.
-An invalid candidate rejects the complete run; valid empty `candidates: []`
-is saved as a successful extraction.
+and `review_status: "unreviewed"`. Generated candidates are never client-approved.
+The provider wire schema requests quotes without offsets. The backend locates
+each exact quote and computes Unicode code point offsets (Python characters,
+not UTF-8 bytes or JavaScript UTF-16 units). Start is inclusive, end exclusive.
+Repeated identical quotes resolve deterministically to the first occurrence;
+this establishes textual traceability, not which utterance the model intended.
+Every persisted span must equal `discussion_text[start:end]`, preserving
+whitespace, CRLF and Unicode exactly. Actor/action must occur in evidence or be null.
 
-The prompt asks for individual atomic obligations, preserving permissions,
-prohibitions, conditions and constraints, while excluding greetings and meeting
-scheduling. It prohibits invented business rules. Exact evidence matching proves
-traceability only. Atomicity, completeness, and semantic preservation require
-human review; extraction does not certify those properties or classify FR/NFR.
-The optional baseline classification API is separate.
-LLMs can produce wrong offsets, omit rules, or change meaning. Failed output
-is rejected rather than repaired or represented as an empty success.
+The discussion is JSON source data in a user message, with a separate system
+prompt treating embedded instructions as untrusted. The prompt extracts only
+explicit software requirements, preserves permissions, prohibitions, negation,
+conditions and numeric limits, and excludes greetings and meeting arrangements.
+It prohibits inferred features and asks for an empty list when no requirements exist.
+
+The initial policy requires each candidate text to equal one complete supporting
+quote exactly. Paraphrasing and rewritten splits are rejected, even beside valid
+source evidence. Compound statements may remain combined to preserve wording and
+restrictions. Multiple context quotes are retained. Blank text, duplicate candidate
+text, missing fields, unknown fields, invalid evidence and malformed output reject
+the **whole run** before an insert; no partial candidates are saved. A valid empty
+list is saved as a successful run. The supplied booking/admin/search example is
+only a test fixture, not a production rule or required candidate count.
 
 ### Limits and errors
 
 | Setting / field | Default and bounds |
 | --- | --- |
-| `C1_EXTRACTION_MAX_CHARACTERS` | 30,000 characters; configurable 1–100,000; oversized saved discussions return 413, never truncated |
-| `C1_LLM_TIMEOUT_SECONDS` | 60 seconds; configurable 1–180; bounds the whole provider operation |
-| `C1_LLM_MAX_TOKENS` | 8,192 output tokens; configurable 256–16,384 |
-| `C1_LLM_RESPONSE_MAX_BYTES` | 262,144 decoded response bytes; configurable 1,024–1,048,576 |
+| `C1_LLM_PROVIDER` | `anthropic`; explicit `anthropic` or `ollama` |
+| `C1_OLLAMA_BASE_URL` | `http://localhost:11434` |
+| `C1_OLLAMA_MODEL` | `llama3.2:1b`; nonblank, maximum 200 characters |
+| `C1_OLLAMA_CONTEXT_LENGTH` | 2,048; configurable 512–131,072 tokens |
+| `C1_EXTRACTION_MAX_CHARACTERS` | 30,000; configurable 1–100,000; oversized source returns 413 without truncation |
+| `C1_LLM_TIMEOUT_SECONDS` | 60; configurable 1–180; whole-operation deadline |
+| `C1_LLM_MAX_TOKENS` | Anthropic: 8,192; configurable 256–16,384 output tokens |
+| `C1_OLLAMA_MAX_TOKENS` | Ollama: 256; configurable 32–16,384 output tokens |
+| `C1_LLM_RESPONSE_MAX_BYTES` | 262,144; configurable 1,024–1,048,576 decoded bytes |
 | Candidates per run | 0–100 |
-| Requirement text | 1–2,000 characters; must not be blank |
-| Evidence per candidate | 1–8 spans; each quote 1–4,000 characters |
+| Requirement text | 1–2,000 characters; nonblank |
+| Evidence per candidate | 1–8 quotes, each 1–4,000 characters |
 | Actor / action | null or nonblank source substrings, maximum 200 / 500 characters |
 
-Local strict Pydantic validation enforces all output constraints, including those
-removed from the provider's supported JSON Schema subset. Input is bounded in
-characters, not tokens: a model context rejection returns a provider failure.
-A token-limit stop, refusal, invalid JSON/schema (including missing or malformed
-provider content blocks), oversized provider response,
-or failed evidence validation returns **502**, with no new run saved.
-Provider/network/authentication/model configuration failures return **503**;
-provider timeouts return **504**. MongoDB outages and write/index failures return
-**503**, following the existing sanitized persistence error handler. Malformed
-project IDs return **422**; missing projects and missing latest runs return **404**.
-No credentials, full discussions, provider error bodies, or driver details are
-logged by application code or returned in error details.
+Strict Pydantic validation enforces local bounds, including constraints removed
+from Anthropic's supported schema subset. Source length is bounded in characters,
+not tokens; configure context for the chosen model and discussion size. The compact
+2,048/256 defaults target short discussions. Long discussions require deliberate
+context/output adjustments; the character limit does not establish token fit, and
+Ollama may discard input context without a detectable output stop. Do not treat a
+completed response as proof of source completeness. Ollama must return `done: true`
+and `done_reason: "stop"`; a missing completion indicator, token-limit stop,
+empty output, invalid JSON/schema, oversized response or failed evidence validation
+returns **502** with no insert. Anthropic must return one text block and `end_turn`.
+Ollama unavailable, missing requested model/endpoint (404), rejected requests and
+external-provider configuration failures return **503**; generation timeouts return
+**504** and are never automatically retried. Error details give checks to perform
+without echoing credentials, discussions, provider bodies or driver details.
+MongoDB write/index failures return **503** via the existing sanitized handler.
+Malformed project IDs return **422**, missing projects/runs return **404**.
 
-Runs are append-only documents in `extraction_runs`, with majority writes,
-a unique `run_id` index, and a `(project_id, created_at, _id)` latest-run index.
-Latest is ordered by creation timestamp then Mongo ObjectId. Concurrent requests
-may complete in a different order. The project and any manually edited requirement
-records are never updated. There is no deduplication: repeating POST creates
-another run. On an ambiguous database/network write failure a document may have
-reached MongoDB even though the API returns 503; there is no automatic retry or
-idempotency token. Failed validation never issues an insert.
+Runs remain append-only in `extraction_runs`, with majority writes, a unique
+`run_id` index and `(project_id, created_at, _id)` latest ordering. Projects,
+original discussions and existing successful runs are never updated by extraction.
+Repeated POSTs create separate runs; concurrent requests may finish out of order.
+An ambiguous network/write failure may reach MongoDB despite a 503; no automatic
+retry or idempotency token is provided. Failed validation never issues an insert.
 
 ### Verification and research limits
 
-`python -m pytest` includes API/schema/evidence tests, multi-span and Unicode
-checks, permission/negation fixture preservation, empty results, separate-run
-persistence, timestamp/tie-break ordering, configuration/input/output bounds,
-the whole-operation timeout, and sanitized provider/database failures. Failed
-runs leave the previous latest run available. Provider HTTP is mocked: fixture preservation tests verify application
-handling, not the model's extraction accuracy. The optional real MongoDB suite
-also checks separate extraction runs surviving application restart, with a mocked
-provider. It uses the same isolated disposable-database setup described above.
-No live model verification or measured research findings are claimed.
-To verify live behavior, configure local credentials and MongoDB, save a small
-synthetic discussion, call POST, then manually review every candidate and span.
+Run from `component-1/backend`:
+
+```sh
+.venv/bin/python -m pytest tests/test_extractions.py tests/test_ollama_extraction.py -q
+.venv/bin/python -m pytest -q
+.venv/bin/python -m pip check
+# Optional single live generation: real adapter, supplied synthetic discussion, no DB write.
+C1_OLLAMA_BASE_URL=http://localhost:11434 C1_OLLAMA_MODEL=llama3.2:1b \
+  .venv/bin/python scripts/smoke_ollama.py
+```
+
+The smoke script ignores `.env`, reads environment overrides, prints the actual
+bounded model response, validation result and elapsed seconds, and exits nonzero
+for unavailability, invalid output or disagreement with the fixture. It performs
+one request, never downloads a model and never persists results. It reports source
+validation separately from the fixture's relevance/completeness comparison. The
+malformed `We will meet onFriday.` fails evidence matching without repair; exact
+`We will meet on Friday.` passes source checks but fails the fixture evaluation.
+An exact meeting quote can therefore still be saved as unreviewed; the prompt
+excludes it, but the backend does not claim a general semantic relevance validator. Its source and
+expected count live only in this separate verification script and tests.
+
+Automated provider responses are mocked: passing them verifies application behavior,
+not model performance or accuracy. Tests cover the booking/admin/search regression,
+meeting exclusion in the mocked fixture, fabricated text with real quotes, permissions,
+negation, duplicates, Unicode offsets, empty extraction, errors/timeouts/truncation,
+provider configuration, old-run compatibility and preservation of successful runs.
+Optional real MongoDB tests use isolated disposable databases and mocked generation,
+as described above. See [extraction verification report](docs/extraction-verification.md)
+for the actual checks and live result from this change.
+
+Exact quotes provide traceability but do not prove extraction completeness,
+relevance, correct context selection or semantic correctness. A model may omit
+requirements, select a nonrequirement sentence, or quote only part of a restriction;
+these still require evaluation and human review. Temperature zero and structured
+JSON do not guarantee faithful extraction. This policy disallows rewritten splits
+and paraphrases; any future support needs separate evaluation and full contextual
+evidence while remaining explicitly unreviewed. No research accuracy claim is made.
 
 ## Initial FR/NFR baseline
 

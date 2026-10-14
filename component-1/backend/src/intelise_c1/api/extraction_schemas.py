@@ -1,5 +1,5 @@
 """Bounded provider output and server-owned extraction metadata."""
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -21,6 +21,24 @@ class CandidateInput(StrictModel):
     action: str | None = Field(max_length=500, description="Explicit action as an exact evidence substring, or null if unstated.")
 
 
+class QuoteEvidence(StrictModel):
+    quote: str = Field(min_length=1, max_length=4000)
+
+
+class GeneratedCandidate(CandidateInput):
+    evidence: list[QuoteEvidence] = Field(min_length=1, max_length=8)
+
+
+class GeneratedOutput(StrictModel):
+    """Provider wire schema: offsets belong to the backend, never the model."""
+    candidates: list[GeneratedCandidate] = Field(max_length=100)
+
+
+class OllamaQuotes(StrictModel):
+    """Compact wire format; all candidate metadata is computed locally."""
+    quotes: list[Annotated[str, Field(min_length=1, max_length=2000)]] = Field(max_length=100)
+
+
 class ExtractionOutput(StrictModel):
     candidates: list[CandidateInput] = Field(max_length=100)
 
@@ -37,5 +55,6 @@ class ExtractionRun(BaseModel):
     source_discussion_hash: str
     created_at: AwareDatetime
     model_identifier: str
+    provider: str = "anthropic"  # Legacy runs were created by the Anthropic adapter.
     prompt_version: str
     candidates: list[RequirementCandidate]

@@ -2,6 +2,7 @@
 
 from urllib.parse import urlsplit
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,6 +25,31 @@ class Settings(BaseSettings):
         pattern=r"^[A-Za-z0-9_][A-Za-z0-9_-]{0,62}$",
     )
     mongodb_timeout_ms: int = Field(default=2000, ge=100, le=10000)
+
+    llm_provider: Literal["anthropic", "ollama"] = "anthropic"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = Field(default="llama3.2:1b", min_length=1, max_length=200)
+    ollama_context_length: int = Field(default=2048, ge=512, le=131072)
+
+    ollama_max_tokens: int = Field(default=256, ge=32, le=16384)
+
+    @field_validator("ollama_base_url")
+    @classmethod
+    def validate_ollama_url(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or parsed.path not in {"", "/"} or any(c.isspace() for c in value)):
+            raise ValueError("Ollama URL must be an HTTP(S) origin without credentials")
+        _ = parsed.port
+        return value.rstrip("/")
+
+    @field_validator("ollama_model")
+    @classmethod
+    def validate_ollama_model(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Ollama model must not be blank")
+        return value
 
     anthropic_api_key: SecretStr | None = None
     llm_model: str = Field(default="", max_length=200)
