@@ -1,8 +1,13 @@
+<<<<<<< Updated upstream
 import { MAX_OFFSET, validExtraction, validProject, validProjectId, validProjectPage } from './contracts.js'
 
 const PREFIX = '/api/v1/component-1'
 const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
 export const EXTRACTION_TIMEOUT_MS = 200000 // Backend provider permits up to 180 seconds, plus persistence.
+=======
+const HEALTH_PATH = '/api/v1/component-1/health'
+export const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
+>>>>>>> Stashed changes
 
 export class BackendConnectionError extends Error {
   constructor(message) {

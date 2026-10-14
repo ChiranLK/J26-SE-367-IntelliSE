@@ -1,5 +1,6 @@
 # Component 01 frontend
 
+<<<<<<< Updated upstream
 React/Vite interface for IntelliSE's AI-Powered Intelligent Requirement
 Engineering Agent for Agile Software Development, a fourth-year research project.
 The supported workflow is **create project → open project → extract requirements
@@ -37,6 +38,29 @@ traceability, not semantic correctness, completeness, accuracy, or client
 approval. There are no editing/approval persistence controls, FR/NFR predictions,
 quality scores, RAG, audio, or SRS generation. Future features remain informational.
 All source and model text is rendered as text nodes, never raw HTML.
+=======
+React/Vite foundation for IntelliSE's **AI-Powered Intelligent Requirement
+Engineering Agent for Agile Software Development**, a fourth-year research
+project. The page introduces Component 01, checks backend connectivity and displays
+saved project/extraction FR/NFR classifications.
+
+## Implemented behavior
+
+- Responsive landing page with semantic headings, a skip link, keyboard focus
+  indicators, and an announced connection status.
+- Automatic health request on mount, exact contract validation, a five-second
+  timeout, and a retry button. Pending requests are cancelled on unmount or
+  replacement; stale requests cannot update the page.
+- Loading, connected, and unavailable states. The landing page remains usable
+  when the backend is offline. Connectivity does not indicate database or AI
+  readiness.
+- Informational planned capabilities: text input, requirement extraction,
+  quality validation, Agile artifacts, and draft SRS generation. These remain planned.
+  Saved-extraction FR/NFR classification is available in its own panel below.
+
+Persistence, extraction and classification are supplied by the separate backend.
+The frontend does not train models or generate fallback results.
+>>>>>>> Stashed changes
 
 ## macOS setup and run commands
 
@@ -51,9 +75,59 @@ cp .env.example .env
 npm run dev
 ```
 
+<<<<<<< Updated upstream
 Open <http://localhost:5173>. Vite uses a fixed port with `strictPort`.
 Stop with Ctrl+C. For later sessions use `npm run dev`. No new npm dependencies
 are required; `package-lock.json` remains the reproducible dependency lockfile.
+=======
+Open <http://localhost:5173>. The port is fixed with `strictPort` so an occupied
+port produces an error instead of silently changing the browser origin.
+Stop with Ctrl+C. For subsequent sessions, run `npm run dev` from this directory.
+Use npm consistently; `package-lock.json` is the reproducible dependency lockfile.
+
+## Environment and separate backend
+
+The example config contains:
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:8001
+```
+
+Copy it to `.env` and restart Vite after editing. It should be an HTTP(S) base
+URL without a query, fragment, or embedded credentials. A trailing slash is
+supported. The frontend appends `/api/v1/component-1/health`.
+
+**Every `VITE_*` value is public** and is bundled into browser code. Never put
+API keys, passwords, tokens, or other credentials in these variables. Local
+environment files are ignored; only `.env.example` is intended for version control.
+Production configuration is selected at build time; changing `.env` requires
+a new build.
+
+The backend runs separately in another terminal. Follow the backend's own
+README when its implementation is available; installing or running this
+frontend does not start it. See `../backend/README.md` for the backend source and setup.
+The service must allow the frontend's browser origin through CORS:
+`http://localhost:5173` for development. If you use production preview, configure
+`http://localhost:4173` as an allowed backend origin as well.
+
+Expected contract:
+
+```text
+GET http://localhost:8001/api/v1/component-1/health
+```
+
+```json
+{"status":"ok","component":"component-1","service":"requirement-engineering"}
+```
+
+Only a successful HTTP response containing all three expected field values
+displays **Connected**. Extra response fields are ignored. HTTP failures,
+invalid JSON, mismatched contracts, network/CORS failures, and timeouts display
+**Unavailable** with a short explanation. Retry performs a new request; it
+is temporarily inactive during a check. No continuous polling is performed.
+
+## Verification commands
+>>>>>>> Stashed changes
 
 ```sh
 npm run lint
@@ -203,6 +277,7 @@ browser tests do not establish real MongoDB durability or extraction accuracy.
 
 ## Troubleshooting
 
+<<<<<<< Updated upstream
 - **Unsupported Node:** Use the 22.x version in `.nvmrc`, then repeat `npm ci`.
 - **Backend unavailable:** Check the separate backend process and API base URL.
   Connected health is insufficient for project/provider readiness.
@@ -215,3 +290,118 @@ browser tests do not establish real MongoDB durability or extraction accuracy.
   need an HTTPS API to avoid mixed-content blocking.
 - **Port occupied:** Stop the other process; Vite intentionally does not switch
   ports. If changing ports, update backend CORS too.
+=======
+- **Unsupported Node version:** Check `node --version`; use the supported 22.x
+  version and repeat `npm ci`. Do not change the lockfile to bypass an engine error.
+- **Dependency download fails:** Check npm registry access and retry `npm ci`.
+- **Port 5173 already in use:** Stop the other process before running Vite.
+  If deliberately changing ports, update the backend's allowed CORS origins.
+- **Backend unavailable:** Confirm the separate backend is running and the
+  configured host/port are correct. Retry after fixing the service or network.
+- **CORS failure:** Check the browser console and the backend's allowed origin.
+  `localhost` and `127.0.0.1`, and different ports, are distinct origins.
+- **Invalid response:** Confirm the URL reaches Component 01's health endpoint,
+  not a proxy error page or another component. Check the three contract fields.
+- **Request timeout:** The request is cancelled after five seconds. Check the
+  backend logs and network, then retry.
+- **Changed environment has no effect:** Restart the development server or
+  rebuild for production. An HTTPS frontend needs an HTTPS backend to avoid
+  browser mixed-content blocking.
+
+## Saved project/extraction classification
+
+The landing page and health check remain available. This checkout initially had no
+project/extraction interface; a saved-project panel now uses the existing backend
+contracts without creating or rewriting discussions/extractions.
+
+- List saved projects (20 per page), open one by its ObjectId, or reopen a bookmarked
+  `?project=PROJECT_ID` URL.
+- Retrieve its latest saved extraction, then retrieve saved classification for that
+  exact extraction UUID. No extraction or classification is generated on opening.
+- Explicit **Classify requirements** sends a body-free POST for that saved run.
+  FR/NFR badges map by requirement ID, including when prediction order differs.
+- Display returned model identity/version, classification timestamp and ID. The
+  trained model is named TF-IDF + logistic regression. No evaluation metric,
+  confidence score, generated label or approval claim is shown.
+- Loading, no projects, no extraction, empty candidates, no saved classification,
+  model unavailable, database unavailable, timeout and malformed-response states
+  are handled separately. Empty extractions can show saved empty predictions;
+  there is no classification action when there are no requirements.
+- Buttons are disabled during classification, backed by synchronous UI and service
+  guards. The frontend never retries POST automatically. Timeout/network failure
+  warns that persistence is ambiguous and asks the user to refresh saved results.
+  The backend has no idempotency contract, so prevention is limited to concurrent
+  submissions in this page; another tab or reload can still submit independently.
+- Responses must match the project/extraction and map every candidate exactly once
+  to an FR/NFR prediction. A different run, missing/unknown/duplicate requirement ID
+  or invalid label cannot supply badges. Refresh clears old badges; after POST,
+  the frontend checks whether a newer extraction exists and explains when the
+  saved result belongs to the older run. Only the current run's saved predictions
+  are applied. The API does not expose a classification-history list across runs.
+- Pending reads are cancelled when switching projects or refreshing. Stale responses
+  cannot replace the new project's view. Original discussions are displayed as text.
+
+Inspected backend source files and the actual running OpenAPI on October 14, 2026:
+
+```text
+GET  /api/v1/component-1/projects?limit=20&offset=0
+GET  /api/v1/component-1/projects/{project_id}
+GET  /api/v1/component-1/projects/{project_id}/extractions/latest
+POST /api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications
+GET  /api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications/latest
+```
+
+The classification response supplies `classification_id`, `project_id`,
+`extraction_run_id`, `model_identifier`, `model_version`, `classified_at` and
+`predictions: [{requirement_id, label}]`. Only the specific 404 message
+`No classification found for this extraction run.` means no saved classification;
+other 404s remain errors. The model-unavailable 503 is separate from persistence 503.
+Health requests retain their existing five-second timeout; project reads use ten
+seconds and classification uses thirty seconds, with no automatic retry.
+
+### Verification for this change
+
+From `component-1/frontend`:
+
+```sh
+npm test
+npm run lint
+npm run build
+npm run dev
+```
+
+Results: **21 tests passed**, lint passed with zero warnings, production build
+passed. Existing eight health checks still pass. New tests cover route/query/body
+contracts, reopening retrieval, empty/missing states, ID-based mapping, older-run
+rejection, malformed output, distinct unavailable states, in-flight duplicate
+protection, cancellation and timeout/network behavior without automatic retries.
+These tests mock HTTP responses and do not establish actual model performance or
+live persistence.
+
+Live checks used the new frontend API service against `http://127.0.0.1:8001`:
+OpenAPI returned 200 with the classification POST/latest GET routes; health
+validation passed; project listing returned **503**, mapped to the database
+unavailable state. Development Origin `http://localhost:5173` received health 200
+with the matching `access-control-allow-origin` header. Node HTTP/header checks
+are not a browser interaction test. Browser rendering/interaction and a successful
+live classification/reopening check remain unverified while MongoDB is unavailable.
+No client records were changed by the live checks.
+
+After MongoDB and a valid saved extraction are available, manually verify:
+
+1. Open the project and confirm exact extraction/requirement IDs.
+2. Classify once; rapid repeated clicks must not send concurrent POSTs. Confirm
+   returned FR/NFR badges, model/version and date without confidence values.
+3. Open another project, return, and reload the bookmark; saved classifications
+   must load by the exact extraction UUID without a POST.
+4. Create a newer extraction through the backend's normal validation path, then
+   refresh. Old labels must disappear and the run-change notice must explain why.
+5. Test model unavailable, database unavailable, no extraction and empty extraction
+   cases. Previously saved results should remain readable without a loaded model.
+6. Check keyboard navigation, mobile layout and project switching during read loads.
+
+The model's evaluation remains a within-corpus normalized-text holdout, not a
+project-separated evaluation. Prediction badges do not establish requirement
+correctness, relevance, completeness or client approval. No backend files were
+modified for this frontend change; no commit or push was made.
+>>>>>>> Stashed changes

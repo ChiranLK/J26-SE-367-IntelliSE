@@ -98,6 +98,7 @@ footer span span { color: #acb7c7; margin: 0 8px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
 
+<<<<<<< Updated upstream
 /* Workspace extends the foundation's blue, slate and white palette. */
 .dashboard-intro { padding: 38px 0; gap: 38px; }
 .dashboard-intro h1 { font-size: clamp(32px, 3.8vw, 46px); }
@@ -177,3 +178,41 @@ dd { margin: 0; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; whit
 @media (max-width: 900px) { .workspace { grid-template-columns: minmax(230px, .8fr) minmax(0, 1.5fr); gap: 18px; } .panel { padding: 20px; } }
 @media (max-width: 700px) { .workspace { grid-template-columns: 1fr; } .dashboard-intro { grid-template-columns: 1fr; } .project-list { max-height: 300px; overflow: auto; padding: 5px; } }
 @media (max-width: 400px) { .panel { padding: 16px; } .run-metadata { grid-template-columns: 1fr; } .action-row button { width: 100%; } .requirement-card { padding: 14px; } }
+=======
+.project-workspace { border-top: 1px solid #e0e5ee; padding: 32px 0; }
+.open-project { margin-bottom: 24px; }
+.open-project label { display: block; font-size: 13px; margin-bottom: 8px; }
+.open-project > div { display: flex; gap: 10px; flex-wrap: wrap; }
+.open-project input { min-width: 0; flex: 1; max-width: 420px; border: 1px solid #cbd2df; border-radius: 7px; padding: 10px; font: inherit; }
+.workspace-button { min-height: 44px; border: 1px solid #cbd2df; border-radius: 7px; padding: 10px 14px; background: #fff; color: #30405a; cursor: pointer; }
+.workspace-button.primary { background: #335be8; color: white; border-color: #335be8; }
+.workspace-button:disabled, .project-list button:disabled { opacity: .6; cursor: default; }
+.workspace-layout { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr); gap: 22px; }
+.project-list { list-style: none; padding: 0; }
+.project-list button { width: 100%; padding: 12px; text-align: left; background: white; color: #30405a; border: 1px solid #e1e6ef; border-radius: 7px; cursor: pointer; margin-bottom: 8px; overflow-wrap: anywhere; }
+.project-list button[aria-current='true'] { border-color: #335be8; background: #eef2ff; }
+.project-list small { display: block; margin-top: 5px; font-size: 10px; }
+.project-detail { margin: 0; padding: 22px; border: 1px solid #e1e6ef; border-radius: 10px; background: white; min-width: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.workspace-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
+.workspace-heading h3, .workspace-heading h4 { margin: 0; }
+.extraction-heading { margin-top: 24px; }
+.record-id { font-size: 11px; color: #58667b; }
+.source-discussion, .requirement-list p { white-space: pre-wrap; }
+.classification-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; background: #f7f8fa; padding: 14px; border-radius: 7px; font-size: 11px; }
+.classification-metadata dt { font-weight: 650; }
+.classification-metadata dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.requirement-list { list-style: none; padding: 0; }
+.requirement-list li { border-top: 1px solid #e1e6ef; padding: 16px 0; }
+.requirement-list small, .workspace-note { font-size: 11px; color: #647188; }
+.requirement-identity { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 11px; }
+.requirement-badge { padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+.requirement-badge.fr { color: #176744; background: #eaf6ef; }
+.requirement-badge.nfr { color: #3156c5; background: #eef2ff; }
+.requirement-badge.pending { color: #58667b; background: #f0f2f6; }
+.workspace-notice, .workspace-error { background: #fff5e6; color: #754b12; padding: 12px; border-radius: 7px; }
+@media (max-width: 640px) {
+  .workspace-layout { grid-template-columns: 1fr; }
+  .classification-metadata { grid-template-columns: 1fr; }
+  .project-detail { padding: 16px; }
+}
+>>>>>>> Stashed changes

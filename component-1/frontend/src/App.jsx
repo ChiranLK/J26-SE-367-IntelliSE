@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useBackendStatus } from './hooks/useBackendStatus.js'
+<<<<<<< Updated upstream
 import CreateProjectForm from './components/CreateProjectForm.jsx'
 import ProjectDetail from './components/ProjectDetail.jsx'
 import ProjectList from './components/ProjectList.jsx'
@@ -7,6 +8,13 @@ import { getHash, openProject, projectFromHash, subscribeToHash } from './servic
 
 const capabilities = [
   ['FR/NFR classification', 'Organize functional and non-functional needs.'],
+=======
+import ProjectWorkspace from './components/ProjectWorkspace.jsx'
+
+const capabilities = [
+  ['Text input', 'Capture stakeholder needs in plain language.'],
+  ['Requirement extraction', 'Identify requirements from supplied text.'],
+>>>>>>> Stashed changes
   ['Quality validation', 'Review clarity, completeness, and consistency.'],
   ['Agile artifacts', 'Shape requirements into user stories and acceptance criteria.'],
   ['Draft SRS generation', 'Assemble a draft software requirements specification.'],
@@ -72,12 +80,16 @@ export default function App() {
           </aside>
         </section>
 
+<<<<<<< Updated upstream
         <section className="workspace" aria-label="Project and requirement extraction workspace">
           <ProjectList key={listRevision} activeId={projectId} refreshKey={listRevision} />
           <div className="workspace-content">
             {projectId ? <ProjectDetail key={projectId} projectId={projectId} /> : <CreateProjectForm onSaved={projectSaved} />}
           </div>
         </section>
+=======
+        <ProjectWorkspace />
+>>>>>>> Stashed changes
 
         <section className="capabilities" aria-labelledby="capabilities-title">
           <div className="section-heading">
@@ -93,7 +105,11 @@ export default function App() {
             ))}
           </ul>
         </section>
+<<<<<<< Updated upstream
         <div className="research-note"><span className="note-symbol" aria-hidden="true">i</span><p>Generated requirements remain unreviewed candidates. This research interface does not claim model accuracy or client validation.</p></div>
+=======
+        <div className="research-note"><span className="note-symbol" aria-hidden="true">i</span><p>Saved classifications use the configured backend model. These predictions support review; they do not establish requirement completeness or correctness.</p></div>
+>>>>>>> Stashed changes
       </main>
       <footer><span>IntelliSE <span aria-hidden="true">/</span> Intelligent Agile Software Engineering</span><span>Fourth-year research project · Component 01</span></footer>
     </>
