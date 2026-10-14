@@ -1,6 +1,6 @@
 # INTELISE — Component 4: Intelligent Agentic Testing & Feedback Loop Assistant
 
-> **Phase 1: Backend Foundation Only**  
+> **Phase 1: Backend Foundation & Phase 2A: React.js Frontend Implementation**  
 > Part of the INTELISE Undergraduate Research Project.
 
 ---
@@ -110,7 +110,20 @@ component-4/
 │   │   └── test_verifications.py       # Verification lifecycle tests
 │   ├── .env.example                    # Backend environment template
 │   └── requirements.txt                # Pinned backend dependencies
-├── frontend/                           # (To be added in future frontend task)
+├── frontend/                           # React.js Frontend (Phase 2A)
+│   ├── public/                         # Static assets (favicon, icons)
+│   ├── src/
+│   │   ├── __tests__/                  # Vitest frontend tests (27 passing)
+│   │   ├── api/                        # Axios client & typed API endpoints
+│   │   ├── components/                 # Common UI components & app layout
+│   │   ├── pages/                      # Dashboard, Submissions, Verifications, Roadmaps
+│   │   ├── styles/                     # Pure CSS design system
+│   │   ├── utils/                      # Constants and formatters
+│   │   ├── App.jsx                     # Route architecture
+│   │   └── main.jsx                    # React 19 bootstrap
+│   ├── .env.example                    # Frontend environment template
+│   ├── package.json                    # Frontend dependencies & scripts
+│   └── vite.config.js                  # Vite & Vitest configuration
 ├── .venv/                              # Root Python 3.12 virtual environment
 ├── .gitignore                          # Git ignore configuration
 └── README.md                           # Documentation
@@ -121,10 +134,12 @@ component-4/
 ## 5. Getting Started & Installation
 
 ### Prerequisites
-- Python 3.12 (Python 3.12.10 recommended)
-- Git
+- **Python**: 3.12 (Python 3.12.10 recommended)
+- **Node.js**: 18+ (tested on Node.js 24.21.0)
+- **npm**: 9+ (tested on npm 11.19.0)
+- **Git**
 
-### 1. Set Up Virtual Environment
+### 1. Set Up Backend Virtual Environment
 
 **Windows (PowerShell):**
 ```powershell
@@ -140,48 +155,72 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2. Install Dependencies
-
-Install backend dependencies from `backend/requirements.txt`:
+### 2. Install Backend Dependencies
 
 ```bash
 pip install -r backend/requirements.txt
 ```
 
-### 3. Configure Environment Variables
-
-Copy `backend/.env.example` to create your local `backend/.env`:
+### 3. Configure Backend Environment Variables
 
 ```bash
 cp backend/.env.example backend/.env    # Linux / macOS
 copy backend\.env.example backend\.env  # Windows PowerShell / CMD
 ```
 
-Default settings in `.env.example` enable in-memory storage (`STORAGE_BACKEND=memory`), allowing immediate local development without a database connection.
+Default settings enable in-memory storage (`STORAGE_BACKEND=memory`), allowing immediate local development without a database connection.
+
+### 4. Install Frontend Dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 5. Configure Frontend Environment Variables
+
+```bash
+cp .env.example .env     # Linux / macOS
+copy .env.example .env   # Windows PowerShell / CMD
+```
+
+Default frontend configuration points to the local FastAPI backend:
+```ini
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
 
 ---
 
-## 6. Running the Application
+## 6. Running the Applications
 
-Navigate to the `backend/` directory or run directly using the root virtual environment:
+### 1. Start the FastAPI Backend
 
-**From `component-4/backend`:**
-```bash
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+Run from the `component-4` root:
+```powershell
+# Windows PowerShell:
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
 ```
 
-**From `component-4` root:**
+Or from `component-4/backend`:
 ```bash
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Once running:
-- **API Root**: [http://localhost:8000/](http://localhost:8000/)
-- **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
-- **Interactive Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **API Root**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
----
+### 2. Start the React Frontend
+
+In a separate terminal, navigate to `component-4/frontend`:
+```bash
+cd component-4/frontend
+npm run dev
+```
+
+- **Frontend Dashboard**: [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
+- **Production Build**: `npm run build` (outputs optimized bundle to `frontend/dist/`)
+
 
 ## 7. API Endpoints Reference
 
@@ -243,7 +282,8 @@ Once running:
 
 ## 8. Running Automated Tests
 
-Run the complete test suite with pytest from either `component-4` root or `backend/`:
+### Backend Tests (pytest)
+Run the 30 automated backend tests with pytest:
 
 **From `component-4` root:**
 ```bash
@@ -255,7 +295,7 @@ Run the complete test suite with pytest from either `component-4` root or `backe
 ..\.venv\Scripts\python.exe -m pytest -v
 ```
 
-All 30 automated unit and integration tests validate:
+All 30 backend tests validate:
 - Root, health-check, and versioned health-check endpoints.
 - Manual submission validation (empty code rejection, language enum enforcement, metadata storage).
 - File upload safety (extension allowlists, bounded 64KB chunk reading, file size boundaries, path traversal sanitization, null byte rejection, UTF-8 validation).
@@ -263,21 +303,43 @@ All 30 automated unit and integration tests validate:
 - Verification run retrieval, status retrieval, and filtered listings.
 - In-memory startup independence and strict MongoDB fail-fast error behavior.
 
+### Frontend Tests (Vitest)
+Run the 27 automated frontend tests with Vitest:
+
+**From `component-4/frontend`:**
+```bash
+npm run test
+```
+
+All 27 frontend tests validate:
+- Axios API client error interceptors and offline backend detection.
+- Full API endpoint operations (`/health`, `/submissions`, `/submissions/upload`, `/verifications`, `/verifications/{id}/status`).
+- Common UI primitives (Badge variants, accessible Buttons, StatCards, Modals, Pagination, EmptyStates).
+- CodeViewer safe plain text rendering (no HTML injection, line numbers, clipboard copy).
+- Page validation logic (preventing empty code submission, file dropzone extension checks).
+- Roadmap notices for Phase 2 defect detection and Phase 3 XAI feedback.
+
 ---
 
 ## 9. Security Notes
 
-1. **No Code Execution**: In Phase 1, submitted code is treated solely as plain text data. The application never executes user-submitted or component-submitted code.
-2. **Path Traversal Defense**: File upload sanitization enforces `os.path.basename()` and strips dangerous relative path segments (`../`).
-3. **MIME & Extension Enforcement**: Binary files and disallowed extensions (`.exe`, `.sh`, `.bin`) are rejected with `400 Bad Request`.
-4. **Size Bounds**: Upload size is capped at 2MB by default (configurable via `MAX_UPLOAD_SIZE_BYTES`).
-5. **CORS Whitelist**: Explicitly configured origins (`ALLOWED_ORIGINS`) prevent unauthorized browser origins from querying the API.
+1. **Zero Client Code Execution**: Neither submitted nor uploaded code is ever executed in the browser or rendered via unsafe HTML injection (`dangerouslySetInnerHTML`). Source code is viewed strictly as text within `<pre><code>`.
+2. **Authoritative Backend Security**: While the frontend provides immediate user feedback (verifying file extensions and 2MB size limit), the FastAPI backend remains the authoritative enforcement boundary.
+3. **Path Traversal Defense**: File upload sanitization enforces `os.path.basename()` and strips dangerous relative path segments (`../`).
+4. **MIME & Extension Enforcement**: Binary files and disallowed extensions (`.exe`, `.sh`, `.bin`) are rejected with `400 Bad Request`.
+5. **CORS Whitelist**: Explicitly configured origins (`ALLOWED_ORIGINS` includes `http://localhost:5173` and `http://127.0.0.1:5173`) prevent unauthorized browser origins from querying the API.
 
 ---
 
-## 10. Research Roadmap
+## 10. Research Roadmap & Limitations
 
-- **Phase 1 (Current)**: Backend foundation, API contracts, in-memory & Atlas repository abstraction, verification run lifecycle.
-- **Phase 2**: Multi-agent test execution (Unit, Integration, Performance agents via LangGraph and local Ollama LLMs).
-- **Phase 3**: Explainable AI (XAI) feedback generator and automated defect communication loop with Component 3.
-- **Phase 4**: React & TypeScript web interface for real-time verification monitoring and feedback inspection.
+- [x] **Phase 1 (Completed)**: Backend foundation, API contracts, in-memory & Atlas repository abstraction, verification run lifecycle.
+- [x] **Phase 2A (Completed)**: React.js frontend implementation, live dashboard, manual submission, drag-and-drop file upload, submission history, verification run management, and design system.
+- [ ] **Phase 2B (Next Phase)**: Multi-agent test execution (Unit, Integration, Performance agents orchestrated via LangGraph and local Ollama LLMs).
+- [ ] **Phase 3**: Explainable AI (XAI) feedback engine and automated defect communication loop with Component 3.
+
+### Current Limitations
+- **Ephemeral Storage**: In development mode (`STORAGE_BACKEND=memory`), data is stored in memory and resets when FastAPI restarts.
+- **Pending Verification**: Autonomous test agent runners are scheduled for Phase 2B. Verification runs currently initialize and remain in `PENDING` status without simulating test execution.
+- **Defects & XAI Reserved**: Defect reporting and Explainable AI tabs display roadmap notices and will become active once Phase 2B and Phase 3 are implemented.
+

@@ -1,0 +1,142 @@
+:root {
+  /* =========================================================================
+     INTELISE DESIGN SYSTEM TOKENS — LINEAR / VERCEL INSPIRED PALETTE
+     Deep charcoal/graphite surfaces with restrained micro-accents
+     ========================================================================= */
+
+  /* Surface Hierarchy (Dark Theme Default) */
+  --bg-canvas: #090a0f;
+  --bg-primary: #090a0f;
+  --bg-secondary: #0d0e14;
+  --bg-tertiary: #13151c;
+  --bg-card: #101217;
+  --bg-card-hover: #15171f;
+  --bg-input: #0b0c10;
+  --bg-input-focus: #0f1016;
+
+  /* Borders & Hairlines */
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --border-active: rgba(255, 255, 255, 0.2);
+  --border-focus: #F59E0B;
+
+  /* Typography Colors */
+  --text-primary: #f4f4f6;
+  --text-secondary: #9da3b4;
+  --text-muted: #6b7282;
+  --text-tertiary: #4b5262;
+  --text-inverse: #090a0f;
+
+  /* Warm Orange Primary Action System (WCAG AA/AAA Compliant) */
+  --primary-300: #FCD34D;
+  --primary-400: #FBBF24;
+  --primary-500: #F59E0B;
+  --primary-600: #D97706;
+  --primary-700: #B45309;
+  --primary-hover: #D97706;
+  --primary-active: #B45309;
+  --primary-text: #111318;
+  --primary-subtle: rgba(245, 158, 11, 0.12);
+  --primary-border: rgba(245, 158, 11, 0.28);
+  --primary-focus: rgba(245, 158, 11, 0.4);
+  --primary-glow: rgba(245, 158, 11, 0.15);
+
+  /* Cyan Micro-accent (Informational) */
+  --accent-cyan: #06b6d4;
+  --accent-cyan-subtle: rgba(6, 182, 212, 0.08);
+  --accent-cyan-border: rgba(6, 182, 212, 0.2);
+
+  /* Semantic Statuses (High readability, low noise) */
+  --status-pending: #f59e0b;
+  --status-pending-bg: rgba(245, 158, 11, 0.08);
+  --status-pending-border: rgba(245, 158, 11, 0.2);
+
+  --status-running: #38bdf8;
+  --status-running-bg: rgba(56, 189, 248, 0.08);
+  --status-running-border: rgba(56, 189, 248, 0.2);
+
+  --status-passed: #10b981;
+  --status-passed-bg: rgba(16, 185, 129, 0.08);
+  --status-passed-border: rgba(16, 185, 129, 0.2);
+
+  --status-failed: #f43f5e;
+  --status-failed-bg: rgba(244, 63, 94, 0.08);
+  --status-failed-border: rgba(244, 63, 94, 0.2);
+
+  --status-error: #ef4444;
+  --status-error-bg: rgba(239, 68, 68, 0.08);
+  --status-error-border: rgba(239, 68, 68, 0.2);
+
+  /* Typography Families */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, monospace;
+
+  /* Sizing Scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Button Height Tokens */
+  --btn-height-sm: 32px;
+  --btn-height-md: 38px;
+  --btn-height-lg: 44px;
+
+  /* Shadows (Precision elevation) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Layout Constants */
+  --sidebar-width: 256px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 62px;
+  --content-max-width: 1400px;
+  --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Light Theme — Refined Slate/Zinc */
+[data-theme="light"] {
+  --bg-canvas: #f8fafc;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.16);
+  --border-active: rgba(0, 0, 0, 0.24);
+  --border-focus: #D97706;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #ffffff;
+
+  --primary-300: #FCD34D;
+  --primary-400: #FBBF24;
+  --primary-500: #F59E0B;
+  --primary-600: #D97706;
+  --primary-700: #B45309;
+  --primary-hover: #D97706;
+  --primary-active: #B45309;
+  --primary-text: #111318;
+  --primary-subtle: rgba(245, 158, 11, 0.1);
+  --primary-border: rgba(245, 158, 11, 0.3);
+  --primary-focus: rgba(217, 119, 6, 0.4);
+  --primary-glow: rgba(245, 158, 11, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
