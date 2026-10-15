@@ -25,7 +25,7 @@ export const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 export const MAX_UPLOAD_SIZE_LABEL = '2 MB';
 
 export const VERIFICATION_STATUSES = {
-  PENDING: { label: 'Pending', variant: 'warning', description: 'Queued for Phase 2 execution' },
+  PENDING: { label: 'Pending', variant: 'warning', description: 'Queued for verification' },
   RUNNING: { label: 'Running', variant: 'info', description: 'Currently executing tests' },
   PASSED: { label: 'Passed', variant: 'success', description: 'All test suites passed' },
   FAILED: { label: 'Failed', variant: 'danger', description: 'Defects detected during testing' },
@@ -41,7 +41,7 @@ export const TEST_TYPES = [
 export const SUBMISSION_SOURCES = {
   manual_entry: { label: 'Manual Entry', variant: 'primary' },
   file_upload: { label: 'File Upload', variant: 'secondary' },
-  component_3_api: { label: 'Component 3 API', variant: 'accent' },
+  component_3_api: { label: 'Repair Integration API', variant: 'accent' },
 };
 
 export const DEFECT_SEVERITIES = {

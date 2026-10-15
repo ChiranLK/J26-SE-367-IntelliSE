@@ -74,7 +74,7 @@ export default function DashboardPage() {
       }
 
       if (healthRes.status === 'rejected' && subRes.status === 'rejected') {
-        setError(subRes.reason?.message || 'Unable to connect to Component 4 backend service.');
+        setError(subRes.reason?.message || 'Unable to connect to backend verification service.');
       }
     } catch (err) {
       setError(err.message || 'An unexpected error occurred while loading dashboard telemetry.');
@@ -117,7 +117,7 @@ export default function DashboardPage() {
               <span>Operational Telemetry</span>
             </h1>
             <p className="page-description">
-              Verification pipeline monitor, code submission metrics, and runtime health for Component 4.
+              Verification pipeline monitor, code submission metrics, and platform runtime health.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -226,14 +226,14 @@ export default function DashboardPage() {
             title="Pending Queue"
             value={statusCounts.PENDING}
             icon={Clock}
-            badge={<Badge variant="warning" dot>Phase 2 Queue</Badge>}
-            description="Awaiting agent test runner"
+            badge={<Badge variant="warning" dot>Pending</Badge>}
+            description="Awaiting test execution"
           />
           <StatCard
             title="Verified (Passed)"
             value={statusCounts.PASSED}
             icon={CheckCircle2}
-            badge={<Badge variant="success" dot>Zero Fabricated</Badge>}
+            badge={<Badge variant="success" dot>Verified</Badge>}
             description="Passed with test evidence"
           />
         </div>

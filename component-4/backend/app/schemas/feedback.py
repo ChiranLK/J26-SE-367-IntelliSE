@@ -113,4 +113,130 @@ class FeedbackIteration(BaseModel):
         description="Timestamp when feedback iteration record was initiated",
     )
 
+    # Phase 4 Milestone 1: Dispatch lifecycle & governance fields
+    dispatch_attempt_id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier for the dispatch attempt (e.g. disp-...)",
+    )
+    approval_status: str = Field(
+        default="NOT_REQUESTED",
+        description="Human approval status (NOT_REQUESTED, PENDING_APPROVAL, APPROVED, REJECTED)",
+    )
+    approved_at: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp when human reviewer explicitly approved feedback dispatch",
+    )
+    approved_by: Optional[str] = Field(
+        default=None,
+        description="Identifier of the human reviewer who authorized dispatch",
+    )
+    delivery_status: str = Field(
+        default="NOT_DISPATCHED",
+        description="Delivery state (NOT_DISPATCHED, PENDING_DELIVERY, DISPATCHED, ACKNOWLEDGED, FAILED)",
+    )
+    component_3_job_id: Optional[str] = Field(
+        default=None,
+        description="Job or task identifier returned in Component 3 acknowledgment",
+    )
+    error_category: Optional[str] = Field(
+        default=None,
+        description="Category of failure if delivery fails (e.g. COMPONENT_3_UNAVAILABLE, TIMEOUT, CLIENT_ERROR)",
+    )
+    correlation_id: Optional[str] = Field(
+        default=None,
+        description="End-to-end tracing correlation identifier (X-Correlation-ID)",
+    )
+    dispatched_at: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp when HTTP dispatch to Component 3 was initiated",
+    )
+    acknowledged_at: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp when Component 3 confirmed receipt of technical feedback",
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp of last iteration state update",
+    )
+
+
+class FeedbackApprovalRequest(BaseModel):
+    """Payload for explicit human approval of technical feedback before dispatch."""
+
+    approver: Optional[str] = Field(
+        default="human_engineer",
+        description="Identifier or name of the human engineer granting approval",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        description="Optional justification or review notes from the human engineer",
+    )
+
+
+class FeedbackDispatchRequest(BaseModel):
+    """Payload to request dispatch of an approved technical feedback package to Component 3."""
+
+    approved: bool = Field(
+        default=True,
+        description="Explicit human confirmation authorizing dispatch to Component 3",
+    )
+    approver: Optional[str] = Field(
+        default="human_engineer",
+        description="Identifier of the human authorizing this dispatch request",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        description="Optional dispatch context notes",
+    )
+    force_retry: bool = Field(
+        default=False,
+        description="If True, permits retrying a previously failed dispatch attempt",
+    )
+
+
+class FeedbackDispatchResponse(BaseModel):
+    """Response returned upon attempting technical feedback dispatch to Component 3."""
+
+    verification_run_id: str = Field(description="Associated verification run ID")
+    feedback_id: str = Field(description="Unique technical feedback package ID")
+    dispatch_attempt_id: str = Field(description="Unique dispatch attempt identifier")
+    approval_status: str = Field(description="Approval state (e.g. APPROVED, NOT_REQUESTED)")
+    delivery_status: str = Field(description="Delivery status (e.g. ACKNOWLEDGED, FAILED, NOT_DISPATCHED)")
+    component_3_acknowledged: bool = Field(description="Whether Component 3 confirmed receipt")
+    component_3_job_id: Optional[str] = Field(
+        default=None,
+        description="Job or correction task ID assigned by Component 3",
+    )
+    correlation_id: str = Field(description="Correlation ID for end-to-end request tracing")
+    message: str = Field(description="Human-readable outcome or status message")
+    error_category: Optional[str] = Field(
+        default=None,
+        description="Category of error if dispatch did not succeed",
+    )
+    iteration: Optional[FeedbackIteration] = Field(
+        default=None,
+        description="Updated feedback iteration record with persisted state",
+    )
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp of the dispatch event",
+    )
+
+
+class Component3StatusResponse(BaseModel):
+    """Diagnostic status response regarding Component 3 connectivity and contract availability."""
+
+    configured: bool = Field(description="Whether Component 3 base URL is configured")
+    enabled: bool = Field(description="Whether live HTTP dispatch to Component 3 is enabled")
+    base_url: str = Field(description="Configured Component 3 service base URL")
+    endpoint: str = Field(description="Configured Component 3 feedback receiver endpoint")
+    contract_status: str = Field(
+        description="Status of Component 3 contract (e.g. UNDER_DEVELOPMENT, ACTIVE)",
+    )
+    dispatch_allowed: bool = Field(
+        description="Whether live dispatch can be executed in the current environment",
+    )
+    reason: str = Field(description="Detailed explanation of integration readiness")
+
+
 

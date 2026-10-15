@@ -90,5 +90,23 @@ class Settings(BaseSettings):
     DOCKER_PIDS_LIMIT: int = 64
     DOCKER_TMPFS_SIZE: str = "64m"
 
+    # Component 3 Outbound Feedback Integration (Phase 4 Milestone 1)
+    # Disabled by default until Component 3 implements a verified feedback receiver endpoint
+    COMPONENT_3_ENABLED: bool = False
+    COMPONENT_3_BASE_URL: str = "http://127.0.0.1:8000"
+    COMPONENT_3_FEEDBACK_ENDPOINT: str = "/api/v1/correction-feedback"
+    COMPONENT_3_TIMEOUT_SECONDS: float = 10.0
+    COMPONENT_3_CONNECT_TIMEOUT_SECONDS: float = 3.0
+    COMPONENT_3_MAX_RETRIES: int = 2
+    COMPONENT_3_API_KEY: str = ""
+
+    @field_validator("COMPONENT_3_BASE_URL", mode="after")
+    @classmethod
+    def validate_component_3_url(cls, v: str) -> str:
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("COMPONENT_3_BASE_URL must begin with http:// or https://")
+        return v.rstrip("/")
+
 
 settings = Settings()
+

@@ -63,9 +63,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggle
       section: 'Verification & Feedback',
       items: [
         { to: '/verifications', label: 'Verification Runs', icon: PlayCircle },
-        { to: '/defects', label: 'Defect Analysis', icon: AlertOctagon, badge: 'Phase 2' },
-        { to: '/xai', label: 'XAI Explanations', icon: BrainCircuit, badge: 'Phase 3' },
-        { to: '/feedback', label: 'Feedback Loop', icon: RefreshCw, badge: 'Phase 3' },
+        { to: '/defects', label: 'Defect Analysis', icon: AlertOctagon },
+        { to: '/xai', label: 'XAI Explanations', icon: BrainCircuit },
+        { to: '/feedback', label: 'Feedback History', icon: RefreshCw },
       ],
     },
   ];

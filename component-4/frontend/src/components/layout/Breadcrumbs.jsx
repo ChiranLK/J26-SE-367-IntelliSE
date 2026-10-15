@@ -10,7 +10,7 @@ const routeNames = {
   'verifications': 'Verification Runs',
   'defects': 'Defect Analysis',
   'xai': 'XAI Explanations',
-  'feedback': 'Feedback Loop',
+  'feedback': 'Feedback History',
 };
 
 export default function Breadcrumbs() {

@@ -10,7 +10,7 @@ const renderWithRouter = (ui) => {
   return render(<BrowserRouter>{ui}</BrowserRouter>);
 };
 
-describe('Technical Feedback Preview UI (Component 3 Integration)', () => {
+describe('Technical Feedback Preview UI', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -106,7 +106,7 @@ describe('Technical Feedback Preview UI (Component 3 Integration)', () => {
 
     // Verify Technical Feedback Section Header and Target
     expect(screen.getByText('Technical Feedback Preview')).toBeInTheDocument();
-    expect(screen.getByText('Target: Component 3')).toBeInTheDocument();
+    expect(screen.getByText('Target: Repair Service')).toBeInTheDocument();
 
     // Verify Eligibility status badge & reason
     expect(screen.getByText('Eligible for Repair Loop')).toBeInTheDocument();
@@ -123,8 +123,8 @@ describe('Technical Feedback Preview UI (Component 3 Integration)', () => {
     expect(screen.getByText(/payload\.json \(Schema v1\.0\)/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Copy JSON/i })).toBeInTheDocument();
 
-    // Verify planned C3 dispatch button is disabled
-    const dispatchBtn = screen.getByRole('button', { name: /Dispatch to C3 \(Planned\)/i });
+    // Verify unavailable repair dispatch button is disabled
+    const dispatchBtn = screen.getByRole('button', { name: /Send for Repair \(Unavailable\)/i });
     expect(dispatchBtn).toBeInTheDocument();
     expect(dispatchBtn).toBeDisabled();
   });

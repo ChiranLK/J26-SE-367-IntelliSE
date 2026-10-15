@@ -175,7 +175,7 @@ export default function FileUploadPage() {
           <span>Source File Upload</span>
         </h1>
         <p className="page-description">
-          Upload individual source code files safely into the Component 4 repository. Server verifies encoding, size, and extensions.
+          Upload source code files safely for automated verification. The platform verifies file encoding, size, and extensions.
         </p>
       </div>
 
