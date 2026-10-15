@@ -1,0 +1,23 @@
+# ==============================================================================
+# INTELISE Component 4 — Isolated Python Test Runner Sandbox
+# Non-root, unprivileged container image for Phase 2B test execution
+# ==============================================================================
+FROM python:3.12-slim
+
+# Prevent Python from writing .pyc files and buffer stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace
+
+# Create an unprivileged non-root user with UID 1000
+RUN groupadd -g 1000 sandbox && \
+    useradd -u 1000 -g sandbox -m -s /bin/bash sandbox && \
+    pip install --no-cache-dir pytest==9.1.1
+
+# Default workdir
+WORKDIR /workspace
+
+# Switch to non-root user
+USER sandbox:sandbox
+
+CMD ["pytest", "--version"]

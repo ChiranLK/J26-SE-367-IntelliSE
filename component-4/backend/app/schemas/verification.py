@@ -22,6 +22,19 @@ class VerificationRunCreate(BaseModel):
         default_factory=lambda: [TestType.UNIT, TestType.INTEGRATION, TestType.PERFORMANCE],
         description="Requested test types for this verification run",
     )
+    trusted_test_cases: Optional[str] = Field(
+        default=None,
+        description="Explicitly authorized pytest test code or oracle for this run",
+    )
+
+
+class VerificationRunExecute(BaseModel):
+    """Payload to trigger execution of a pending verification run."""
+
+    trusted_test_cases: Optional[str] = Field(
+        default=None,
+        description="Optional explicit trusted pytest test code / oracle overriding or complementing submission test code",
+    )
 
 
 class VerificationStatusResponse(BaseModel):
@@ -63,6 +76,10 @@ class VerificationRunResponse(BaseModel):
     feedback_iterations: List[FeedbackIteration] = Field(
         default_factory=list,
         description="Feedback loop history with Component 3",
+    )
+    execution_telemetry: Optional[dict] = Field(
+        default_factory=dict,
+        description="Runtime container execution telemetry",
     )
     error_message: Optional[str] = Field(
         default=None,

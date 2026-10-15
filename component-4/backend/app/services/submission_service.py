@@ -55,6 +55,7 @@ class SubmissionService:
             language=payload.language,
             filename=sanitized_filename,
             requirement_ids=payload.requirement_ids,
+            test_code=payload.test_code,
             source_type=SubmissionSource.MANUAL_ENTRY,
             created_at=now,
             metadata=payload.metadata,

@@ -1,27 +1,26 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
+
 from app.core.errors import ResourceNotFoundException
 from app.core.logging import logger
 from app.repositories.base import BaseSubmissionRepository, BaseVerificationRunRepository
 from app.schemas.common import VerificationStatus
+from app.schemas.defect_report import DefectReportListResponse
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunListResponse,
     VerificationRunResponse,
     VerificationStatusResponse,
 )
+from app.services.defect_analysis_service import DefectAnalysisService
+from app.workflows.verification_graph import verification_pipeline
+
 
 
 class VerificationService:
     """
-    Manages verification runs.
-
-    CRITICAL ARCHITECTURAL CONSTRAINTS (Phase 1):
-    - Real testing agents, LangGraph orchestration, and test execution are scheduled for Phase 2.
-    - Code is NOT executed during Phase 1.
-    - Verification runs are initialized in PENDING status.
-    - NO mock/fake passing test results or fabricated defects are generated.
+    Manages verification runs and orchestrates real containerized execution via LangGraph.
     """
 
     def __init__(
@@ -33,11 +32,13 @@ class VerificationService:
         self.verification_repo = verification_repo
 
     async def create_verification_run(
-        self, payload: VerificationRunCreate
+        self,
+        payload: VerificationRunCreate,
+        execute_now: bool = False,
     ) -> VerificationRunResponse:
         """
         Registers a new verification run in PENDING status for an existing submission.
-        Does NOT execute code or fabricate test results in Phase 1.
+        If execute_now is True, initiates execution immediately.
         """
         # Ensure referenced submission exists
         submission = await self.submission_repo.get_by_id(payload.submission_id)
@@ -46,6 +47,10 @@ class VerificationService:
 
         run_id = f"run-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc)
+
+        init_telemetry = {}
+        if payload.trusted_test_cases:
+            init_telemetry["has_trusted_test_cases"] = True
 
         verification_run = VerificationRunResponse(
             id=run_id,
@@ -56,6 +61,7 @@ class VerificationService:
             test_results=[],
             defect_reports=[],
             feedback_iterations=[],
+            execution_telemetry=init_telemetry,
             error_message=None,
             created_at=now,
             updated_at=now,
@@ -68,7 +74,89 @@ class VerificationService:
             submission.id,
             saved_run.status.value,
         )
+
+        if execute_now:
+            return await self.execute_verification_run(
+                run_id=run_id,
+                trusted_test_cases=payload.trusted_test_cases,
+            )
+
         return saved_run
+
+    async def execute_verification_run(
+        self,
+        run_id: str,
+        trusted_test_cases: Optional[str] = None,
+        timeout_seconds: Optional[int] = None,
+    ) -> VerificationRunResponse:
+        """
+        Orchestrates real Python test execution using the LangGraph verification pipeline
+        and containerized test runner sandbox.
+        """
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        if not submission:
+            raise ResourceNotFoundException("Submission", run.submission_id)
+
+        # Transition to RUNNING status
+        await self.verification_repo.update_status(run_id, VerificationStatus.RUNNING)
+        logger.info("Starting LangGraph verification workflow for run %s", run_id)
+
+        # Determine effective trusted test oracle
+        # Prioritize explicit run parameter, then submission test_code
+        effective_test_cases = trusted_test_cases or submission.test_code
+
+        state = {
+            "submission_id": submission.id,
+            "run_id": run.id,
+            "source_code": submission.code,
+            "language": submission.language.value,
+            "filename": submission.filename,
+            "requirement_ids": submission.requirement_ids,
+            "trusted_test_cases": effective_test_cases,
+            "timeout_seconds": timeout_seconds,
+            "telemetry": {},
+        }
+
+        # Invoke the LangGraph compiled state graph
+        result_state = await verification_pipeline.ainvoke(state)
+
+        final_status_str = result_state.get("status", VerificationStatus.ERROR.value)
+        try:
+            final_status = VerificationStatus(final_status_str)
+        except ValueError:
+            final_status = VerificationStatus.ERROR
+
+        final_results = result_state.get("test_results", [])
+        final_defects = result_state.get("defect_reports", [])
+        final_error = result_state.get("error_message")
+        final_telemetry = result_state.get("telemetry", {})
+
+        now = datetime.now(timezone.utc)
+        updated_run = VerificationRunResponse(
+            id=run.id,
+            submission_id=run.submission_id,
+            status=final_status,
+            triggered_by=run.triggered_by,
+            requested_test_types=run.requested_test_types,
+            test_results=final_results,
+            defect_reports=final_defects,
+            feedback_iterations=run.feedback_iterations,
+            execution_telemetry=final_telemetry,
+            error_message=final_error,
+            created_at=run.created_at,
+            updated_at=now,
+        )
+
+        saved = await self.verification_repo.save(updated_run)
+        logger.info(
+            "Completed verification run %s with status %s (test count: %d, defect count: %d)",
+            run_id,
+            saved.status.value,
+            len(saved.test_results),
+            len(saved.defect_reports),
+        )
+        return saved
 
     async def get_verification_run(self, run_id: str) -> VerificationRunResponse:
         """Retrieves complete details for a verification run."""
@@ -89,6 +177,34 @@ class VerificationService:
             updated_at=run.updated_at,
         )
 
+    async def get_verification_defects(self, run_id: str) -> DefectReportListResponse:
+        """
+        Retrieves evidence-based defect reports for a specific verification run.
+        If the run failed and defect reports have not yet been generated, analyzes the run on-demand.
+        """
+        run = await self.get_verification_run(run_id)
+
+        # If run is PASSED or PENDING, returns empty list
+        if run.status in (VerificationStatus.PASSED, VerificationStatus.PENDING):
+            return DefectReportListResponse(total=0, items=[])
+
+        # If defect reports are already present, return them
+        if run.defect_reports:
+            return DefectReportListResponse(total=len(run.defect_reports), items=run.defect_reports)
+
+        # On-demand fallback analysis if run failed but defect_reports list was empty
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        analyzer = DefectAnalysisService()
+        reports = analyzer.analyze_run(run, submission)
+
+        if reports:
+            # Save updated reports back to repository
+            run.defect_reports = reports
+            run.updated_at = datetime.now(timezone.utc)
+            await self.verification_repo.save(run)
+
+        return DefectReportListResponse(total=len(reports), items=reports)
+
     async def list_runs(
         self,
         submission_id: Optional[str] = None,
@@ -105,3 +221,4 @@ class VerificationService:
         items = await self.verification_repo.list_all(skip=skip, limit=limit)
         total = await self.verification_repo.count()
         return VerificationRunListResponse(total=total, items=items)
+

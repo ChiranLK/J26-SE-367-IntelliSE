@@ -28,6 +28,7 @@ export default function ManualSubmissionPage() {
   // Form state
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState('');
+  const [testCode, setTestCode] = useState('');
   const [filename, setFilename] = useState('');
   const [requirementTagInput, setRequirementTagInput] = useState('');
   const [requirementIds, setRequirementIds] = useState([]);
@@ -107,6 +108,7 @@ export default function ManualSubmissionPage() {
 
   const handleReset = () => {
     setCode('');
+    setTestCode('');
     setFilename('');
     setRequirementIds([]);
     setRequirementTagInput('');
@@ -135,6 +137,7 @@ export default function ManualSubmissionPage() {
         language,
         filename: filename.trim() || null,
         requirement_ids: requirementIds,
+        test_code: testCode.trim() || null,
         metadata: {
           submitted_via: 'web_frontend_manual',
           timestamp: new Date().toISOString(),
@@ -439,6 +442,27 @@ export default function ManualSubmissionPage() {
               <span>Press <kbd style={{ padding: '1px 4px', background: 'var(--bg-tertiary)', borderRadius: '3px' }}>Tab</kbd> for indentation • <kbd style={{ padding: '1px 4px', background: 'var(--bg-tertiary)', borderRadius: '3px' }}>Ctrl + Enter</kbd> to submit</span>
               <span>Code is securely stored for verification; never executed in browser.</span>
             </div>
+          </div>
+
+          {/* Optional Test Suite / Oracle Editor */}
+          <div className="form-group" style={{ marginTop: '1rem' }}>
+            <label htmlFor="testcode-textarea" className="form-label">
+              <span>Trusted Test Suite / Oracle (Optional)</span>
+              <span className="form-hint">Authorized pytest test cases to verify this submission in Phase 2B</span>
+            </label>
+            <textarea
+              id="testcode-textarea"
+              className="form-textarea code-textarea"
+              rows={6}
+              placeholder={`# Optional: Supply authorized test cases for verification\nfrom solution import calculate_metrics\n\ndef test_metrics():\n    assert calculate_metrics([10, 20, 30])["count"] == 3\n`}
+              value={testCode}
+              onChange={(e) => setTestCode(e.target.value)}
+              spellCheck="false"
+              style={{ minHeight: '110px' }}
+            />
+            <span className="form-hint">
+              Phase 2B requirement: Only explicitly authorized test cases or specifications may determine correctness.
+            </span>
           </div>
 
           {/* Workbench Footer Actions */}

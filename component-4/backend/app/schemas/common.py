@@ -45,6 +45,7 @@ class TestResultStatus(str, Enum):
     FAILED = "FAILED"
     ERROR = "ERROR"
     SKIPPED = "SKIPPED"
+    TIMEOUT = "TIMEOUT"
 
 
 class DefectSeverity(str, Enum):

@@ -31,3 +31,34 @@ class FeedbackIteration(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp when feedback iteration record was initiated",
     )
+
+
+class TechnicalFeedbackPayload(BaseModel):
+    """
+    Internal technical feedback representation for future Component 3 integration.
+    Contains strictly evidence-based diagnostic records (no XAI or speculative explanations).
+    """
+
+    verification_run_id: str = Field(description="Associated verification run identifier")
+    submission_id: str = Field(description="Associated code submission identifier")
+    failed_assertions: List[str] = Field(
+        default_factory=list,
+        description="List of failed assertion statements extracted from pytest outputs",
+    )
+    error_logs: List[str] = Field(
+        default_factory=list,
+        description="Relevant error logs or diagnostic excerpts",
+    )
+    affected_files: List[str] = Field(
+        default_factory=list,
+        description="List of affected source code filenames confirmed by submission metadata",
+    )
+    test_failure_details: List[dict] = Field(
+        default_factory=list,
+        description="Detailed test outcome objects for failed test cases",
+    )
+    generated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp when technical feedback payload was generated",
+    )
+

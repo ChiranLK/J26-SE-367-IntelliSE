@@ -21,6 +21,8 @@ import {
   FileCode,
   ShieldCheck,
   ExternalLink,
+  Bug,
+  ShieldAlert,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -36,10 +38,12 @@ import {
   createVerificationRun,
   getVerificationRunById,
   getVerificationStatus,
+  executeVerificationRun,
 } from '../api/verificationApi';
 import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
-import { VERIFICATION_STATUSES, TEST_TYPES } from '../utils/constants';
+import { VERIFICATION_STATUSES, TEST_TYPES, DEFECT_SEVERITIES } from '../utils/constants';
+
 
 export default function VerificationRunsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,7 +70,10 @@ export default function VerificationRunsPage() {
   const [createSubmissionId, setCreateSubmissionId] = useState(createForParam || '');
   const [selectedTestTypes, setSelectedTestTypes] = useState(['unit', 'integration', 'performance']);
   const [triggeredBy, setTriggeredBy] = useState('manual');
+  const [trustedTestCases, setTrustedTestCases] = useState('');
+  const [executeImmediately, setExecuteImmediately] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [executingRun, setExecutingRun] = useState(false);
   const [createError, setCreateError] = useState(null);
 
   // Run detail modal state
@@ -133,6 +140,21 @@ export default function VerificationRunsPage() {
     });
   };
 
+  const handleExecutePipeline = async (runId, testCode = undefined) => {
+    setExecutingRun(true);
+    try {
+      const updatedRun = await executeVerificationRun(runId, {
+        trusted_test_cases: testCode || undefined,
+      });
+      setSelectedRun(updatedRun);
+      setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
+    } catch (err) {
+      setError(`Failed to execute verification pipeline: ${err.message}`);
+    } finally {
+      setExecutingRun(false);
+    }
+  };
+
   const handleCreateRun = async (e) => {
     e.preventDefault();
     if (!createSubmissionId.trim()) {
@@ -148,12 +170,22 @@ export default function VerificationRunsPage() {
         submission_id: createSubmissionId.trim(),
         triggered_by: triggeredBy.trim() || 'manual',
         test_types: selectedTestTypes,
+        trusted_test_cases: trustedTestCases.trim() || undefined,
       });
+
+      let finalRun = newRun;
+      if (executeImmediately) {
+        finalRun = await executeVerificationRun(newRun.id, {
+          trusted_test_cases: trustedTestCases.trim() || undefined,
+        });
+      }
 
       setShowCreateModal(false);
       setCreateSubmissionId('');
+      setTrustedTestCases('');
+      setExecuteImmediately(false);
       fetchRuns(0, true);
-      handleViewDetails(newRun.id);
+      handleViewDetails(finalRun.id);
     } catch (err) {
       setCreateError(err.message || 'Failed to initiate verification run.');
     } finally {
@@ -613,6 +645,41 @@ export default function VerificationRunsPage() {
               </div>
             </div>
 
+            <div className="form-group">
+              <label htmlFor="trusted-tests-input" className="form-label">
+                <span>Authorized Test Cases (Optional pytest suite)</span>
+                <span className="form-hint">Explicit test oracle for Python execution</span>
+              </label>
+              <textarea
+                id="trusted-tests-input"
+                className="form-input text-mono"
+                rows={4}
+                placeholder="from solution import add&#10;&#10;def test_add():&#10;    assert add(2, 3) == 5"
+                value={trustedTestCases}
+                onChange={(e) => setTrustedTestCases(e.target.value)}
+                style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}
+              />
+              <span className="form-hint">
+                Phase 2B requirement: Only explicitly authorized test specifications determine correctness.
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label className="checkbox-label" style={{ padding: '0.4rem', borderRadius: '4px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={executeImmediately}
+                  onChange={(e) => setExecuteImmediately(e.target.checked)}
+                />
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>Execute in Docker Sandbox Immediately</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Runs pytest inside an isolated, unprivileged container upon registration
+                  </div>
+                </div>
+              </label>
+            </div>
+
             <div
               style={{
                 padding: '0.625rem 0.75rem',
@@ -624,7 +691,7 @@ export default function VerificationRunsPage() {
                 marginTop: '0.75rem',
               }}
             >
-              <strong style={{ color: 'var(--text-primary)' }}>Phase 2A Lifecycle Note:</strong> The verification run will be registered with status <code style={{ color: 'var(--status-pending)' }}>PENDING</code>. In Phase 2B, LangGraph testing agents will process this run.
+              <strong style={{ color: 'var(--text-primary)' }}>Sandbox Security:</strong> Python code executes inside an unprivileged Docker container with zero network access, read-only rootfs, and resource boundaries.
             </div>
           </form>
         </Modal>
@@ -639,6 +706,17 @@ export default function VerificationRunsPage() {
           size="lg"
           footer={
             <>
+              {selectedRun.status === 'PENDING' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={PlayCircle}
+                  loading={executingRun}
+                  onClick={() => handleExecutePipeline(selectedRun.id)}
+                >
+                  Execute in Sandbox
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -698,9 +776,41 @@ export default function VerificationRunsPage() {
 
           {/* CI/CD Agent Pipeline Telemetry Box */}
           <div style={{ marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '0.35rem' }}>
-              Autonomous Agent Telemetry
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Autonomous Agent Sandbox Telemetry
+              </span>
+              {selectedRun.execution_telemetry?.duration_ms && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Total Duration: {selectedRun.execution_telemetry.duration_ms.toFixed(1)}ms
+                </span>
+              )}
+            </div>
+
+            {selectedRun.error_message && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <Alert type="danger" title="Pipeline Diagnostics">
+                  {selectedRun.error_message}
+                </Alert>
+              </div>
+            )}
+
+            {selectedRun.execution_telemetry?.no_oracle && (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                <strong style={{ color: 'var(--status-pending)' }}>No Test Oracle Supplied:</strong> Safe AST syntax validation passed, but functional correctness cannot be verified without authorized test specifications.
+              </div>
+            )}
+
             {selectedRun.test_results && selectedRun.test_results.length > 0 ? (
               <div className="table-responsive">
                 <table className="data-table">
@@ -710,15 +820,57 @@ export default function VerificationRunsPage() {
                       <th>Type</th>
                       <th>Status</th>
                       <th>Duration</th>
+                      <th>Diagnostics</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedRun.test_results.map((tr, idx) => (
                       <tr key={idx}>
-                        <td>{tr.test_name}</td>
-                        <td>{tr.test_type}</td>
-                        <td>{tr.status}</td>
-                        <td>{tr.duration_ms}ms</td>
+                        <td>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                            {tr.test_name || tr.name}
+                          </span>
+                        </td>
+                        <td>
+                          <Badge variant="secondary">{tr.test_type}</Badge>
+                        </td>
+                        <td>
+                          <Badge
+                            variant={
+                              tr.status === 'PASSED'
+                                ? 'success'
+                                : tr.status === 'FAILED'
+                                ? 'danger'
+                                : 'warning'
+                            }
+                            dot
+                          >
+                            {tr.status}
+                          </Badge>
+                        </td>
+                        <td>
+                          {tr.duration_ms !== null && tr.duration_ms !== undefined
+                            ? `${tr.duration_ms.toFixed(1)}ms`
+                            : '—'}
+                        </td>
+                        <td style={{ maxWidth: '240px' }}>
+                          {tr.error_message ? (
+                            <span
+                              style={{
+                                color: 'var(--status-failed)',
+                                fontSize: '0.75rem',
+                                wordBreak: 'break-word',
+                              }}
+                              title={tr.error_message}
+                            >
+                              {tr.error_message}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                              None
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -737,15 +889,195 @@ export default function VerificationRunsPage() {
               >
                 <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Clock size={14} color="var(--status-pending)" />
-                  <span>Awaiting Phase 2B Testing Agent Dispatch</span>
+                  <span>Awaiting Sandbox Pipeline Execution</span>
                 </div>
-                Verification run is persisted in <code style={{ color: 'var(--status-pending)' }}>PENDING</code> state. Unit, Integration, and Performance test runners orchestrated via LangGraph & Ollama will execute against this artifact in Phase 2B.
+                Verification run is registered in <code style={{ color: 'var(--status-pending)' }}>PENDING</code> state. Click <strong>Execute in Sandbox</strong> to dispatch the LangGraph Docker test runner.
+              </div>
+            )}
+          </div>
+
+          {/* Evidence-Based Defect Reports Section */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Bug size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Evidence-Based Defect Analysis
+                </span>
+                {selectedRun.defect_reports && selectedRun.defect_reports.length > 0 && (
+                  <Badge variant="danger" dot style={{ fontSize: '0.65rem' }}>
+                    {selectedRun.defect_reports.length} {selectedRun.defect_reports.length === 1 ? 'Defect' : 'Defects'}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Zero Defects Detected for PASSED runs */}
+            {selectedRun.status === 'PASSED' && (
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <CheckCircle2 size={18} color="var(--status-passed)" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: 'var(--status-passed)' }}>Zero Defects Detected:</strong> All test assertions passed within the isolated Docker sandbox. No runtime exceptions or assertion failures observed.
+                </div>
+              </div>
+            )}
+
+            {/* Defect Reports Cards for FAILED runs with defects */}
+            {selectedRun.defect_reports && selectedRun.defect_reports.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {selectedRun.defect_reports.map((defect, dIdx) => (
+                  <div
+                    key={defect.defect_id || dIdx}
+                    style={{
+                      padding: '0.75rem 0.875rem',
+                      backgroundColor: 'var(--bg-input)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Badge variant="danger" style={{ fontSize: '0.6875rem', fontWeight: 600 }}>
+                          {defect.failure_category || 'ASSERTION_FAILURE'}
+                        </Badge>
+                        <span className="text-mono" style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.75rem' }}>
+                          {defect.failed_test || defect.title}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Severity:</span>
+                        <Badge
+                          variant={DEFECT_SEVERITIES[defect.severity]?.variant || 'danger'}
+                          dot
+                          style={{ fontSize: '0.6875rem' }}
+                        >
+                          {DEFECT_SEVERITIES[defect.severity]?.label || defect.severity}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.35rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Affected File: </span>
+                        <code style={{ color: 'var(--primary-300)' }}>
+                          {defect.file_path || 'solution.py'}{defect.line_number ? `:${defect.line_number}` : ''}
+                        </code>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Defect ID: </span>
+                        <code style={{ color: 'var(--text-secondary)' }}>{defect.defect_id}</code>
+                      </div>
+                    </div>
+
+                    {/* Expected vs Actual Diffs if extractable */}
+                    {(defect.expected_value || defect.actual_value) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', margin: '0.5rem 0' }}>
+                        <div
+                          style={{
+                            padding: '0.4rem 0.6rem',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            borderRadius: 'var(--radius-xs)',
+                          }}
+                        >
+                          <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--status-passed)', fontWeight: 600, display: 'block' }}>
+                            Expected Value
+                          </span>
+                          <span className="text-mono" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                            {defect.expected_value || '—'}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            padding: '0.4rem 0.6rem',
+                            backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: 'var(--radius-xs)',
+                          }}
+                        >
+                          <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--status-failed)', fontWeight: 600, display: 'block' }}>
+                            Actual / Observed Value
+                          </span>
+                          <span className="text-mono" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                            {defect.actual_value || '—'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Diagnostic details */}
+                    {defect.assertion_or_exception && (
+                      <div
+                        style={{
+                          marginTop: '0.35rem',
+                          padding: '0.4rem 0.6rem',
+                          backgroundColor: 'var(--bg-tertiary)',
+                          borderRadius: 'var(--radius-xs)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--status-failed)',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {defect.assertion_or_exception}
+                      </div>
+                    )}
+
+                    {/* Traceback Excerpt */}
+                    {defect.traceback_excerpt && (
+                      <details style={{ marginTop: '0.4rem' }}>
+                        <summary style={{ fontSize: '0.7rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                          View Traceback Excerpt
+                        </summary>
+                        <pre
+                          style={{
+                            margin: '0.25rem 0 0',
+                            padding: '0.5rem',
+                            background: '#07090e',
+                            borderRadius: 'var(--radius-xs)',
+                            border: '1px solid var(--border-color)',
+                            fontSize: '0.7rem',
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--text-secondary)',
+                            overflowX: 'auto',
+                            maxHeight: '160px',
+                            whiteSpace: 'pre-wrap',
+                          }}
+                        >
+                          {defect.traceback_excerpt}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Awaiting or FAILED without defect reports */}
+            {selectedRun.status === 'PENDING' && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                Defect reports will be synthesized dynamically if test execution detects failures.
               </div>
             )}
           </div>
 
           {/* Target Code Snippet */}
           {relatedSubmission && (
+
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
