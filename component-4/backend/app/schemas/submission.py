@@ -24,6 +24,10 @@ class CodeSubmissionCreate(BaseModel):
         default_factory=list,
         description="Optional requirement identifiers that this code is intended to satisfy",
     )
+    test_code: Optional[str] = Field(
+        default=None,
+        description="Optional accompanying test code suite",
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Extensible metadata (e.g. Component 3 caller info, component tag)",
@@ -54,6 +58,10 @@ class CodeSubmissionResponse(BaseModel):
         default_factory=list,
         description="Associated requirement identifiers",
     )
+    test_code: Optional[str] = Field(
+        default=None,
+        description="Optional accompanying test code suite",
+    )
     source_type: SubmissionSource = Field(
         default=SubmissionSource.MANUAL_ENTRY,
         description="Submission mechanism (manual entry, file upload, etc.)",
@@ -73,3 +81,10 @@ class CodeSubmissionListResponse(BaseModel):
 
     total: int = Field(description="Total count of stored submissions")
     items: List[CodeSubmissionResponse] = Field(description="List of submissions")
+
+
+# Backward-compatible aliases
+SubmissionResponse = CodeSubmissionResponse
+SubmissionCreate = CodeSubmissionCreate
+
+

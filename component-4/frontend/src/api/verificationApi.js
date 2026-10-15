@@ -45,3 +45,30 @@ export async function getVerificationStatus(runId) {
   const response = await apiClient.get(`/api/v1/verifications/${encodeURIComponent(runId)}/status`);
   return response.data;
 }
+
+/**
+ * Triggers execution of a verification run in the isolated Docker container sandbox.
+ * @param {string} runId
+ * @param {Object} [payload]
+ * @param {string} [payload.trusted_test_cases]
+ */
+export async function executeVerificationRun(runId, payload = {}) {
+  const response = await apiClient.post(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/execute`,
+    payload
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves evidence-based defect reports for a specific verification run.
+ * @param {string} runId
+ */
+export async function getVerificationDefects(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/defects`
+  );
+  return response.data;
+}
+
+

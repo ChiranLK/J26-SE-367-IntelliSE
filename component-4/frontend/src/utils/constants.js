@@ -43,3 +43,11 @@ export const SUBMISSION_SOURCES = {
   file_upload: { label: 'File Upload', variant: 'secondary' },
   component_3_api: { label: 'Component 3 API', variant: 'accent' },
 };
+
+export const DEFECT_SEVERITIES = {
+  CRITICAL: { label: 'Critical', variant: 'danger' },
+  HIGH: { label: 'High', variant: 'warning' },
+  MEDIUM: { label: 'Medium', variant: 'secondary' },
+  LOW: { label: 'Low', variant: 'secondary' },
+};
+

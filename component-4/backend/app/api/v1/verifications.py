@@ -1,13 +1,16 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.api.deps import get_verification_service
+from app.schemas.defect_report import DefectReportListResponse
 from app.schemas.verification import (
     VerificationRunCreate,
+    VerificationRunExecute,
     VerificationRunListResponse,
     VerificationRunResponse,
     VerificationStatusResponse,
 )
 from app.services.verification_service import VerificationService
+
 
 router = APIRouter(prefix="/verifications", tags=["Verifications"])
 
@@ -18,16 +21,34 @@ router = APIRouter(prefix="/verifications", tags=["Verifications"])
     status_code=status.HTTP_201_CREATED,
     summary="Initiate Verification Run",
     description=(
-        "Registers a verification run in PENDING status for an existing submission. "
-        "In Phase 1, test execution and agent workflows are NOT executed; the run is prepared "
-        "with PENDING status for Phase 2 agentic execution."
+        "Registers a verification run for an existing submission. Defaults to PENDING status. "
+        "If execute_now=true, immediately executes the LangGraph verification pipeline in an isolated Docker sandbox."
     ),
 )
 async def create_verification_run(
     payload: VerificationRunCreate,
+    execute_now: bool = Query(False, description="Optionally execute verification run immediately"),
     service: VerificationService = Depends(get_verification_service),
 ) -> VerificationRunResponse:
-    return await service.create_verification_run(payload)
+    return await service.create_verification_run(payload, execute_now=execute_now)
+
+
+@router.post(
+    "/{run_id}/execute",
+    response_model=VerificationRunResponse,
+    summary="Execute Verification Run",
+    description=(
+        "Triggers the LangGraph verification pipeline for an existing verification run, "
+        "executing pytest against trusted test cases inside an isolated, non-root Docker container."
+    ),
+)
+async def execute_verification_run(
+    run_id: str,
+    payload: Optional[VerificationRunExecute] = None,
+    service: VerificationService = Depends(get_verification_service),
+) -> VerificationRunResponse:
+    trusted_tests = payload.trusted_test_cases if payload else None
+    return await service.execute_verification_run(run_id, trusted_test_cases=trusted_tests)
 
 
 @router.get(
@@ -73,3 +94,20 @@ async def get_verification_status(
     service: VerificationService = Depends(get_verification_service),
 ) -> VerificationStatusResponse:
     return await service.get_verification_status(run_id)
+
+
+@router.get(
+    "/{run_id}/defects",
+    response_model=DefectReportListResponse,
+    summary="Get Verification Run Defect Reports",
+    description=(
+        "Retrieves empirical, evidence-based defect reports generated from real pytest execution outcomes "
+        "for a specific verification run. Returns zero defects for PASSED or PENDING runs."
+    ),
+)
+async def get_verification_defects(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> DefectReportListResponse:
+    return await service.get_verification_defects(run_id)
+
