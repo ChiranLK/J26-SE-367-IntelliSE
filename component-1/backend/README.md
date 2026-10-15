@@ -321,3 +321,38 @@ Do not export unrelated system or other-component packages into the lock.
   health or unit test alone does not establish real persistence.
 
 No shared repository files or other components are required to run this service.
+
+
+## Diagnosing project persistence 503
+
+Health remains 200 when persistence is unavailable. A missing/blank `MONGODB_URI`
+intentionally leaves the project repository unconfigured; this is health-only
+operation. A configured URI defers network access until project requests, where
+connection/index/write failures return the same sanitized 503. Do not diagnose
+Atlas authentication from that generic response alone.
+
+Run from this backend directory because `.env` resolves from the working directory.
+Keep real credentials local and never print `.env` or a driver exception message.
+The demonstrated local fix on October 14, 2026 was the missing environment key and
+an absent local database listener, not an API/repository defect:
+
+```dotenv
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DATABASE=intellise_component_1
+```
+
+For the documented local service, start Docker Desktop, then reuse the MongoDB
+container with `docker start intellise-c1-mongodb`. Create it with the command in
+MongoDB setup only if it does not exist. Never delete its named data volume to
+solve connection problems. Restart the backend after a missing/invalid URI is
+corrected; an already configured backend can recover from a transient service
+outage without changing APIs or stored records.
+
+The current frontend branch contains a project-only backend. The full extraction
+and classification backend is on `component-1-backend`; run that backend source
+separately when using the saved classification interface. Restarting the frontend
+branch's older backend would remove those routes. No merge or route replacement
+is required to diagnose MongoDB.
+
+See [MongoDB diagnosis and verification](research/mongodb-diagnosis.md) for bounded,
+sanitized ping results, actual isolated test outcomes and remaining blockers.
