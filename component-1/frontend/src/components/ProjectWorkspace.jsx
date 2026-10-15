@@ -91,8 +91,8 @@ function SavedProject({ projectId, onBusyChange }) {
     }
   }
 
-  if (view.phase === 'loading') return <div className="project-detail" role="status">Loading project and saved extraction…</div>
-  if (view.phase === 'error') return <div className="project-detail"><p role="alert">{view.error.message}</p><button className="workspace-button" onClick={refresh}>Retry loading project</button></div>
+  if (view.phase === 'loading') return <div className="classification-project-detail" role="status">Loading project and saved extraction…</div>
+  if (view.phase === 'error') return <div className="classification-project-detail"><p role="alert">{view.error.message}</p><button className="workspace-button" onClick={refresh}>Retry loading project</button></div>
   const { project, extraction, classification, classificationState, error, notice } = view
   // Defensive mapping also guards against a stale response after an extraction change.
   let labels = new Map()
@@ -102,7 +102,7 @@ function SavedProject({ projectId, onBusyChange }) {
   }
   const waiting = classifying || classificationState === 'loading'
 
-  return <article className="project-detail" aria-labelledby="saved-project-title">
+  return <article className="classification-project-detail" aria-labelledby="saved-project-title">
     <div className="workspace-heading"><h3 id="saved-project-title">{project.name}</h3>
       <button className="workspace-button" disabled={waiting} onClick={refresh}>Refresh saved results</button></div>
     <p className="record-id">Project <code>{project.id}</code></p>
@@ -122,7 +122,7 @@ function SavedProject({ projectId, onBusyChange }) {
       {mappingError && <p className="workspace-error" role="alert">{mappingError}</p>}
       {classification && !mappingError && <ClassificationMetadata result={classification} />}
       {!extraction.candidates.length ? <p role="status">This saved extraction contains no requirements.{classification ? ' Its saved classification has no predictions.' : ''}</p>
-        : <ul className="requirement-list">{extraction.candidates.map((candidate) => <li key={candidate.requirement_id}>
+        : <ul className="classification-requirement-list">{extraction.candidates.map((candidate) => <li key={candidate.requirement_id}>
           <div className="requirement-identity"><code>{candidate.requirement_id}</code>
             {labels.has(candidate.requirement_id) ? <span className={`requirement-badge ${labels.get(candidate.requirement_id).toLowerCase()}`} title={labels.get(candidate.requirement_id) === 'FR' ? 'Functional requirement prediction' : 'Non-functional requirement prediction'}>{labels.get(candidate.requirement_id)}</span>
               : <span className="requirement-badge pending">Unclassified</span>}
@@ -133,7 +133,7 @@ function SavedProject({ projectId, onBusyChange }) {
   </article>
 }
 
-export default function ProjectWorkspace() {
+function StandaloneWorkspace() {
   const initialId = new URLSearchParams(window.location.search).get('project') ?? ''
   const [selectedId, setSelectedId] = useState(/^[a-f0-9]{24}$/i.test(initialId) ? initialId.toLowerCase() : '')
   const [enteredId, setEnteredId] = useState(initialId)
@@ -185,8 +185,21 @@ export default function ProjectWorkspace() {
       {listing.phase === 'loading' && <p role="status">Loading projects…</p>}
       {listing.error && <p role="alert">{listing.error.message}</p>}
       {listing.phase === 'ready' && !listing.items.length && <p>No saved projects yet.</p>}
-      <ul className="project-list">{listing.items.map((project) => <li key={project.id}><button type="button" disabled={busy} aria-current={selectedId === project.id ? 'true' : undefined} onClick={() => select(project.id)}>{project.name}<small>{project.id}</small></button></li>)}</ul>
+      <ul className="classification-project-list">{listing.items.map((project) => <li key={project.id}><button type="button" disabled={busy} aria-current={selectedId === project.id ? 'true' : undefined} onClick={() => select(project.id)}>{project.name}<small>{project.id}</small></button></li>)}</ul>
       {listing.hasMore && <button className="workspace-button" disabled={busy || listing.phase === 'loading'} onClick={() => loadPage(page.offset + 20)}>Load more projects</button>}
-    </aside>{selectedId ? <SavedProject key={selectedId} projectId={selectedId} onBusyChange={setBusy} /> : <p className="project-detail">Select a saved project to load its latest extraction and classification.</p>}</div>
+    </aside>{selectedId ? <SavedProject key={selectedId} projectId={selectedId} onBusyChange={setBusy} /> : <p className="classification-project-detail">Select a saved project to load its latest extraction and classification.</p>}</div>
+  </section>
+}
+
+
+// Share the dashboard's selected project; retain the standalone stash interface
+// for callers that do not provide a selection. Never duplicate project navigation.
+export default function ProjectWorkspace({ projectId, refreshKey = 0 }) {
+  const [busy, setBusy] = useState(false)
+  if (projectId === undefined) return <StandaloneWorkspace />
+  return <section className="project-workspace" aria-labelledby="projects-title" aria-busy={busy}>
+    <div className="section-heading"><div><p className="eyebrow section-eyebrow">CLASSIFY & REVIEW</p><h2 id="projects-title">Requirement classification</h2></div><p>Review the trained FR/NFR baseline’s predictions.</p></div>
+    {projectId ? <SavedProject key={`${projectId}-${refreshKey}`} projectId={projectId} onBusyChange={setBusy} />
+      : <p className="classification-project-detail">Create or open a saved project above to classify its saved extraction.</p>}
   </section>
 }

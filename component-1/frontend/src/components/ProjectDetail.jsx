@@ -4,7 +4,7 @@ import { formatDate } from '../services/format.js'
 import { openNewProject, pendingExtraction } from '../services/navigation.js'
 import ExtractionResults from './ExtractionResults.jsx'
 
-export default function ProjectDetail({ projectId }) {
+export default function ProjectDetail({ projectId, onExtractionSaved }) {
   const [project, setProject] = useState(null)
   const [projectError, setProjectError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -54,6 +54,7 @@ export default function ProjectDetail({ projectId }) {
       const saved = await getLatestExtraction(project.id, project.discussion_text, { signal: controller.signal })
       if (!controller.signal.aborted) {
         setRun(saved)
+        onExtractionSaved?.()
         setLatest({ phase: 'ready', error: '' })
         setNeedsCheck(false)
         pendingExtraction(projectId, false)
@@ -62,6 +63,7 @@ export default function ProjectDetail({ projectId }) {
       if (!controller.signal.aborted) {
         if (isNoExtraction(error)) {
           setRun(null)
+          onExtractionSaved?.()
           setLatest({ phase: 'none', error: '' })
           setNeedsCheck(false)
           pendingExtraction(projectId, false)
@@ -81,6 +83,7 @@ export default function ProjectDetail({ projectId }) {
       const saved = await extractRequirements(project.id, project.discussion_text, { signal: controller.signal })
       if (!controller.signal.aborted) {
         setRun(saved)
+        onExtractionSaved?.()
         setLatest({ phase: 'ready', error: '' })
         pendingExtraction(projectId, false)
       }

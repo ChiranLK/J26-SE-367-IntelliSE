@@ -1,13 +1,9 @@
-<<<<<<< Updated upstream
 import { MAX_OFFSET, validExtraction, validProject, validProjectId, validProjectPage } from './contracts.js'
+import { validJobAccepted, validTranscription, validTranscriptionId, validateAudioFile } from './transcriptionContracts.js'
 
 const PREFIX = '/api/v1/component-1'
-const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
-export const EXTRACTION_TIMEOUT_MS = 200000 // Backend provider permits up to 180 seconds, plus persistence.
-=======
-const HEALTH_PATH = '/api/v1/component-1/health'
 export const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
->>>>>>> Stashed changes
+export const EXTRACTION_TIMEOUT_MS = 200000 // Backend provider permits up to 180 seconds, plus persistence.
 
 export class BackendConnectionError extends Error {
   constructor(message) {
@@ -52,10 +48,11 @@ async function request(path, {
     }
     url.pathname = `${url.pathname.replace(/\/+$/, '')}${PREFIX}${path}`
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
+    const multipart = body instanceof FormData
     const response = await fetch(url, {
       method, signal: controller.signal, credentials: 'omit', cache: 'no-store',
-      headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      headers: { Accept: 'application/json', ...(body === undefined || multipart ? {} : { 'Content-Type': 'application/json' }) },
+      ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     })
     let data
     try { data = await response.json() } catch (error) {
@@ -118,3 +115,16 @@ export const getLatestExtraction = (id, discussion, options = {}) => request(`${
 // Only this exact 404 detail means "no extraction yet"; missing projects remain errors.
 export const isNoExtraction = (error) => error instanceof ApiError && error.status === 404
   && error.detail === 'No extraction found for this project.'
+
+export function transcribeAudio(file, options = {}) {
+  const invalid = validateAudioFile(file)
+  if (invalid) throw new ApiError(invalid, { code: 'audio-input' })
+  const body = new FormData()
+  body.append('audio', file, file.name)
+  return request('/transcriptions', { timeoutMs: 60000, ...options, method: 'POST', body, validate: validJobAccepted })
+}
+
+export function getTranscription(id, options = {}) {
+  if (!validTranscriptionId(id)) throw new ApiError('Invalid transcription job ID.', { status: 422 })
+  return request(`/transcriptions/${id}`, { ...options, validate: (data) => validTranscription(data, id) })
+}
