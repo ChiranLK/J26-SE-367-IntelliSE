@@ -23,7 +23,7 @@ from intelise_c3.contracts.stack_selection import (
     StackSelectionRequest,
     TeamProficiency,
 )
-from intelise_c3.core.config import Settings
+from intelise_c3.core.config import BACKEND_ROOT, Settings
 from intelise_c3.core.errors import ApplicationError
 from intelise_c3.llm.ollama import OllamaLLMClient
 from intelise_c3.services.code_generation import CodeGenerationService
@@ -31,9 +31,8 @@ from intelise_c3.services.design_understanding import DesignUnderstandingService
 from intelise_c3.services.input_validation import InputValidationService
 from intelise_c3.services.stack_selection import StackSelectionService
 
-COMPONENT_ROOT = Path(__file__).resolve().parents[3]
 SIMULATED_INPUT = (
-    COMPONENT_ROOT
+    BACKEND_ROOT
     / "tests"
     / "fixtures"
     / "simulated"

@@ -1,7 +1,7 @@
 # Component integration contracts
 
 The FR-C3-01 C1/C2 schemas implemented in
-`src/intelise_c3/contracts/provisional_input.py` are **PROVISIONAL**. They are
+`backend/src/intelise_c3/contracts/provisional_input.py` are **PROVISIONAL**. They are
 Component 3 assumptions for research and testing, not approved group
 integration contracts. The Component 1 and Component 2 owners must confirm or
 replace them before real integration.

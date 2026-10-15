@@ -6,7 +6,8 @@ from pathlib import Path
 from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-COMPONENT_ROOT = Path(__file__).resolve().parents[3]
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+COMPONENT_ROOT = BACKEND_ROOT.parent
 
 
 class Settings(BaseSettings):
@@ -115,7 +116,7 @@ class Settings(BaseSettings):
         return resolved
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(COMPONENT_ROOT / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

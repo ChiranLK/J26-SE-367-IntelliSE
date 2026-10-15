@@ -15,7 +15,7 @@ from intelise_c3.contracts.traceability import (
     GraphUpdateRequest,
 )
 from intelise_c3.core.errors import ApplicationError
-from intelise_c3.core.config import get_settings
+from intelise_c3.core.config import COMPONENT_ROOT, get_settings
 from intelise_c3.domain.generation import (
     ArtifactOrigin,
     GenerationManifest,
@@ -343,7 +343,7 @@ def test_legacy_c2_direction_is_normalized_only_with_exact_anchor_evidence(
 
 
 def test_existing_verified_task_management_v1_manifest_is_normalized_if_available() -> None:
-    workspace_root = Path(__file__).parents[1] / "generated-workspaces"
+    workspace_root = COMPONENT_ROOT / "generated-workspaces"
     if not workspace_root.exists():
         pytest.skip("No local historical Task Management workspace is available.")
 

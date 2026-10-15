@@ -251,7 +251,7 @@ workspace:
 
 ```powershell
 $env:RUN_OLLAMA_GENERATION_INTEGRATION = "1"
-python -m pytest .\tests\test_generation_integration.py -m integration -v
+python -m pytest .\backend\tests\test_generation_integration.py -m integration -v
 Remove-Item Env:RUN_OLLAMA_GENERATION_INTEGRATION
 ```
 

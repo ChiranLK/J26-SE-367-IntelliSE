@@ -22,7 +22,7 @@ from intelise_c3.contracts.defect_report import DefectItem, DefectReport
 from intelise_c3.contracts.generation import GenerationMode
 from intelise_c3.contracts.scoped_regeneration import ScopedRegenerationRequest
 from intelise_c3.contracts.traceability import GraphCreateRequest
-from intelise_c3.core.config import Settings
+from intelise_c3.core.config import BACKEND_ROOT, COMPONENT_ROOT, Settings
 from intelise_c3.core.errors import ApplicationError
 from intelise_c3.domain.generation import GenerationRunResult
 from intelise_c3.domain.llm import (
@@ -43,8 +43,7 @@ from intelise_c3.traceability.builder import TraceabilityGraphBuilder
 from intelise_c3.traceability.store import SQLiteTraceabilityStore
 from intelise_c3.traceability.verification import ManifestVerificationService
 
-COMPONENT_ROOT = Path(__file__).resolve().parents[3]
-FIXTURE_DIRECTORY = COMPONENT_ROOT / "tests" / "fixtures" / "simulated" / "scoped_regeneration"
+FIXTURE_DIRECTORY = BACKEND_ROOT / "tests" / "fixtures" / "simulated" / "scoped_regeneration"
 SERVICE_PATH = "backend/src/services/taskService.js"
 PRIMARY_SCENARIO_ID = "SIM-SCN-001-service-update-missing-task"
 MOCK_MODEL_LABEL = "SIMULATED-MOCK-MODEL-NOT-OLLAMA"

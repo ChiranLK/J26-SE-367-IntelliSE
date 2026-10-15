@@ -32,7 +32,7 @@ Set-Location .\component-3
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e "./backend[dev]"
 Copy-Item .env.example .env
 ```
 
@@ -44,7 +44,9 @@ with `-3.11`.
 With the virtual environment active and from `component-3/`:
 
 ```powershell
+Set-Location backend
 python -m pytest
+Set-Location ..
 ```
 
 ## Start FastAPI
@@ -75,7 +77,7 @@ From another PowerShell session, submit the explicitly simulated valid fixture:
 
 ```powershell
 Set-Location .\component-3
-$body = Get-Content -Raw .\tests\fixtures\simulated\valid_input_package.json
+$body = Get-Content -Raw .\backend\tests\fixtures\simulated\valid_input_package.json
 Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/api/v1/validate-input `
@@ -295,7 +297,7 @@ The real-service pytest is opt-in and is skipped during an ordinary test run:
 
 ```powershell
 $env:RUN_OLLAMA_INTEGRATION = "1"
-python -m pytest .\tests\test_ollama_integration.py -m integration -v
+python -m pytest .\backend\tests\test_ollama_integration.py -m integration -v
 Remove-Item Env:RUN_OLLAMA_INTEGRATION
 ```
 

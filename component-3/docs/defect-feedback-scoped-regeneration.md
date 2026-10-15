@@ -405,7 +405,7 @@ python -m intelise_c3.scripts.scoped_regeneration_experiment --model ollama
 
 # Optional real-model invariant test (skipped by default)
 $env:RUN_OLLAMA_REPAIR_INTEGRATION = "1"
-python -m pytest tests/test_scoped_regeneration.py -k real_local_model
+python -m pytest backend/tests/test_scoped_regeneration.py -k real_local_model
 ```
 
 Output goes to git-ignored `generated-workspaces/experiments/` and

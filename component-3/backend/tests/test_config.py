@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from intelise_c3.core.config import COMPONENT_ROOT, Settings
+from intelise_c3.core.config import BACKEND_ROOT, COMPONENT_ROOT, Settings
 
 
 def test_configuration_defaults_are_valid(monkeypatch) -> None:
@@ -26,6 +26,13 @@ def test_configuration_defaults_are_valid(monkeypatch) -> None:
     assert settings.ollama_num_ctx == 4096
     assert settings.generated_workspace_root.name == "generated-workspaces"
     assert settings.traceability_store_path.name == "traceability.sqlite3"
+
+
+def test_backend_and_component_roots_are_distinct_and_stable() -> None:
+    assert BACKEND_ROOT.name == "backend"
+    assert COMPONENT_ROOT == BACKEND_ROOT.parent
+    assert (BACKEND_ROOT / "pyproject.toml").is_file()
+    assert (COMPONENT_ROOT / "frontend" / "package.json").is_file()
 
 
 def test_environment_overrides_are_loaded(monkeypatch) -> None:
