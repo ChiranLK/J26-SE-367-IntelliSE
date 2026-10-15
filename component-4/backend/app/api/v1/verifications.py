@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
-from app.api.deps import get_verification_service
+from app.api.deps import get_repair_service, get_verification_service
 from app.schemas.defect_report import DefectReportListResponse
 from app.schemas.feedback import (
     Component3StatusResponse,
@@ -10,6 +10,16 @@ from app.schemas.feedback import (
     FeedbackIteration,
     TechnicalFeedbackPreviewResponse,
 )
+from app.schemas.repair import (
+    DefectResolutionComparison,
+    RepairAttemptListResponse,
+    RepairAttemptResponse,
+    RepairResponseIngestRequest,
+)
+from app.schemas.test_suite import (
+    TrustedTestSuiteAttachRequest,
+    TrustedTestSuiteResponse,
+)
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunExecute,
@@ -18,6 +28,7 @@ from app.schemas.verification import (
     VerificationStatusResponse,
 )
 from app.schemas.xai import XaiExplanationResponse
+from app.services.repair_service import RepairService
 from app.services.verification_service import VerificationService
 
 
@@ -238,6 +249,135 @@ async def dispatch_feedback(
         notes=notes,
         force_retry=force_retry,
     )
+
+
+@router.post(
+    "/{run_id}/repair-responses",
+    response_model=RepairAttemptResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ingest Corrected Code for Failed Verification Run",
+    description=(
+        "Controlled local ingestion of corrected source code for an eligible failed verification run. "
+        "Strictly enforces human approval prerequisite, file extension validation (.py only), "
+        "path traversal defense, and host AST static parsing without executing untrusted code on the host. "
+        "Preserves the original failed submission completely unchanged and records a new submission and repair attempt."
+    ),
+)
+async def ingest_repair_response(
+    run_id: str,
+    payload: RepairResponseIngestRequest,
+    service: RepairService = Depends(get_repair_service),
+) -> RepairAttemptResponse:
+    attempt = await service.ingest_repair_response(original_run_id=run_id, request=payload)
+    return RepairAttemptResponse.model_validate(attempt.model_dump())
+
+
+@router.post(
+    "/{run_id}/repair-responses/{repair_id}/re-verify",
+    response_model=RepairAttemptResponse,
+    summary="Execute Re-Verification for Ingested Repair",
+    description=(
+        "Executes a new verification run for an ingested repair attempt using the existing Docker-isolated pytest runner. "
+        "Reuses the original authorized test suite and computes a deterministic defect resolution comparison upon completion."
+    ),
+)
+async def reverify_repair(
+    run_id: str,
+    repair_id: str,
+    force_reverify: bool = Query(False, description="Force re-verification even if already executed"),
+    service: RepairService = Depends(get_repair_service),
+) -> RepairAttemptResponse:
+    attempt = await service.execute_reverification(
+        original_run_id=run_id,
+        repair_id=repair_id,
+        force_reverify=force_reverify,
+    )
+    return RepairAttemptResponse.model_validate(attempt.model_dump())
+
+
+@router.get(
+    "/{run_id}/repair-responses",
+    response_model=RepairAttemptListResponse,
+    summary="List Repair Attempts for Verification Run",
+    description="Retrieves all recorded repair attempts and their resolution outcomes for a specific verification run.",
+)
+async def list_repair_attempts(
+    run_id: str,
+    service: RepairService = Depends(get_repair_service),
+) -> RepairAttemptListResponse:
+    items = await service.list_repair_attempts(original_run_id=run_id)
+    return RepairAttemptListResponse(
+        total=len(items),
+        items=[RepairAttemptResponse.model_validate(i.model_dump()) for i in items],
+    )
+
+
+@router.get(
+    "/{run_id}/repair-responses/{repair_id}",
+    response_model=RepairAttemptResponse,
+    summary="Get Repair Attempt Details",
+    description="Retrieves a specific repair attempt and its status for a verification run.",
+)
+async def get_repair_attempt(
+    run_id: str,
+    repair_id: str,
+    service: RepairService = Depends(get_repair_service),
+) -> RepairAttemptResponse:
+    attempt = await service.get_repair_attempt(original_run_id=run_id, repair_id=repair_id)
+    return RepairAttemptResponse.model_validate(attempt.model_dump())
+
+
+@router.get(
+    "/{run_id}/repair-responses/{repair_id}/comparison",
+    response_model=DefectResolutionComparison,
+    summary="Get Defect Resolution Comparison",
+    description=(
+        "Retrieves the deterministic before-and-after defect and test resolution comparison "
+        "between the original verification and the re-verification run."
+    ),
+)
+async def get_repair_comparison(
+    run_id: str,
+    repair_id: str,
+    service: RepairService = Depends(get_repair_service),
+) -> DefectResolutionComparison:
+    return await service.get_repair_comparison(original_run_id=run_id, repair_id=repair_id)
+
+
+@router.post(
+    "/{run_id}/trusted-test-suite",
+    response_model=TrustedTestSuiteResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Attach or Recover Authorized Trusted Test Suite",
+    description=(
+        "Safely attaches an independently authorized original test artifact to a verification run. "
+        "Validates syntax statically on the host (no host execution) and persists the immutable test specification "
+        "without modifying original defect reports or feedback iterations."
+    ),
+)
+async def attach_trusted_test_suite(
+    run_id: str,
+    payload: TrustedTestSuiteAttachRequest,
+    service: VerificationService = Depends(get_verification_service),
+) -> TrustedTestSuiteResponse:
+    return await service.attach_trusted_test_suite(run_id=run_id, request=payload)
+
+
+@router.get(
+    "/{run_id}/trusted-test-suite",
+    response_model=TrustedTestSuiteResponse,
+    summary="Get Trusted Test Suite Metadata",
+    description=(
+        "Retrieves public metadata and content hash for the trusted test suite associated with a verification run. "
+        "Does not expose raw executable test code unnecessarily."
+    ),
+)
+async def get_trusted_test_suite(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> TrustedTestSuiteResponse:
+    return await service.get_trusted_test_suite_metadata(run_id=run_id)
+
 
 
 

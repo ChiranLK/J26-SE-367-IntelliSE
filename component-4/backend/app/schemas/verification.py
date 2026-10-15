@@ -81,6 +81,10 @@ class VerificationRunResponse(BaseModel):
         default_factory=dict,
         description="Runtime container execution telemetry",
     )
+    test_suite_id: Optional[str] = Field(
+        default=None,
+        description="Associated trusted test suite identifier",
+    )
     error_message: Optional[str] = Field(
         default=None,
         description="Diagnostic details if status is ERROR",
@@ -102,6 +106,10 @@ class VerificationRunResponse(BaseModel):
                 "Verification run cannot be marked PASSED without real test evidence."
             )
         return self
+
+    @property
+    def defects(self) -> List[DefectReport]:
+        return self.defect_reports
 
 
 class VerificationRunListResponse(BaseModel):

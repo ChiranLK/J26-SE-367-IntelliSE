@@ -29,6 +29,9 @@ import {
   Lock,
   CheckCircle,
   XCircle,
+  Wrench,
+  RotateCcw,
+  GitCompare,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -39,6 +42,7 @@ import EmptyState from '../components/common/EmptyState';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import Pagination from '../components/common/Pagination';
 import CodeViewer from '../components/common/CodeViewer';
+import ExpandableDiagnostic from '../components/common/ExpandableDiagnostic';
 import {
   getVerificationRuns,
   createVerificationRun,
@@ -50,6 +54,9 @@ import {
   getComponent3Status,
   approveFeedback,
   dispatchFeedback,
+  ingestRepairResponse,
+  reverifyRepair,
+  getRepairAttempts,
 } from '../api/verificationApi';
 import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
@@ -103,6 +110,21 @@ export default function VerificationRunsPage() {
   const [approvingFeedback, setApprovingFeedback] = useState(false);
   const [dispatchingFeedback, setDispatchingFeedback] = useState(false);
   const [dispatchMessage, setDispatchMessage] = useState(null);
+
+  // Repair Ingestion & Re-Verification States
+  const [repairAttempts, setRepairAttempts] = useState([]);
+  const [loadingRepairs, setLoadingRepairs] = useState(false);
+  const [showIngestRepair, setShowIngestRepair] = useState(false);
+  const [correctedCode, setCorrectedCode] = useState('');
+  const [correctedFilename, setCorrectedFilename] = useState('solution.py');
+  const [repairSource, setRepairSource] = useState('LOCAL_MANUAL');
+  const [repairNotes, setRepairNotes] = useState('');
+  const [ingestingRepair, setIngestingRepair] = useState(false);
+  const [reverifyingRepairId, setReverifyingRepairId] = useState(null);
+  const [repairError, setRepairError] = useState(null);
+  const [repairWarningMessage, setRepairWarningMessage] = useState(null);
+  const [repairSuccessMessage, setRepairSuccessMessage] = useState(null);
+  const [forceConfirmRepair, setForceConfirmRepair] = useState(null);
 
 
   const fetchRuns = async (offset = skip, isRefresh = false) => {
@@ -247,6 +269,12 @@ export default function VerificationRunsPage() {
     setRelatedSubmission(null);
     setFeedbackPreview(null);
     setXaiExplanation(null);
+    setRepairAttempts([]);
+    setShowIngestRepair(false);
+    setCorrectedCode('');
+    setRepairError(null);
+    setRepairSuccessMessage(null);
+    setForceConfirmRepair(null);
 
     try {
       const run = await getVerificationRunById(runId);
@@ -255,6 +283,9 @@ export default function VerificationRunsPage() {
       try {
         const sub = await getSubmissionById(run.submission_id);
         setRelatedSubmission(sub);
+        if (sub?.filename) {
+          setCorrectedFilename(sub.filename);
+        }
       } catch {
         setRelatedSubmission(null);
       }
@@ -286,10 +317,97 @@ export default function VerificationRunsPage() {
       } catch {
         setC3Status(null);
       }
+
+      // Fetch repair attempts
+      setLoadingRepairs(true);
+      try {
+        const repairRes = await getRepairAttempts(run.id);
+        setRepairAttempts(repairRes?.items || []);
+      } catch {
+        setRepairAttempts([]);
+      } finally {
+        setLoadingRepairs(false);
+      }
     } catch (err) {
       setError(`Failed to retrieve verification run details: ${err.message}`);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleIngestRepair = async (runId) => {
+    if (!correctedCode.trim()) {
+      setRepairError('Please provide non-empty Python source code for the repair.');
+      return;
+    }
+    setIngestingRepair(true);
+    setRepairError(null);
+    setRepairSuccessMessage(null);
+    try {
+      const payload = {
+        corrected_code: correctedCode,
+        filename: correctedFilename.trim() || 'solution.py',
+        repair_source: repairSource,
+        notes: repairNotes.trim() || undefined,
+      };
+      await ingestRepairResponse(runId, payload);
+      setRepairSuccessMessage('Corrected source code ingested successfully. You can now re-verify this implementation.');
+      setShowIngestRepair(false);
+      setCorrectedCode('');
+      setRepairNotes('');
+      // Refresh repair list
+      const updatedList = await getRepairAttempts(runId);
+      setRepairAttempts(updatedList.items || []);
+    } catch (err) {
+      setRepairError(err.message || 'Failed to ingest corrected code.');
+    } finally {
+      setIngestingRepair(false);
+    }
+  };
+
+  const handleReverifyRepair = async (runId, repairId, force = false) => {
+    setReverifyingRepairId(repairId);
+    setRepairError(null);
+    setRepairWarningMessage(null);
+    setRepairSuccessMessage(null);
+    try {
+      const result = await reverifyRepair(runId, repairId, { force_reverify: force });
+      const isBlocked =
+        result.status === 'BLOCKED' ||
+        result.is_inconsistent ||
+        (!result.corrected_run_id && result.comparison?.verdict === 'INCONCLUSIVE');
+
+      if (isBlocked) {
+        setRepairWarningMessage(
+          result.notes || 'Re-verification is blocked: original trusted test suite is unavailable to safely verify this repair.'
+        );
+      } else if (result.status === 'FAILED') {
+        setRepairError(result.notes || 'Re-verification execution failed.');
+      } else {
+        setRepairSuccessMessage('Re-verification completed. Resolution comparison updated below.');
+      }
+
+      const [updatedList, updatedRun] = await Promise.all([
+        getRepairAttempts(runId),
+        getVerificationRunById(runId),
+      ]);
+      setRepairAttempts(updatedList.items || []);
+      setSelectedRun(updatedRun);
+      setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
+    } catch (err) {
+      setRepairError(err.message || 'Failed to execute re-verification.');
+    } finally {
+      setReverifyingRepairId(null);
+    }
+  };
+
+  const handleConfirmForceReverify = async () => {
+    if (!forceConfirmRepair || reverifyingRepairId) return;
+    const repairId = forceConfirmRepair.repair_id || forceConfirmRepair.id;
+    try {
+      await handleReverifyRepair(selectedRun.id, repairId, true);
+    } finally {
+      setForceConfirmRepair(null);
     }
   };
 
@@ -938,7 +1056,11 @@ export default function VerificationRunsPage() {
             {selectedRun.error_message && (
               <div style={{ marginBottom: '0.75rem' }}>
                 <Alert type="danger" title="Pipeline Diagnostics">
-                  {selectedRun.error_message}
+                  <ExpandableDiagnostic
+                    text={selectedRun.error_message}
+                    variant="danger"
+                    maxLength={100}
+                  />
                 </Alert>
               </div>
             )}
@@ -1001,23 +1123,13 @@ export default function VerificationRunsPage() {
                             ? `${tr.duration_ms.toFixed(1)}ms`
                             : '—'}
                         </td>
-                        <td style={{ maxWidth: '240px' }}>
-                          {tr.error_message ? (
-                            <span
-                              style={{
-                                color: 'var(--status-failed)',
-                                fontSize: '0.75rem',
-                                wordBreak: 'break-word',
-                              }}
-                              title={tr.error_message}
-                            >
-                              {tr.error_message}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                              None
-                            </span>
-                          )}
+                        <td className="diagnostic-cell">
+                          <ExpandableDiagnostic
+                            text={tr.error_message}
+                            variant="danger"
+                            maxLength={70}
+                            emptyFallback="None"
+                          />
                         </td>
                       </tr>
                     ))}
@@ -1168,20 +1280,15 @@ export default function VerificationRunsPage() {
 
                     {/* Diagnostic details */}
                     {defect.assertion_or_exception && (
-                      <div
-                        style={{
-                          marginTop: '0.35rem',
-                          padding: '0.4rem 0.6rem',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          borderRadius: 'var(--radius-xs)',
-                          border: '1px solid var(--border-color)',
-                          fontSize: '0.75rem',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--status-failed)',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {defect.assertion_or_exception}
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>
+                          Failed Assertion / Exception Detail
+                        </div>
+                        <ExpandableDiagnostic
+                          text={defect.assertion_or_exception}
+                          variant="danger"
+                          maxLength={90}
+                        />
                       </div>
                     )}
 
@@ -1594,6 +1701,563 @@ export default function VerificationRunsPage() {
             })()}
           </div>
 
+          {/* Repair Ingestion, Re-Verification & Defect Resolution Tracking Section */}
+          <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Wrench size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Repair Ingestion & Re-Verification
+                </span>
+                <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
+                  Target: Verification Engine
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  {repairAttempts.length} Recorded Attempt(s)
+                </span>
+                {selectedRun.status !== 'PASSED' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={Plus}
+                    onClick={() => {
+                      setShowIngestRepair((prev) => !prev);
+                      setRepairError(null);
+                      setRepairSuccessMessage(null);
+                    }}
+                    style={{ height: '26px', fontSize: '0.7rem' }}
+                  >
+                    {showIngestRepair ? 'Cancel Ingestion' : 'Submit Corrected Code'}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Context Notice */}
+            <div
+              style={{
+                padding: '0.625rem 0.75rem',
+                backgroundColor: 'rgba(249, 115, 22, 0.04)',
+                border: '1px solid rgba(249, 115, 22, 0.2)',
+                borderRadius: 'var(--radius-xs)',
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.25rem',
+              }}
+            >
+              <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                Deterministic Defect Resolution Tracking
+              </div>
+              <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                Ingest corrected source code to re-run test suites in the isolated Docker sandbox. The original failed submission remains unchanged. Defect resolutions, remaining issues, and regressions are deterministically verified against authorized test specifications.
+              </p>
+            </div>
+
+            {/* Ingestion Alerts */}
+            {repairSuccessMessage && (
+              <div
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.72rem',
+                  marginBottom: '0.75rem',
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>{repairSuccessMessage}</span>
+                <button
+                  type="button"
+                  onClick={() => setRepairSuccessMessage(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {repairWarningMessage && (
+              <div
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.72rem',
+                  marginBottom: '0.75rem',
+                  backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={14} color="var(--warning-color, #eab308)" />
+                  <span>{repairWarningMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRepairWarningMessage(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {repairError && (
+              <div
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.72rem',
+                  marginBottom: '0.75rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: 'var(--status-failed)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>{repairError}</span>
+                <button
+                  type="button"
+                  onClick={() => setRepairError(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Inline Ingestion Form */}
+            {showIngestRepair && (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-xs)',
+                  marginBottom: '0.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.625rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Ingest Corrected Python Source Artifact
+                  </span>
+                  <Badge variant="outline" style={{ fontSize: '0.625rem' }}>
+                    Sandboxed Re-Verification
+                  </Badge>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                      Filename (.py only)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input text-mono"
+                      value={correctedFilename}
+                      onChange={(e) => setCorrectedFilename(e.target.value)}
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
+                      placeholder="solution.py"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                      Provenance Source
+                    </label>
+                    <select
+                      className="form-input"
+                      value={repairSource}
+                      onChange={(e) => setRepairSource(e.target.value)}
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
+                    >
+                      <option value="LOCAL_MANUAL">Local Manual Fix</option>
+                      <option value="LOCAL_UPLOAD">Local File Upload</option>
+                      <option value="LOCAL_AUTOMATED">Automated Local Script</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                    Corrected Source Code
+                  </label>
+                  <textarea
+                    className="form-input text-mono"
+                    rows={6}
+                    value={correctedCode}
+                    onChange={(e) => setCorrectedCode(e.target.value)}
+                    placeholder="# Paste corrected Python implementation here..."
+                    style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                    Safety Policy: Code syntax is statically validated with AST parsing on host; execution occurs strictly within isolated Docker containers.
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                    Notes (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={repairNotes}
+                    onChange={(e) => setRepairNotes(e.target.value)}
+                    placeholder="Brief description of defect fix applied"
+                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginTop: '0.25rem' }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowIngestRepair(false)}
+                    style={{ height: '26px', fontSize: '0.7rem' }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={ingestingRepair}
+                    onClick={() => handleIngestRepair(selectedRun.id)}
+                    style={{ height: '26px', fontSize: '0.7rem' }}
+                  >
+                    Ingest Corrected Code
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Repair Attempts List / Cards */}
+            {loadingRepairs ? (
+              <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>
+                Loading repair history...
+              </div>
+            ) : repairAttempts.length === 0 ? (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px dashed var(--border-color)',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.72rem',
+                  color: 'var(--text-muted)',
+                  textAlign: 'center',
+                }}
+              >
+                No repair iterations ingested for this run. Use &quot;Submit Corrected Code&quot; above to test fixes.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {repairAttempts.map((attempt) => {
+                  const comp = attempt.comparison;
+                  const isReverifying = reverifyingRepairId === (attempt.repair_id || attempt.id);
+                  const isBlockedOrInconclusive =
+                    attempt.status === 'BLOCKED' ||
+                    attempt.is_inconsistent ||
+                    (!attempt.corrected_run_id && comp?.verdict === 'INCONCLUSIVE');
+                  const isReverifiedSuccess = attempt.status === 'REVERIFIED' && !!attempt.corrected_run_id;
+
+                  return (
+                    <div
+                      key={attempt.repair_id || attempt.id}
+                      style={{
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-xs)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      {/* Attempt Header Bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <code style={{ fontSize: '0.75rem', color: 'var(--primary-300)', fontWeight: 600 }}>
+                            {attempt.repair_id || attempt.id}
+                          </code>
+                          <Badge variant="outline" style={{ fontSize: '0.625rem' }}>
+                            {attempt.repair_source}
+                          </Badge>
+                          <Badge
+                            variant={
+                              isReverifiedSuccess
+                                ? 'success'
+                                : isBlockedOrInconclusive
+                                ? 'warning'
+                                : attempt.status === 'INGESTED'
+                                ? 'warning'
+                                : attempt.status === 'REVERIFYING'
+                                ? 'primary'
+                                : 'danger'
+                            }
+                            dot
+                            style={{ fontSize: '0.625rem' }}
+                          >
+                            {isBlockedOrInconclusive ? 'BLOCKED' : attempt.status}
+                          </Badge>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                            {formatDate(attempt.created_at)}
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {attempt.status === 'INGESTED' ? (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={PlayCircle}
+                              loading={isReverifying}
+                              onClick={() => handleReverifyRepair(selectedRun.id, attempt.repair_id || attempt.id)}
+                              style={{ height: '24px', fontSize: '0.6875rem' }}
+                            >
+                              Run Verification Again
+                            </Button>
+                          ) : isReverifiedSuccess ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              icon={RotateCcw}
+                              loading={reverifyingRepairId === (attempt.repair_id || attempt.id)}
+                              onClick={() => setForceConfirmRepair(attempt)}
+                              style={{ height: '24px', fontSize: '0.6875rem' }}
+                              title="Re-run verification against this repair artifact"
+                            >
+                              Run Again (Force)
+                            </Button>
+                          ) : isBlockedOrInconclusive ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled
+                              style={{ height: '24px', fontSize: '0.6875rem', opacity: 0.6 }}
+                              title="Re-verification is blocked: trusted test suite is unavailable"
+                            >
+                              Blocked (Test Suite Required)
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Corrected Submission Info */}
+                      <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.72rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)' }}>Corrected Submission: </span>
+                          <code className="text-mono" style={{ color: 'var(--text-primary)' }}>
+                            {attempt.corrected_submission_id}
+                          </code>
+                        </div>
+                        {attempt.corrected_run_id && (
+                          <div>
+                            <span style={{ color: 'var(--text-muted)' }}>Re-Verification Run: </span>
+                            <code className="text-mono" style={{ color: 'var(--primary-300)' }}>
+                              {attempt.corrected_run_id}
+                            </code>
+                          </div>
+                        )}
+                        {attempt.notes && (
+                          <div>
+                            <span style={{ color: 'var(--text-muted)' }}>Notes: </span>
+                            <span>{attempt.notes}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Defect Resolution Comparison Section */}
+                      {comp && (
+                        <div
+                          style={{
+                            marginTop: '0.25rem',
+                            padding: '0.625rem',
+                            backgroundColor: 'var(--bg-input)',
+                            borderRadius: 'var(--radius-xs)',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem',
+                          }}
+                        >
+                          {/* Informative notice if verification was blocked or inconclusive */}
+                          {isBlockedOrInconclusive && (
+                            <div
+                              style={{
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: 'var(--radius-xs)',
+                                backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                                border: '1px solid rgba(234, 179, 8, 0.3)',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.72rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.25rem',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--status-pending)' }}>
+                                <AlertTriangle size={14} />
+                                <span>Verification Blocked: Authorized Test Suite Unavailable</span>
+                              </div>
+                              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+                                {comp.notes || attempt.notes || 'The original trusted test suite is unavailable. To prevent false positives or unsafe execution, re-verification cannot proceed until an authorized test suite is provided.'}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Verdict Summary Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <GitCompare size={14} color="var(--primary-400)" />
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                Defect Resolution Outcome:
+                              </span>
+                              <Badge
+                                variant={
+                                  comp.verdict === 'FULLY_RESOLVED'
+                                    ? 'success'
+                                    : comp.verdict === 'PARTIALLY_RESOLVED'
+                                    ? 'warning'
+                                    : comp.verdict === 'REGRESSION_INTRODUCED'
+                                    ? 'danger'
+                                    : comp.verdict === 'UNRESOLVED'
+                                    ? 'danger'
+                                    : 'secondary'
+                                }
+                                style={{ fontSize: '0.65rem' }}
+                              >
+                                {comp.verdict === 'FULLY_RESOLVED'
+                                  ? 'All Defects Resolved'
+                                  : comp.verdict === 'PARTIALLY_RESOLVED'
+                                  ? 'Partially Resolved'
+                                  : comp.verdict === 'REGRESSION_INTRODUCED'
+                                  ? 'Regression Introduced'
+                                  : comp.verdict === 'UNRESOLVED'
+                                  ? 'Defects Persist'
+                                  : isBlockedOrInconclusive
+                                  ? 'Blocked / Inconclusive'
+                                  : 'Inconclusive'}
+                              </Badge>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                              Resolution Rate: {isBlockedOrInconclusive ? 'Inconclusive' : `${comp.resolution_rate}%`}
+                            </span>
+                          </div>
+
+                          {/* Stats Metrics Grid */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.35rem', fontSize: '0.72rem' }}>
+                            <div style={{ padding: '0.35rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '3px', border: '1px solid var(--border-color)' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.625rem', display: 'block' }}>ORIGINAL DEFECTS</span>
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{comp.original_defects_count}</span>
+                            </div>
+                            <div style={{ padding: '0.35rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '3px', border: '1px solid var(--border-color)' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.625rem', display: 'block' }}>RESOLVED</span>
+                              <span style={{ fontWeight: 600, color: 'var(--status-passed)' }}>{comp.resolved_defects_count}</span>
+                            </div>
+                            <div style={{ padding: '0.35rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '3px', border: '1px solid var(--border-color)' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.625rem', display: 'block' }}>REMAINING</span>
+                              <span style={{ fontWeight: 600, color: isBlockedOrInconclusive ? 'var(--text-muted)' : (comp.remaining_defects_count > 0 ? 'var(--status-failed)' : 'var(--text-muted)') }}>
+                                {isBlockedOrInconclusive ? 'Inconclusive' : comp.remaining_defects_count}
+                              </span>
+                            </div>
+                            <div style={{ padding: '0.35rem 0.5rem', background: 'var(--bg-tertiary)', borderRadius: '3px', border: '1px solid var(--border-color)' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.625rem', display: 'block' }}>NEW REGRESSIONS</span>
+                              <span style={{ fontWeight: 600, color: comp.new_defects_count > 0 ? 'var(--status-failed)' : 'var(--text-muted)' }}>
+                                {comp.new_defects_count}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Test-Level Comparison Details Table */}
+                          {comp.test_comparisons && comp.test_comparisons.length > 0 && (
+                            <div style={{ marginTop: '0.25rem' }}>
+                              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.2rem' }}>
+                                Test Suite Verification Details:
+                              </span>
+                              <div className="table-responsive">
+                                <table className="data-table" style={{ fontSize: '0.7rem' }}>
+                                  <thead>
+                                    <tr>
+                                      <th>Test Case</th>
+                                      <th>Original</th>
+                                      <th>Corrected</th>
+                                      <th>Resolution Outcome</th>
+                                      <th>Diagnostic Notes</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {comp.test_comparisons.map((tc, idx) => (
+                                      <tr key={idx}>
+                                        <td className="text-mono" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                          {tc.test_name}
+                                        </td>
+                                        <td>
+                                          <Badge variant={tc.original_status === 'PASSED' ? 'success' : 'danger'}>
+                                            {tc.original_status}
+                                          </Badge>
+                                        </td>
+                                        <td>
+                                          <Badge variant={tc.corrected_status === 'PASSED' ? 'success' : 'danger'}>
+                                            {tc.corrected_status}
+                                          </Badge>
+                                        </td>
+                                        <td>
+                                          <Badge
+                                            variant={
+                                              tc.resolution_status === 'RESOLVED'
+                                                ? 'success'
+                                                : tc.resolution_status === 'NEW_FAILURE'
+                                                ? 'danger'
+                                                : tc.resolution_status === 'STILL_FAILING'
+                                                ? 'danger'
+                                                : 'warning'
+                                            }
+                                          >
+                                            {tc.resolution_status}
+                                          </Badge>
+                                        </td>
+                                        <td className="diagnostic-cell" style={{ color: 'var(--text-secondary)' }}>
+                                          <ExpandableDiagnostic
+                                            text={tc.notes || tc.error_message}
+                                            variant="default"
+                                            maxLength={60}
+                                            emptyFallback="—"
+                                          />
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Target Code Snippet */}
           {relatedSubmission && (
 
@@ -1617,6 +2281,101 @@ export default function VerificationRunsPage() {
           )}
         </Modal>
       )}
+
+      {/* Forced Re-Verification Confirmation Modal */}
+      <Modal
+        isOpen={!!forceConfirmRepair}
+        onClose={() => {
+          if (!reverifyingRepairId) {
+            setForceConfirmRepair(null);
+          }
+        }}
+        title="Confirm Re-Verification Execution"
+        size="md"
+        className="modal-confirmation-dialog"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', width: '100%' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setForceConfirmRepair(null)}
+              disabled={!!reverifyingRepairId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={RotateCcw}
+              loading={reverifyingRepairId === (forceConfirmRepair?.repair_id || forceConfirmRepair?.id)}
+              disabled={!!reverifyingRepairId}
+              onClick={handleConfirmForceReverify}
+            >
+              Run Verification Again
+            </Button>
+          </div>
+        }
+      >
+        <div className="force-reverify-modal-content">
+          <p style={{ color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+            The corrected code will be tested again against the authorized test specifications in an isolated execution sandbox.
+          </p>
+
+          {forceConfirmRepair && (
+            <div
+              style={{
+                backgroundColor: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                fontSize: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Target Repair ID:</span>
+                <span className="text-mono" style={{ color: 'var(--primary-400)', fontWeight: 500 }}>
+                  {forceConfirmRepair.repair_id || forceConfirmRepair.id}
+                </span>
+              </div>
+              {forceConfirmRepair.corrected_submission_id && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Corrected Submission:</span>
+                  <span className="text-mono" style={{ color: 'var(--text-secondary)' }}>
+                    {forceConfirmRepair.corrected_submission_id}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <ul
+            style={{
+              margin: 0,
+              paddingLeft: '1.25rem',
+              color: 'var(--text-secondary)',
+              fontSize: '0.8125rem',
+              lineHeight: 1.6,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+            }}
+          >
+            <li>
+              <strong>New Execution:</strong> A new execution will be started in the container sandbox to evaluate the corrected source code.
+            </li>
+            <li>
+              <strong>Preserved Evidence:</strong> Existing verification evidence and history will be preserved without overwriting prior test records.
+            </li>
+            <li>
+              <strong>Execution Time:</strong> The operation may take some time depending on test suite complexity and container provisioning.
+            </li>
+          </ul>
+        </div>
+      </Modal>
     </div>
   );
 }
