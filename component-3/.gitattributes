@@ -1,0 +1,5 @@
+# Container entrypoints must remain executable by POSIX shells after Windows checkout.
+runtime-preview/*.sh text eol=lf
+runtime-preview/Dockerfile text eol=lf
+runtime-preview/*.mjs text eol=lf
+runtime-preview/*.yml text eol=lf

@@ -9,8 +9,14 @@ Node.js Task Management generation MVP using deterministic scaffolding and one
 locally model-generated business-logic module. Task 7 adds persistent,
 versioned living requirement traceability over verified generation manifests.
 
-General-purpose application generation, scoped regeneration, deployment, and
-real integrations with Components 1, 2, and 4 remain future work.
+General-purpose application generation, deployment, and real integrations with
+Components 1, 2, and 4 remain future work. Defect-scoped regeneration exists
+for the narrow Task Management MVP with simulated C4 reports; independent C4
+retesting remains pending.
+
+The directory layout is documented in `docs/STRUCTURE.md`. PP1 integration
+status, novelty evidence, panel-defense source map, and presentation runbooks
+are in `docs/pp1-integration-and-research-readiness.md`.
 
 ## Requirements
 
@@ -219,6 +225,12 @@ npm run dev     # then open http://127.0.0.1:5173
 
 See `docs/ui-research-demo.md` for the three-process Windows start-up, the
 five-minute walkthrough, helper endpoints, and limitations.
+
+The generated Task Management app can optionally be exercised inside the
+manifest-verified Docker-only preview described in
+`docs/generated-app-preview.md`. Do not run generated npm or Node commands on
+the Windows host. Preview success does not change C4 `PENDING` or deployment
+`BLOCKED` status.
 
 ## Configuration
 

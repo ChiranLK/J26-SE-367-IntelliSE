@@ -14,6 +14,7 @@ component-3/
 |-- docs/                 Research and operating documentation
 |-- generated-workspaces/ Generated application runs (Git-ignored)
 |-- runtime/              Local traceability persistence (Git-ignored)
+|-- runtime-preview/      Docker-only verified generated-app preview tools
 |-- .env.example
 `-- README.md
 ```
@@ -25,3 +26,8 @@ FastAPI service or Research UI.
 The `.env` file, generated workspace root, and SQLite traceability store remain
 anchored to `component-3/`, while Python packaging and pytest configuration are
 owned by `component-3/backend/`.
+
+`runtime-preview/executions/` contains disposable verified copies, logs, smoke
+results, and screenshots. It is Git-ignored, and the preview verifier refuses
+to overwrite an existing execution ID. The preview tools are tracked; generated
+workspace copies and runtime evidence are not.

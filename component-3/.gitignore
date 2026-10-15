@@ -21,6 +21,7 @@ htmlcov/
 generated-workspaces/
 runtime/workspaces/
 runtime/traceability/
+runtime-preview/executions/
 
 # Temporary files
 tmp/

@@ -1,0 +1,37 @@
+# Disposable preview for one manifest-verified generated workspace copy.
+services:
+  generated-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: intelise-c3-generated-preview:local
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 256
+    ports:
+      - "127.0.0.1:3001:3002"
+      - "127.0.0.1:5180:5180"
+    environment:
+      CORS_ALLOWED_ORIGIN: http://127.0.0.1:5180
+      FRONTEND_PORT: "5180"
+      BACKEND_PORT: "3001"
+      BACKEND_ADAPTER_PORT: "3002"
+    volumes:
+      - type: bind
+        source: ${WORKSPACE_HOST_PATH}
+        target: /workspace-ro
+        read_only: true
+    tmpfs:
+      - /tmp:size=768m,mode=1777,exec
+    networks:
+      - preview-net
+
+networks:
+  preview-net:
+    driver: bridge

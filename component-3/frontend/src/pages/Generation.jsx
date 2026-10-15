@@ -210,6 +210,28 @@ export default function Generation({ navigate }) {
             ) : null}
           </Card>
 
+          <Card
+            title="Isolated runtime preview (optional)"
+            subtitle="Runs a manifest-verified generated workspace only inside Docker, never inside this Research UI."
+          >
+            <p className="small">
+              After starting the documented preview, open{" "}
+              <a href="http://127.0.0.1:5180" target="_blank" rel="noreferrer">
+                generated Task Manager
+              </a>
+              {" "}or inspect its{" "}
+              <a
+                href="http://127.0.0.1:3001/api/v1/tasks"
+                target="_blank"
+                rel="noreferrer"
+              >
+                local API
+              </a>
+              . The operator must first follow <code>docs/generated-app-preview.md</code>;
+              these links do not start or execute generated code.
+            </p>
+          </Card>
+
           <div className="button-row">
             <Button onClick={() => navigate("traceability")}>Continue to Living Traceability</Button>
           </div>

@@ -1,0 +1,51 @@
+{
+  "template_version": "1.0",
+  "classification": "EMPTY_MANUAL_RESEARCH_REVIEW_TEMPLATE",
+  "dataset_id": "TO_BE_ASSIGNED_BY_RESEARCHER",
+  "dataset_version": "0.0-DRAFT",
+  "status": "PENDING_INDEPENDENT_HUMAN_REVIEW",
+  "source_artifacts": {
+    "project_id": null,
+    "srs_version": null,
+    "uml_version": null,
+    "generation_run_id": null,
+    "artifact_digest_sha256": null,
+    "graph_id": null,
+    "graph_version": null
+  },
+  "traceability_ground_truth": {
+    "in_scope_node_ids": [],
+    "expected_typed_links": [],
+    "review_notes": []
+  },
+  "scoped_regeneration_cases": [],
+  "baseline_policies": [
+    "FULL_REGENERATION_ALL_MODULES",
+    "DEFECT_LOCATION_ONLY",
+    "C3_GRAPH_GUIDED_SELECTION"
+  ],
+  "planned_metrics": [
+    "scope_precision",
+    "scope_recall",
+    "scope_f1",
+    "selected_module_count",
+    "collateral_edit_count",
+    "unchanged_file_ratio",
+    "review_required_rate",
+    "llm_call_count",
+    "latency_ms"
+  ],
+  "independent_review": {
+    "requirement_and_uml_inspected": false,
+    "expected_links_identified": false,
+    "edge_directions_checked": false,
+    "affected_modules_identified": false,
+    "reviewer_identity": null,
+    "review_date": null,
+    "disagreements": [],
+    "adjudication": null,
+    "final_researcher_approval": "PENDING"
+  },
+  "recorded_measurements": null,
+  "warning": "Do not add benchmark scores until the frozen cases and judgments have been independently reviewed by real people."
+}
