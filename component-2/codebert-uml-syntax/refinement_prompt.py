@@ -2,8 +2,6 @@ from validator_messages import ALLOWED_CHANGE
 
 
 def build_refinement_prompt(report):
-    # every problem type in the report may need its own permission (e.g. remove an
-    # attribute AND add a line), so collect all of them
     types = [report["syntax_error_type"]] + [p["rule"] for p in report.get("uml_rules", [])]
     allowed = " ".join(dict.fromkeys(ALLOWED_CHANGE[t] for t in types if t in ALLOWED_CHANGE))
     rules = ("Do not rename, add or remove classes, actors, use cases, attributes, methods or relationships"

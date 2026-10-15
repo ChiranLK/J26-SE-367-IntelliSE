@@ -49,7 +49,7 @@ def run_one(validator, srs_text, diagram_type, project, out_dir, model, max_roun
     report = last_report = None
 
     temp = temperature
-    for rnd in range(max_rounds + 1):           # round 0 = generation, then repairs
+    for rnd in range(max_rounds + 1):
         t0 = time.time()
         reply = ask(prompt, model=model, temperature=temp)
         round_secs = time.time() - t0
@@ -63,7 +63,6 @@ def run_one(validator, srs_text, diagram_type, project, out_dir, model, max_roun
             lost = missing_fixes(last_report, puml)
             if lost:
                 if report["is_valid"]:
-                    # keep the last error type, so the repair prompt allows the same change again
                     report.update(is_valid=False, syntax_status="INVALID", feedback=[],
                                   syntax_error_type=last_report["syntax_error_type"])
                 report["flagged_by"] = report["flagged_by"] + ["repair_check"]
