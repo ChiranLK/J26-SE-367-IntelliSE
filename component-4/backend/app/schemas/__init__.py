@@ -34,6 +34,26 @@ from app.schemas.xai import (
     XaiExplanationResponse,
 )
 
+from app.schemas.repair import (
+    DefectResolutionComparison,
+    DefectResolutionDetail,
+    OverallResolutionVerdict,
+    RepairAttempt,
+    RepairAttemptListResponse,
+    RepairAttemptResponse,
+    RepairResponseIngestRequest,
+    RepairResponseStatus,
+    RepairSource,
+    ResolutionStatus,
+    TestResolutionDetail,
+)
+from app.schemas.test_suite import (
+    TestSuiteProvenance,
+    TrustedTestSuite,
+    TrustedTestSuiteAttachRequest,
+    TrustedTestSuiteResponse,
+)
+
 __all__ = [
     "ProgrammingLanguage",
     "VerificationStatus",
@@ -60,4 +80,19 @@ __all__ = [
     "EvidenceItem",
     "CorrectionRecommendation",
     "XaiExplanationResponse",
+    "RepairSource",
+    "RepairResponseStatus",
+    "ResolutionStatus",
+    "OverallResolutionVerdict",
+    "TestResolutionDetail",
+    "DefectResolutionDetail",
+    "DefectResolutionComparison",
+    "RepairResponseIngestRequest",
+    "RepairAttempt",
+    "RepairAttemptResponse",
+    "RepairAttemptListResponse",
+    "TrustedTestSuite",
+    "TrustedTestSuiteResponse",
+    "TrustedTestSuiteAttachRequest",
+    "TestSuiteProvenance",
 ]

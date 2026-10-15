@@ -1,11 +1,22 @@
+import ast
 import asyncio
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from app.core.errors import InvalidInputException, ResourceNotFoundException
+from app.core.errors import FileValidationException, InvalidInputException, ResourceNotFoundException
 from app.core.logging import logger
-from app.repositories.base import BaseSubmissionRepository, BaseVerificationRunRepository
+from app.repositories.base import (
+    BaseSubmissionRepository,
+    BaseTestSuiteRepository,
+    BaseVerificationRunRepository,
+)
+from app.schemas.test_suite import (
+    TestSuiteProvenance,
+    TrustedTestSuite,
+    TrustedTestSuiteAttachRequest,
+    TrustedTestSuiteResponse,
+)
 from app.schemas.common import VerificationStatus
 from app.schemas.defect_report import DefectReportListResponse
 from app.schemas.feedback import (
@@ -39,9 +50,11 @@ class VerificationService:
         self,
         submission_repo: BaseSubmissionRepository,
         verification_repo: BaseVerificationRunRepository,
+        test_suite_repo: Optional[BaseTestSuiteRepository] = None,
     ) -> None:
         self.submission_repo = submission_repo
         self.verification_repo = verification_repo
+        self.test_suite_repo = test_suite_repo
 
     async def create_verification_run(
         self,
@@ -60,6 +73,32 @@ class VerificationService:
         run_id = f"run-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc)
 
+        # Durably persist the trusted test suite immediately if available
+        suite_id = None
+        source_test_cases = payload.trusted_test_cases or submission.test_code
+        if source_test_cases and self.test_suite_repo:
+            new_suite = TrustedTestSuite(
+                verification_run_id=run_id,
+                submission_id=submission.id,
+                test_code=source_test_cases,
+                content_hash=TrustedTestSuite.compute_hash(source_test_cases),
+                provenance=(
+                    TestSuiteProvenance.RUN_EXPLICIT
+                    if payload.trusted_test_cases
+                    else TestSuiteProvenance.SUBMISSION_ATTACHED
+                ),
+                test_types=payload.test_types or ["unit"],
+                execution_config={"timeout_seconds": 30},
+            )
+            await self.test_suite_repo.save(new_suite)
+            suite_id = new_suite.suite_id
+            logger.info(
+                "Persisted trusted test suite %s for new verification run %s (provenance=%s)",
+                suite_id,
+                run_id,
+                new_suite.provenance.value,
+            )
+
         init_telemetry = {}
         if payload.trusted_test_cases:
             init_telemetry["has_trusted_test_cases"] = True
@@ -74,6 +113,7 @@ class VerificationService:
             defect_reports=[],
             feedback_iterations=[],
             execution_telemetry=init_telemetry,
+            test_suite_id=suite_id,
             error_message=None,
             created_at=now,
             updated_at=now,
@@ -115,8 +155,19 @@ class VerificationService:
         logger.info("Starting LangGraph verification workflow for run %s", run_id)
 
         # Determine effective trusted test oracle
-        # Prioritize explicit run parameter, then submission test_code
-        effective_test_cases = trusted_test_cases or submission.test_code
+        # Prioritize explicit run parameter, then attached test suite, then submission test_code
+        effective_test_cases = trusted_test_cases
+        if not effective_test_cases and self.test_suite_repo:
+            if getattr(run, "test_suite_id", None):
+                existing_suite = await self.test_suite_repo.get_by_id(run.test_suite_id)
+                if existing_suite:
+                    effective_test_cases = existing_suite.test_code
+            if not effective_test_cases:
+                existing_suite = await self.test_suite_repo.get_by_run_id(run.id)
+                if existing_suite:
+                    effective_test_cases = existing_suite.test_code
+        if not effective_test_cases:
+            effective_test_cases = submission.test_code
 
         state = {
             "submission_id": submission.id,
@@ -146,6 +197,29 @@ class VerificationService:
         final_error = result_state.get("error_message")
         final_telemetry = result_state.get("telemetry", {})
 
+        # Durably persist the trusted test suite for subsequent re-verification
+        saved_suite_id = getattr(run, "test_suite_id", None)
+        if effective_test_cases and self.test_suite_repo:
+            existing = await self.test_suite_repo.get_by_run_id(run.id)
+            if existing and existing.test_code == effective_test_cases:
+                saved_suite_id = existing.suite_id
+            else:
+                new_suite = TrustedTestSuite(
+                    verification_run_id=run.id,
+                    submission_id=submission.id,
+                    test_code=effective_test_cases,
+                    content_hash=TrustedTestSuite.compute_hash(effective_test_cases),
+                    provenance=(
+                        TestSuiteProvenance.RUN_EXPLICIT
+                        if trusted_test_cases
+                        else TestSuiteProvenance.SUBMISSION_ATTACHED
+                    ),
+                    test_types=run.requested_test_types or ["unit"],
+                    execution_config={"timeout_seconds": timeout_seconds or 30},
+                )
+                await self.test_suite_repo.save(new_suite)
+                saved_suite_id = new_suite.suite_id
+
         now = datetime.now(timezone.utc)
         updated_run = VerificationRunResponse(
             id=run.id,
@@ -157,6 +231,7 @@ class VerificationService:
             defect_reports=final_defects,
             feedback_iterations=final_iterations,
             execution_telemetry=final_telemetry,
+            test_suite_id=saved_suite_id,
             error_message=final_error,
             created_at=run.created_at,
             updated_at=now,
@@ -164,12 +239,13 @@ class VerificationService:
 
         saved = await self.verification_repo.save(updated_run)
         logger.info(
-            "Completed verification run %s with status %s (test count: %d, defect count: %d, iterations: %d)",
+            "Completed verification run %s with status %s (test count: %d, defect count: %d, iterations: %d, suite: %s)",
             run_id,
             saved.status.value,
             len(saved.test_results),
             len(saved.defect_reports),
             len(saved.feedback_iterations),
+            saved_suite_id,
         )
         return saved
 
@@ -380,5 +456,147 @@ class VerificationService:
         items = await self.verification_repo.list_all(skip=skip, limit=limit)
         total = await self.verification_repo.count()
         return VerificationRunListResponse(total=total, items=items)
+
+    async def attach_trusted_test_suite(
+        self,
+        run_id: str,
+        request: TrustedTestSuiteAttachRequest,
+    ) -> TrustedTestSuiteResponse:
+        """
+        Secure recovery workflow to explicitly supply an independently authorized original test artifact
+        for a historical verification run lacking durable test specifications.
+        Validates syntax statically without host execution, persists the immutable test suite,
+        and associates it with the verification run without altering its original defect history or results.
+        """
+        run = await self.get_verification_run(run_id)
+        if not run:
+            raise ResourceNotFoundException("VerificationRun", run_id)
+
+        # 1. Static AST parsing on the host (NEVER execute code on host)
+        try:
+            ast.parse(request.test_code, filename="trusted_test_recovery.py")
+        except SyntaxError as syn_err:
+            raise FileValidationException(
+                f"Authorized test code contains syntax errors: {syn_err.msg} (line {syn_err.lineno})"
+            )
+        except Exception as parse_err:
+            raise FileValidationException(f"Failed to parse test code statically: {parse_err}")
+
+        # 2. Compute deterministic content hash
+        content_hash = TrustedTestSuite.compute_hash(request.test_code)
+
+        # 3. Create trusted test suite specification
+        suite = TrustedTestSuite(
+            verification_run_id=run.id,
+            submission_id=run.submission_id,
+            test_code=request.test_code,
+            content_hash=content_hash,
+            provenance=request.provenance,
+            test_types=run.requested_test_types or ["unit"],
+            notes=request.notes,
+        )
+
+        if self.test_suite_repo:
+            await self.test_suite_repo.save(suite)
+
+        # 4. Associate with the run WITHOUT altering test_results, defect_reports, or feedback_iterations
+        if not run.test_suite_id or run.test_suite_id != suite.suite_id:
+            run.test_suite_id = suite.suite_id
+            run.updated_at = datetime.now(timezone.utc)
+            await self.verification_repo.save(run)
+
+        # 5. If this run has an original submission with missing test_code, attach it safely
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        if submission and not submission.test_code:
+            submission.test_code = request.test_code
+            await self.submission_repo.save(submission)
+
+        logger.info(
+            "Attached authorized trusted test suite %s (hash %s, provenance %s) to run %s",
+            suite.suite_id,
+            content_hash[:12],
+            suite.provenance.value,
+            run.id,
+        )
+
+        return TrustedTestSuiteResponse(
+            suite_id=suite.suite_id,
+            verification_run_id=suite.verification_run_id,
+            submission_id=suite.submission_id,
+            content_hash=suite.content_hash,
+            provenance=suite.provenance,
+            test_types=suite.test_types,
+            notes=suite.notes,
+            created_at=suite.created_at,
+        )
+
+    async def get_trusted_test_suite_metadata(
+        self,
+        run_id: str,
+    ) -> TrustedTestSuiteResponse:
+        """
+        Retrieves public metadata for the trusted test suite associated with a verification run.
+        Avoids exposing raw executable test source code.
+        """
+        run = await self.get_verification_run(run_id)
+        if not run:
+            raise ResourceNotFoundException("VerificationRun", run_id)
+
+        suite = None
+        if self.test_suite_repo:
+            if run.test_suite_id:
+                suite = await self.test_suite_repo.get_by_id(run.test_suite_id)
+            if not suite:
+                suite = await self.test_suite_repo.get_by_run_id(run_id)
+
+        if not suite:
+            # Check if submission has test_code
+            sub = await self.submission_repo.get_by_id(run.submission_id)
+            if sub and sub.test_code:
+                return TrustedTestSuiteResponse(
+                    suite_id=f"legacy-sub-{sub.id}",
+                    verification_run_id=run.id,
+                    submission_id=sub.id,
+                    content_hash=TrustedTestSuite.compute_hash(sub.test_code),
+                    provenance=TestSuiteProvenance.SUBMISSION_ATTACHED,
+                    test_types=run.requested_test_types or ["unit"],
+                    notes="Discovered from original submission test_code",
+                    created_at=sub.created_at,
+                )
+            raise ResourceNotFoundException("TrustedTestSuite", f"run:{run_id}")
+
+        return TrustedTestSuiteResponse(
+            suite_id=suite.suite_id,
+            verification_run_id=suite.verification_run_id,
+            submission_id=suite.submission_id,
+            content_hash=suite.content_hash,
+            provenance=suite.provenance,
+            test_types=suite.test_types,
+            notes=suite.notes,
+            created_at=suite.created_at,
+        )
+
+    async def get_trusted_test_code_for_run(
+        self,
+        run_id: str,
+    ) -> Optional[str]:
+        """Internal helper to retrieve authorized test code for containerized execution."""
+        run = await self.verification_repo.get_by_id(run_id)
+        if not run:
+            return None
+        if self.test_suite_repo:
+            if getattr(run, "test_suite_id", None):
+                suite = await self.test_suite_repo.get_by_id(run.test_suite_id)
+                if suite and suite.test_code:
+                    return suite.test_code
+            suite = await self.test_suite_repo.get_by_run_id(run_id)
+            if suite and suite.test_code:
+                return suite.test_code
+
+        sub = await self.submission_repo.get_by_id(run.submission_id)
+        if sub and sub.test_code:
+            return sub.test_code
+
+        return None
 
 

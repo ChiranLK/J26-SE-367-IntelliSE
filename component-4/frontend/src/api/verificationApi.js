@@ -150,6 +150,76 @@ export async function dispatchFeedback(runId, payload = {}) {
   return response.data;
 }
 
+/**
+ * Ingests corrected source code for a failed verification run.
+ * @param {string} runId
+ * @param {Object} payload
+ * @param {string} payload.corrected_code
+ * @param {string} [payload.filename='solution.py']
+ * @param {string} [payload.feedback_iteration_id]
+ * @param {string} [payload.repair_source='LOCAL_MANUAL']
+ * @param {string} [payload.notes]
+ */
+export async function ingestRepairResponse(runId, payload) {
+  const response = await apiClient.post(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/repair-responses`,
+    payload
+  );
+  return response.data;
+}
+
+/**
+ * Triggers re-verification for an ingested repair attempt.
+ * @param {string} runId
+ * @param {string} repairId
+ * @param {Object} [options]
+ * @param {boolean} [options.force_reverify=false]
+ */
+export async function reverifyRepair(runId, repairId, { force_reverify = false } = {}) {
+  const response = await apiClient.post(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/repair-responses/${encodeURIComponent(repairId)}/re-verify`,
+    null,
+    { params: { force_reverify } }
+  );
+  return response.data;
+}
+
+/**
+ * Lists all repair attempts associated with a verification run.
+ * @param {string} runId
+ */
+export async function getRepairAttempts(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/repair-responses`
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves details of a specific repair attempt.
+ * @param {string} runId
+ * @param {string} repairId
+ */
+export async function getRepairAttemptById(runId, repairId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/repair-responses/${encodeURIComponent(repairId)}`
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves defect and test resolution comparison for a re-verified repair attempt.
+ * @param {string} runId
+ * @param {string} repairId
+ */
+export async function getRepairComparison(runId, repairId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/repair-responses/${encodeURIComponent(repairId)}/comparison`
+  );
+  return response.data;
+}
+
+
 
 
 

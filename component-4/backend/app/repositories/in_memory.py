@@ -1,9 +1,15 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from app.core.logging import logger
-from app.repositories.base import BaseSubmissionRepository, BaseVerificationRunRepository
+from app.repositories.base import (
+    BaseRepairRepository,
+    BaseSubmissionRepository,
+    BaseTestSuiteRepository,
+    BaseVerificationRunRepository,
+)
 from app.schemas.common import VerificationStatus
+from app.schemas.repair import RepairAttempt
 from app.schemas.submission import CodeSubmissionResponse
 from app.schemas.verification import VerificationRunResponse
 
@@ -122,3 +128,109 @@ class InMemoryVerificationRunRepository(BaseVerificationRunRepository):
         """Utility method to reset in-memory state during automated tests."""
         async with self._lock:
             self._storage.clear()
+
+
+class InMemoryRepairRepository(BaseRepairRepository):
+    """In-memory storage for repair attempts and re-verification outcomes."""
+
+    def __init__(self) -> None:
+        self._storage: Dict[str, Any] = {}
+        self._lock = asyncio.Lock()
+
+    async def save(self, repair: Any) -> Any:
+        async with self._lock:
+            canonical_id = getattr(repair, "repair_id", None) or getattr(repair, "id", None)
+            if canonical_id:
+                self._storage[canonical_id] = repair
+            alt_id = getattr(repair, "id", None)
+            if alt_id and alt_id != canonical_id:
+                self._storage[alt_id] = repair
+            return repair
+
+    async def get_by_id(self, repair_id: str) -> Optional[Any]:
+        async with self._lock:
+            if repair_id in self._storage:
+                return self._storage[repair_id]
+            for item in self._storage.values():
+                item_repair_id = getattr(item, "repair_id", None)
+                item_id = getattr(item, "id", None)
+                if repair_id in (item_repair_id, item_id):
+                    return item
+            return None
+
+    async def get_by_original_run_id(self, run_id: str) -> List[Any]:
+        async with self._lock:
+            seen_ids = set()
+            items = []
+            for r in self._storage.values():
+                item_id = getattr(r, "repair_id", None) or getattr(r, "id", None)
+                if item_id and item_id not in seen_ids and getattr(r, "original_run_id", None) == run_id:
+                    seen_ids.add(item_id)
+                    items.append(r)
+            items.sort(key=lambda r: getattr(r, "created_at", None) or datetime.min, reverse=True)
+            return items
+
+    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Any]:
+        async with self._lock:
+            seen_ids = set()
+            items = []
+            for r in self._storage.values():
+                item_id = getattr(r, "repair_id", None) or getattr(r, "id", None)
+                if item_id and item_id not in seen_ids:
+                    seen_ids.add(item_id)
+                    items.append(r)
+            items.sort(key=lambda r: getattr(r, "created_at", None) or datetime.min, reverse=True)
+            return items[skip : skip + limit]
+
+    async def count(self) -> int:
+        async with self._lock:
+            seen_ids = {getattr(r, "repair_id", None) or getattr(r, "id", None) for r in self._storage.values()}
+            return len(seen_ids - {None})
+
+    async def clear(self) -> None:
+        """Utility method to reset in-memory state during automated tests."""
+        async with self._lock:
+            self._storage.clear()
+
+
+class InMemoryTestSuiteRepository(BaseTestSuiteRepository):
+    """In-memory storage for trusted test suites."""
+
+    def __init__(self) -> None:
+        self._storage: Dict[str, Any] = {}
+        self._run_index: Dict[str, str] = {}  # run_id -> suite_id
+        self._lock = asyncio.Lock()
+
+    async def save(self, suite: Any) -> Any:
+        async with self._lock:
+            suite_id = getattr(suite, "suite_id", None)
+            run_id = getattr(suite, "verification_run_id", None)
+            if suite_id:
+                self._storage[suite_id] = suite
+            if run_id and suite_id:
+                self._run_index[run_id] = suite_id
+            return suite
+
+    async def get_by_id(self, suite_id: str) -> Optional[Any]:
+        async with self._lock:
+            return self._storage.get(suite_id)
+
+    async def get_by_run_id(self, run_id: str) -> Optional[Any]:
+        async with self._lock:
+            suite_id = self._run_index.get(run_id)
+            if suite_id and suite_id in self._storage:
+                return self._storage[suite_id]
+            for item in self._storage.values():
+                if getattr(item, "verification_run_id", None) == run_id:
+                    return item
+            return None
+
+    async def count(self) -> int:
+        async with self._lock:
+            return len(self._storage)
+
+    async def clear(self) -> None:
+        async with self._lock:
+            self._storage.clear()
+            self._run_index.clear()
+

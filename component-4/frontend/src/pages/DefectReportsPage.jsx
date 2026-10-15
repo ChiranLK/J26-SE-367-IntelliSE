@@ -13,6 +13,7 @@ import Alert from '../components/common/Alert';
 import Button from '../components/common/Button';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import EmptyState from '../components/common/EmptyState';
+import ExpandableDiagnostic from '../components/common/ExpandableDiagnostic';
 import { getVerificationRuns } from '../api/verificationApi';
 import { DEFECT_SEVERITIES } from '../utils/constants';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
@@ -212,9 +213,11 @@ export default function DefectReportsPage() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', marginBottom: '0.25rem', textTransform: 'uppercase' }}>
                     Failed Assertion / Error Detail:
                   </div>
-                  <div style={{ color: 'var(--status-failed)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                    {defect.assertion_or_exception || 'Assertion error detected during pytest execution'}
-                  </div>
+                  <ExpandableDiagnostic
+                    text={defect.assertion_or_exception || 'Assertion error detected during pytest execution'}
+                    variant="danger"
+                    maxLength={100}
+                  />
                 </div>
 
                 {/* Expected vs Actual Value Comparison */}

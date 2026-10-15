@@ -1051,3 +1051,72 @@
   color: var(--text-secondary);
 }
 
+/* Expandable Diagnostics & Responsive Table Cells */
+.expandable-diagnostic {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.diagnostic-preview-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.diagnostic-expanded-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.btn-diagnostic-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  color: var(--primary-400);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.btn-diagnostic-toggle:hover {
+  background-color: var(--primary-subtle);
+  border-color: var(--primary-border);
+  color: var(--primary-300);
+}
+
+.btn-diagnostic-toggle:focus-visible {
+  outline: 2px solid var(--primary-400);
+  outline-offset: 1px;
+}
+
+.diagnostic-cell {
+  white-space: normal !important;
+  max-width: 320px;
+  min-width: 160px;
+}
+
+.data-table td.diagnostic-cell,
+.data-table td:last-child.diagnostic-cell {
+  white-space: normal !important;
+}
+
+@media (max-width: 768px) {
+  .diagnostic-cell {
+    max-width: 240px;
+    min-width: 120px;
+  }
+}
+
