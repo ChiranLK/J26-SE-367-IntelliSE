@@ -341,6 +341,11 @@ export default function VerificationRunsPage() {
           type: 'info',
           text: `Safe fail-closed: ${res.message} (Delivery Status: NOT_DISPATCHED, Category: ${res.error_category})`,
         });
+      } else if (res.delivery_status === 'UNKNOWN') {
+        setDispatchMessage({
+          type: 'warning',
+          text: `Delivery outcome unknown: ${res.message} [Category: ${res.error_category || 'TIMEOUT'}]. Automatic retry suppressed.`,
+        });
       } else {
         setDispatchMessage({
           type: 'warning',
@@ -1340,6 +1345,12 @@ export default function VerificationRunsPage() {
                   }
                   if (latestIter?.delivery_status === 'FAILED') {
                     return <Badge variant="danger" style={{ fontSize: '0.65rem' }}>DISPATCH FAILED</Badge>;
+                  }
+                  if (latestIter?.delivery_status === 'UNKNOWN') {
+                    return <Badge variant="warning" style={{ fontSize: '0.65rem' }}>UNKNOWN OUTCOME</Badge>;
+                  }
+                  if (latestIter?.delivery_status === 'PENDING_DELIVERY') {
+                    return <Badge variant="warning" style={{ fontSize: '0.65rem' }}>DISPATCHING...</Badge>;
                   }
                   if (latestIter?.approval_status === 'APPROVED') {
                     return <Badge variant="accent" style={{ fontSize: '0.65rem' }}>APPROVED</Badge>;

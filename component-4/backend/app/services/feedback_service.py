@@ -1,12 +1,14 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from app.core.errors import InvalidInputException
 from app.core.logging import logger
 from app.schemas.common import TestResultStatus, VerificationStatus
 from app.schemas.defect_report import DefectReport
 from app.schemas.feedback import (
+    FORBIDDEN_EXPLANATION_KEYS,
+    DeliveryStatus,
     FeedbackIteration,
     TechnicalFeedbackPayload,
     TechnicalFeedbackPreviewResponse,
@@ -14,13 +16,13 @@ from app.schemas.feedback import (
 from app.schemas.submission import CodeSubmissionResponse
 from app.schemas.test_result import TestResult
 from app.schemas.verification import VerificationRunResponse
-from app.services.component3_client import Component3Client
+from app.services.component3_client import Component3Client, Component3DispatchResult
 
 
 class TechnicalFeedbackService:
     """
     Service responsible for deterministic evaluation of feedback eligibility,
-    construction of structured technical feedback packages for Component 3,
+    construction and validation of structured technical feedback packages for Component 3,
     and idempotent feedback iteration tracking.
     """
 
@@ -89,6 +91,87 @@ class TechnicalFeedbackService:
             return True
         return False
 
+    def validate_technical_feedback_payload(
+        self,
+        payload: TechnicalFeedbackPayload,
+        run: Optional[VerificationRunResponse] = None,
+    ) -> None:
+        """
+        Strengthened validation of technical feedback intended for an external code repair service.
+        Guarantees that:
+        1. Required identifiers (feedback_id, verification_run_id, submission_id) are present and valid.
+        2. Defect identifiers and failed tests match actual persisted verification evidence.
+        3. No fabricated source line numbers or file paths are included.
+        4. Optional evidence fields (comparisons, error logs) are preserved even when partially absent.
+        5. CRITICAL: Human-facing explanations (summaries, recommendations, XAI narratives, provider metadata)
+           are strictly forbidden and rejected if detected.
+        """
+        # 1. Validate required identifiers
+        if not payload.feedback_id or not payload.feedback_id.strip():
+            raise InvalidInputException("Technical feedback payload must contain a non-empty 'feedback_id'.")
+        if not payload.verification_run_id or not payload.verification_run_id.strip():
+            raise InvalidInputException("Technical feedback payload must contain a non-empty 'verification_run_id'.")
+        if not payload.submission_id or not payload.submission_id.strip():
+            raise InvalidInputException("Technical feedback payload must contain a non-empty 'submission_id'.")
+        if not payload.defect_ids:
+            raise InvalidInputException("Technical feedback payload must reference at least one defect ID.")
+
+        # 2. Correlate with persisted verification run evidence when run is supplied
+        if run is not None:
+            if payload.verification_run_id != run.id:
+                raise InvalidInputException(
+                    f"Payload verification_run_id '{payload.verification_run_id}' does not match run ID '{run.id}'."
+                )
+            if payload.submission_id != run.submission_id:
+                raise InvalidInputException(
+                    f"Payload submission_id '{payload.submission_id}' does not match run submission ID '{run.submission_id}'."
+                )
+
+            persisted_defect_ids = {d.defect_id for d in (run.defect_reports or [])}
+            for d_id in payload.defect_ids:
+                if d_id not in persisted_defect_ids:
+                    raise InvalidInputException(
+                        f"Technical feedback payload references unpersisted or fabricated defect ID '{d_id}'."
+                    )
+
+            persisted_failed_test_names = {
+                (t.name or t.test_name or t.test_id)
+                for t in (run.test_results or [])
+                if (t.status.value if hasattr(t.status, "value") else str(t.status)) in ("FAILED", "ERROR", "TIMEOUT")
+            }
+            # Add defect report failed test names
+            for d in (run.defect_reports or []):
+                if d.failed_test:
+                    persisted_failed_test_names.add(d.failed_test)
+
+            for ft in payload.failed_tests:
+                if persisted_failed_test_names and ft not in persisted_failed_test_names:
+                    raise InvalidInputException(
+                        f"Technical feedback payload references unverified failed test '{ft}'."
+                    )
+
+        # 3. Human Explanation Isolation: Recursively verify no human narrative or provider fields exist
+        payload_dict = payload.model_dump(mode="json") if hasattr(payload, "model_dump") else dict(payload)
+        self._assert_no_human_explanation_leak(payload_dict)
+
+    def _assert_no_human_explanation_leak(self, data: Any, path: str = "") -> None:
+        """
+        Recursively scans a data structure to ensure zero human-facing XAI explanations,
+        summaries, recommendations, or internal credentials exist.
+        """
+        if isinstance(data, dict):
+            for k, v in data.items():
+                current_path = f"{path}.{k}" if path else k
+                if k in FORBIDDEN_EXPLANATION_KEYS or k in ("api_key", "token", "password", "secret", "mongodb_uri"):
+                    raise InvalidInputException(
+                        f"Human explanation isolation violation: forbidden field '{current_path}' detected in "
+                        "machine-directed technical feedback payload. Human narratives are strictly segregated."
+                    )
+                self._assert_no_human_explanation_leak(v, current_path)
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                self._assert_no_human_explanation_leak(item, f"{path}[{i}]")
+
     def build_feedback_payload(
         self,
         run: VerificationRunResponse,
@@ -104,7 +187,7 @@ class TechnicalFeedbackService:
         # Deterministic feedback package ID
         feedback_id = f"fb-{uuid.uuid5(uuid.NAMESPACE_DNS, f'{run.id}:{len(defect_reports)}').hex[:12]}"
 
-        # Affected filenames from defects or submission metadata
+        # Affected filenames from defects or submission metadata (no fabricated file paths)
         affected_files_set = set()
         for d in defect_reports:
             if d.file_path and d.file_path.strip():
@@ -187,7 +270,7 @@ class TechnicalFeedbackService:
             if (t.status.value if hasattr(t.status, "value") else str(t.status)) in ("FAILED", "ERROR", "TIMEOUT")
         ]
 
-        return TechnicalFeedbackPayload(
+        payload = TechnicalFeedbackPayload(
             feedback_id=feedback_id,
             verification_run_id=run.id,
             submission_id=run.submission_id,
@@ -203,6 +286,10 @@ class TechnicalFeedbackService:
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )
+
+        # Validate generated payload
+        self.validate_technical_feedback_payload(payload, run)
+        return payload
 
     def get_feedback_preview(
         self,
@@ -273,6 +360,7 @@ class TechnicalFeedbackService:
             notes=notes or f"Generated technical feedback cycle #{iteration_number}",
             payload=payload,
             created_at=now,
+            delivery_status=DeliveryStatus.NOT_DISPATCHED.value,
         )
 
         run.feedback_iterations.append(iteration)
@@ -294,7 +382,11 @@ class TechnicalFeedbackService:
     ) -> Tuple[VerificationRunResponse, FeedbackIteration]:
         """
         Records explicit human approval for an eligible verification run's technical feedback.
-        Guarantees that only runs with real defect evidence can be approved.
+        Guarantees that:
+        - Only runs with real defect evidence can be approved.
+        - Repeated approval calls do not create unintended duplicate iterations.
+        - Approval updates approval metadata and notes without automatically triggering dispatch.
+        - Note: Approver identity is client-supplied for audit trail and is not independently authenticated.
         """
         is_eligible, reason = self.check_eligibility(run)
         if not is_eligible:
@@ -308,11 +400,17 @@ class TechnicalFeedbackService:
         iteration.approved_at = now
         iteration.approved_by = approver
         iteration.updated_at = now
+        # Keep delivery_status as NOT_DISPATCHED (approval never triggers dispatch)
+        if iteration.delivery_status == DeliveryStatus.PENDING_DELIVERY.value:
+            pass  # Retain pending if an active lock exists
+        elif iteration.delivery_status not in (DeliveryStatus.ACKNOWLEDGED.value, DeliveryStatus.UNKNOWN.value):
+            iteration.delivery_status = DeliveryStatus.NOT_DISPATCHED.value
+
         if notes:
             iteration.notes = notes
 
         logger.info(
-            "Feedback iteration %s for run %s approved by %s",
+            "Feedback iteration %s for run %s approved by %s (client-supplied identity)",
             iteration.iteration_id,
             run.id,
             approver,
@@ -330,8 +428,12 @@ class TechnicalFeedbackService:
     ) -> Tuple[VerificationRunResponse, FeedbackIteration, bool, Any]:
         """
         Dispatches an approved technical feedback package to Component 3 via the outbound client.
-        Enforces human approval, eligibility, and idempotency.
-        Returns: (updated_run, iteration, already_dispatched_flag, dispatch_result)
+        Enforces:
+        - Human approval prerequisite.
+        - Idempotency: duplicate dispatch on ACKNOWLEDGED iteration returns existing record.
+        - Concurrency protection: in-flight PENDING_DELIVERY prevents concurrent double dispatch.
+        - State tracking: timeouts yield UNKNOWN state rather than assumed failure or auto-retry.
+        - Audit trail: attempt counting, attempt timestamps, and sanitized error messages.
         """
         is_eligible, reason = self.check_eligibility(run)
         if not is_eligible:
@@ -347,8 +449,15 @@ class TechnicalFeedbackService:
                 "Please approve the technical feedback package first."
             )
 
+        # Concurrency / In-flight protection
+        if iteration.delivery_status == DeliveryStatus.PENDING_DELIVERY.value:
+            raise InvalidInputException(
+                f"A dispatch attempt is currently in progress for iteration '{iteration.iteration_id}'. "
+                "Concurrent dispatch requests are rejected."
+            )
+
         # Idempotency check: already acknowledged?
-        if iteration.delivery_status == "ACKNOWLEDGED" and not force_retry:
+        if iteration.delivery_status == DeliveryStatus.ACKNOWLEDGED.value and not force_retry:
             logger.info(
                 "Feedback iteration %s for run %s already delivered and acknowledged; skipping duplicate dispatch.",
                 iteration.iteration_id,
@@ -360,6 +469,14 @@ class TechnicalFeedbackService:
         correlation_id = iteration.correlation_id or f"corr-{uuid.uuid4().hex[:12]}"
         dispatch_id = f"disp-{uuid.uuid4().hex[:12]}"
 
+        # Record dispatch attempt audit trail
+        iteration.delivery_status = DeliveryStatus.PENDING_DELIVERY.value
+        iteration.attempt_count = (iteration.attempt_count or 0) + 1
+        iteration.last_attempt_at = now
+        iteration.attempt_timestamps = (iteration.attempt_timestamps or []) + [now]
+        iteration.dispatched_at = now
+        iteration.updated_at = now
+
         c3_client = client or Component3Client()
 
         result = await c3_client.dispatch_feedback(
@@ -368,24 +485,36 @@ class TechnicalFeedbackService:
             idempotency_key=dispatch_id,
         )
 
+        completed_at = datetime.now(timezone.utc)
         iteration.dispatch_attempt_id = result.dispatch_attempt_id
         iteration.correlation_id = result.correlation_id
-        iteration.dispatched_at = now
-        iteration.updated_at = now
+        iteration.updated_at = completed_at
 
         if result.success and result.acknowledged:
-            iteration.delivery_status = "ACKNOWLEDGED"
+            iteration.delivery_status = DeliveryStatus.ACKNOWLEDGED.value
             iteration.component_3_acknowledged = True
             iteration.component_3_job_id = result.job_id
-            iteration.acknowledged_at = now
+            iteration.acknowledged_at = completed_at
             iteration.error_category = None
+            iteration.sanitized_error_message = None
             iteration.status = "AWAITING_REVISION"
-        else:
-            iteration.delivery_status = "FAILED"
+        elif result.error_category == "TIMEOUT":
+            # Ambiguous timeout outcome: remote receiver might have received payload
+            iteration.delivery_status = DeliveryStatus.UNKNOWN.value
+            iteration.component_3_acknowledged = False
+            iteration.error_category = "TIMEOUT"
+            iteration.sanitized_error_message = result.message
+        elif result.error_category == "COMPONENT_3_DISABLED":
+            iteration.delivery_status = DeliveryStatus.NOT_DISPATCHED.value
             iteration.component_3_acknowledged = False
             iteration.error_category = result.error_category
-            if result.error_category == "COMPONENT_3_DISABLED":
-                iteration.delivery_status = "NOT_DISPATCHED"
+            iteration.sanitized_error_message = result.message
+        else:
+            iteration.delivery_status = DeliveryStatus.FAILED.value
+            iteration.component_3_acknowledged = False
+            iteration.error_category = result.error_category
+            iteration.sanitized_error_message = result.message
 
         return (updated_run, iteration, False, result)
+
 

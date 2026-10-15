@@ -1,6 +1,7 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from app.core.errors import InvalidInputException, ResourceNotFoundException
 from app.core.logging import logger
@@ -263,6 +264,8 @@ class VerificationService:
             await self.verification_repo.save(updated_run)
         return iteration
 
+    _dispatch_locks: Dict[str, asyncio.Lock] = {}
+
     def get_component3_status(self) -> Component3StatusResponse:
         """Retrieves Component 3 connectivity, configuration, and contract readiness status."""
         client = Component3Client()
@@ -276,6 +279,8 @@ class VerificationService:
     ) -> FeedbackIteration:
         """
         Explicitly records human approval for an eligible verification run's technical feedback.
+        Repeated approvals for the same defect set do not create duplicate iterations.
+        Approval does not automatically trigger dispatch.
         """
         run = await self.get_verification_run(run_id)
         submission = await self.submission_repo.get_by_id(run.submission_id)
@@ -297,59 +302,67 @@ class VerificationService:
     ) -> FeedbackDispatchResponse:
         """
         Dispatches an approved technical feedback package to Component 3.
-        Enforces human approval and safe fail-closed behavior when Component 3 is not ready.
+        Enforces human approval, safe fail-closed behavior when Component 3 is not ready,
+        atomic in-flight concurrency protection, and unknown-outcome handling on timeout.
         """
-        run = await self.get_verification_run(run_id)
-        submission = await self.submission_repo.get_by_id(run.submission_id)
-        service = TechnicalFeedbackService()
+        lock = self._dispatch_locks.setdefault(run_id, asyncio.Lock())
+        async with lock:
+            run = await self.get_verification_run(run_id)
+            submission = await self.submission_repo.get_by_id(run.submission_id)
+            service = TechnicalFeedbackService()
 
-        # If user explicitly approves in dispatch request and not yet approved, mark approved first
-        latest_iter = run.feedback_iterations[-1] if run.feedback_iterations else None
-        if (not latest_iter or latest_iter.approval_status != "APPROVED") and approved:
-            run, _ = service.approve_feedback(
-                run=run, submission=submission, approver=approver, notes=notes
+            # If user explicitly approves in dispatch request and not yet approved, mark approved first
+            latest_iter = run.feedback_iterations[-1] if run.feedback_iterations else None
+            if (not latest_iter or latest_iter.approval_status != "APPROVED") and approved:
+                run, _ = service.approve_feedback(
+                    run=run, submission=submission, approver=approver, notes=notes
+                )
+                await self.verification_repo.save(run)
+
+            updated_run, iteration, already_dispatched, result = await service.dispatch_feedback(
+                run=run,
+                submission=submission,
+                client=client,
+                approver=approver,
+                notes=notes,
+                force_retry=force_retry,
             )
+            await self.verification_repo.save(updated_run)
 
-        updated_run, iteration, already_dispatched, result = await service.dispatch_feedback(
-            run=run,
-            submission=submission,
-            client=client,
-            approver=approver,
-            notes=notes,
-            force_retry=force_retry,
-        )
-        await self.verification_repo.save(updated_run)
+            feedback_id = iteration.payload.feedback_id if iteration.payload else f"fb-{run.id}"
 
-        feedback_id = iteration.payload.feedback_id if iteration.payload else f"fb-{run.id}"
+            if already_dispatched:
+                return FeedbackDispatchResponse(
+                    verification_run_id=run.id,
+                    feedback_id=feedback_id,
+                    dispatch_attempt_id=iteration.dispatch_attempt_id or f"disp-{uuid.uuid4().hex[:12]}",
+                    approval_status=iteration.approval_status,
+                    delivery_status=iteration.delivery_status,
+                    component_3_acknowledged=iteration.component_3_acknowledged,
+                    component_3_job_id=iteration.component_3_job_id,
+                    correlation_id=iteration.correlation_id or f"corr-{uuid.uuid4().hex[:12]}",
+                    message="Feedback already delivered and acknowledged by Component 3.",
+                    error_category=None,
+                    sanitized_error_message=None,
+                    attempt_count=iteration.attempt_count or 1,
+                    iteration=iteration,
+                )
 
-        if already_dispatched:
             return FeedbackDispatchResponse(
                 verification_run_id=run.id,
                 feedback_id=feedback_id,
-                dispatch_attempt_id=iteration.dispatch_attempt_id or f"disp-{uuid.uuid4().hex[:12]}",
+                dispatch_attempt_id=result.dispatch_attempt_id,
                 approval_status=iteration.approval_status,
                 delivery_status=iteration.delivery_status,
-                component_3_acknowledged=iteration.component_3_acknowledged,
-                component_3_job_id=iteration.component_3_job_id,
-                correlation_id=iteration.correlation_id or f"corr-{uuid.uuid4().hex[:12]}",
-                message="Feedback already delivered and acknowledged by Component 3.",
-                error_category=None,
+                component_3_acknowledged=result.acknowledged,
+                component_3_job_id=result.job_id,
+                correlation_id=result.correlation_id,
+                message=result.message,
+                error_category=result.error_category,
+                sanitized_error_message=iteration.sanitized_error_message,
+                attempt_count=iteration.attempt_count or 1,
                 iteration=iteration,
             )
-
-        return FeedbackDispatchResponse(
-            verification_run_id=run.id,
-            feedback_id=feedback_id,
-            dispatch_attempt_id=result.dispatch_attempt_id,
-            approval_status=iteration.approval_status,
-            delivery_status=iteration.delivery_status,
-            component_3_acknowledged=result.acknowledged,
-            component_3_job_id=result.job_id,
-            correlation_id=result.correlation_id,
-            message=result.message,
-            error_category=result.error_category,
-            iteration=iteration,
-        )
 
     async def list_runs(
         self,

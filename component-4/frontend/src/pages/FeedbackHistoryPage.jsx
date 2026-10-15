@@ -123,12 +123,16 @@ export default function FeedbackHistoryPage() {
     switch (status) {
       case 'ACKNOWLEDGED':
         return <Badge variant="success">ACKNOWLEDGED</Badge>;
+      case 'PENDING_DELIVERY':
+        return <Badge variant="warning">PENDING_DELIVERY</Badge>;
       case 'DISPATCHED':
         return <Badge variant="accent">DISPATCHED</Badge>;
       case 'NOT_DISPATCHED':
         return <Badge variant="secondary">NOT_DISPATCHED</Badge>;
       case 'FAILED':
         return <Badge variant="danger">FAILED</Badge>;
+      case 'UNKNOWN':
+        return <Badge variant="warning">UNKNOWN</Badge>;
       default:
         return <Badge variant="secondary">PENDING</Badge>;
     }
@@ -150,7 +154,8 @@ export default function FeedbackHistoryPage() {
       (statusFilter === 'APPROVED' && iter.approval_status === 'APPROVED') ||
       (statusFilter === 'ACKNOWLEDGED' && iter.delivery_status === 'ACKNOWLEDGED') ||
       (statusFilter === 'NOT_DISPATCHED' && iter.delivery_status === 'NOT_DISPATCHED') ||
-      (statusFilter === 'FAILED' && iter.delivery_status === 'FAILED');
+      (statusFilter === 'FAILED' && iter.delivery_status === 'FAILED') ||
+      (statusFilter === 'UNKNOWN' && iter.delivery_status === 'UNKNOWN');
 
     return matchesSearch && matchesStatus;
   });
@@ -286,6 +291,7 @@ export default function FeedbackHistoryPage() {
               <option value="ACKNOWLEDGED">Acknowledged</option>
               <option value="NOT_DISPATCHED">Not Dispatched</option>
               <option value="FAILED">Failed</option>
+              <option value="UNKNOWN">Unknown Outcome</option>
             </select>
           </div>
         )}
@@ -510,6 +516,18 @@ export default function FeedbackHistoryPage() {
                         <div style={{ fontSize: '0.71875rem', color: 'var(--status-failed)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                           <AlertTriangle size={12} />
                           <span>{iter.error_category}</span>
+                        </div>
+                      )}
+
+                      {iter.sanitized_error_message && (
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {iter.sanitized_error_message}
+                        </div>
+                      )}
+
+                      {iter.attempt_count > 0 && (
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Attempts: {iter.attempt_count}
                         </div>
                       )}
 
