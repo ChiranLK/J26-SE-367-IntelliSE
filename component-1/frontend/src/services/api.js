@@ -1,5 +1,6 @@
 import { MAX_OFFSET, validExtraction, validProject, validProjectId, validProjectPage } from './contracts.js'
 import { validJobAccepted, validTranscription, validTranscriptionId, validateAudioFile } from './transcriptionContracts.js'
+import { supportsProjectProvenance, verifyProjectProvenance } from './projectProvenance.js'
 
 const PREFIX = '/api/v1/component-1'
 export const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
@@ -31,7 +32,7 @@ function errorDetail(detail) {
 
 async function request(path, {
   baseUrl = DEFAULT_BASE_URL, signal, timeoutMs = 15000, method = 'GET', body,
-  validate = () => true, query = {},
+  validate = () => true, query = {}, componentPath = true,
 } = {}) {
   const controller = new AbortController()
   let timedOut = false
@@ -46,7 +47,7 @@ async function request(path, {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
       throw new ApiError('The backend URL is not configured correctly.', { code: 'config' })
     }
-    url.pathname = `${url.pathname.replace(/\/+$/, '')}${PREFIX}${path}`
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}${componentPath ? PREFIX : ''}${path}`
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
     const multipart = body instanceof FormData
     const response = await fetch(url, {
@@ -69,7 +70,7 @@ async function request(path, {
         uncertain: writing && response.status >= 500 && response.status !== 502,
       })
     }
-    if (!validate(data)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
+    if (!await validate(data)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
     return data
   } catch (error) {
     if (signal?.aborted) throw error
@@ -95,7 +96,21 @@ function projectPath(id) {
   return `/projects/${id.toLowerCase()}`
 }
 
-export const createProject = (input, options = {}) => request('/projects', { ...options, method: 'POST', body: input, validate: validProject })
+export async function checkProjectProvenanceContract(options = {}) {
+  const schema = await request('/openapi.json', { ...options, componentPath: false })
+  return supportsProjectProvenance(schema)
+}
+
+export async function createProject(input, options = {}) {
+  if (input.transcription_id != null) {
+    if (!validTranscriptionId(input.transcription_id)) throw new ApiError('Invalid transcription job ID.', { status: 422 })
+    if (!await checkProjectProvenanceContract(options)) throw new ApiError('This backend cannot save transcription provenance. Your discussion and source reference are retained.', { code: 'provenance-unavailable' })
+  }
+  return request('/projects', { ...options, method: 'POST', body: input, validate: async (data) =>
+    validProject(data) && await verifyProjectProvenance(data)
+    && (input.transcription_id == null || (data.transcription_provenance?.transcription_id === input.transcription_id
+      && data.discussion_text === input.discussion_text)) })
+}
 
 export function listProjects({ limit = 10, offset = 0, ...options } = {}) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) {
@@ -104,7 +119,7 @@ export function listProjects({ limit = 10, offset = 0, ...options } = {}) {
   return request('/projects', { ...options, query: { limit, offset }, validate: (data) => validProjectPage(data, limit, offset) })
 }
 
-export const getProject = (id, options = {}) => request(projectPath(id), { ...options, validate: (data) => validProject(data) && data.id === id.toLowerCase() })
+export const getProject = (id, options = {}) => request(projectPath(id), { ...options, validate: async (data) => validProject(data) && data.id === id.toLowerCase() && await verifyProjectProvenance(data) })
 export const extractRequirements = (id, discussion, options = {}) => request(`${projectPath(id)}/extractions`, {
   timeoutMs: EXTRACTION_TIMEOUT_MS, ...options, method: 'POST', validate: (data) => validExtraction(data, id, discussion),
 })

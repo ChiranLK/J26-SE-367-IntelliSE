@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { transcriptionId, transcriptionJob, originalTranscript } from './transcription-fixture.js'
+import { provenanceContract, projectProvenance } from './project-provenance-fixture.js'
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const date = '2026-10-12T00:00:00Z'
@@ -94,6 +95,8 @@ test('project creation, extraction, classification, recovery and refresh in a re
   let audioPosts = 0
   let audioGets = 0
   const audioJobs = new Map()
+  let provenanceEnabled = false
+  let audioReferenceFailure = false
   const pages = []
   const api = createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', '*')
@@ -103,6 +106,7 @@ test('project creation, extraction, classification, recovery and refresh in a re
     function reply(status, data) { response.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(data)) }
     const url = new URL(request.url, 'http://fixture.test')
     const path = url.pathname.replace('/api/v1/component-1', '')
+    if (path === '/openapi.json') { reply(200, provenanceEnabled ? provenanceContract : { paths: {} }); return }
     if (path === '/transcriptions' && request.method === 'POST') {
       audioPosts++
       const identifier = transcriptionId(audioPosts)
@@ -138,6 +142,7 @@ test('project creation, extraction, classification, recovery and refresh in a re
       const items = projects.slice(offset, offset + limit).map((item) => {
         const summary = { ...item }
         delete summary.discussion_text
+        delete summary.transcription_provenance
         return summary
       })
       reply(200, { items, limit, offset, has_more: offset + limit < projects.length })
@@ -149,8 +154,17 @@ test('project creation, extraction, classification, recovery and refresh in a re
       for await (const chunk of request) body += chunk
       await delay(150)
       if (createFailure) { reply(503, { detail: 'Fixture database unavailable.' }); return }
-      const input = JSON.parse(body)
-      const project = { ...input, id: id(100), name: input.name.trim(), status: 'draft', created_at: date, updated_at: date }
+      const { transcription_id, ...input } = JSON.parse(body)
+      if (transcription_id && audioReferenceFailure) { reply(409, { detail: 'Referenced transcription must be completed before saving.' }); return }
+      const stamp = transcription_id ? transcriptionJob().updated_at : date
+      const project = { ...input, id: id(98 + createCalls), name: input.name.trim(), status: 'draft', created_at: stamp, updated_at: stamp }
+      if (transcription_id) {
+        assert.equal(provenanceEnabled, true)
+        assert.ok(audioJobs.has(transcription_id))
+        assert.deepEqual(Object.keys(input).sort(), ['description', 'discussion_text', 'name'])
+        project.transcription_provenance = projectProvenance(input.discussion_text, transcriptionJob('completed', transcription_id), stamp)
+        savedRun = null
+      }
       projects.unshift(project)
       reply(201, project)
       return
@@ -417,9 +431,63 @@ test('project creation, extraction, classification, recovery and refresh in a re
   assert.equal(createCalls, 2)
   assert.equal(extractionCalls, 4)
   assert.equal(classificationCalls, 1)
+
+  // Upgrade/downgrade detection, reference errors, save and source retrieval.
+  provenanceEnabled = true
+  audioMode = 'success'
+  await click('+ New project')
+  await waitText('Create a project')
+  await fill('name', 'Saved audio review')
+  await fill('description', 'Keep audio description.')
+  await fill('discussion_text', 'Confirm replacement of pasted text.')
+  await click('Upload audio')
+  await selectAudio()
+  await click('Transcribe audio', true)
+  await waitText('Transcription completed.')
+  await fill('reviewed-transcript', ' \r\nOnly administrators can delete accounts. Café 👋\t ')
+  // Native textareas expose LF line endings for an edited/pasted draft.
+  const reviewedAudioText = await evaluate('document.getElementById("reviewed-transcript").value')
+  await click('Use this transcript')
+  await click('Replace discussion')
+  await waitText('Audio source retained for saving.')
+  assert.equal(await enabled('Save and open project'), true)
+  const sourceId = transcriptionId(6)
+  provenanceEnabled = false
+  await click('Save and open project')
+  await waitText('Audio-derived project saving is unavailable.')
+  assert.equal(createCalls, 2, 'fresh preflight prevents a POST after backend downgrade')
+  assert.equal(await evaluate('document.getElementById("discussion_text").value'), reviewedAudioText)
+  provenanceEnabled = true
+  await click('Check audio saving support')
+  await waitUntil(() => enabled('Save and open project'), 'provenance support restored')
+  audioReferenceFailure = true
+  await click('Save and open project', true)
+  await waitText('Referenced transcription must be completed before saving.')
+  assert.equal(createCalls, 3)
+  assert.equal(await evaluate('document.querySelector(".workspace-notice code").textContent'), sourceId)
+  audioReferenceFailure = false
+  await click('Save and open project', true)
+  await waitText('Saved audio source')
+  assert.equal(createCalls, 4)
+  assert.equal(audioPosts, 6)
+  assert.equal(await evaluate('document.querySelector(".discussion pre").textContent'), reviewedAudioText)
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source .audio-original pre").textContent'), originalTranscript)
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source pre b")'), null)
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source code").textContent'), sourceId)
+  await reload()
+  await waitText('Saved audio source')
+  await click('+ New project')
+  await waitText('Create a project')
+  await evaluate('[...document.querySelectorAll(".project-name")].find(el => el.textContent === "Saved audio review").closest("button").click()')
+  await waitText('Saved audio source')
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source code").textContent'), sourceId)
+  assert.equal(await evaluate('document.querySelector(".discussion pre").textContent'), reviewedAudioText)
+  assert.equal(createCalls, 4, 'refresh and reopen must not repeat saving')
+  assert.equal(extractionCalls, 4)
+  assert.equal(classificationCalls, 1)
 })
 
-test('live audio upload, ASR review and provenance gate through the browser', {
+test('live audio upload, edited project save, refresh and reopen through the browser', {
   skip: !process.env.C1_LIVE_AUDIO_BASE_URL, timeout: 360000,
 }, async (t) => {
   // Explicit opt-in only. Use an audio-enabled backend with a disposable DB.
@@ -442,7 +510,8 @@ test('live audio upload, ASR review and provenance gate through the browser', {
   await command('Page.navigate', { url: `http://127.0.0.1:${port}/#new-project` })
   await waitText('Connected')
   await fill('name', 'Disposable live audio review')
-  await fill('description', 'No project should be saved by this verification.')
+  await fill('description', 'Disposable provenance workflow verification.')
+  await fill('discussion_text', 'Existing discussion must be replaced explicitly.')
   await click('Upload audio')
   const { root } = await command('DOM.getDocument')
   const { nodeId } = await command('DOM.querySelector', { nodeId: root.nodeId, selector: '#audio-file' })
@@ -456,19 +525,40 @@ test('live audio upload, ASR review and provenance gate through the browser', {
   assert.equal(metadata.originalMatchesEditor, true)
   assert.equal(metadata.language, 'en')
   assert.ok(metadata.characters > 0)
-  assert.equal(await evaluate('document.getElementById("discussion_text").value'), '')
+  assert.equal(await evaluate('document.getElementById("discussion_text").value'), 'Existing discussion must be replaced explicitly.')
   await fill('reviewed-transcript', 'A reviewed draft for this disposable UI check.')
   await click('Refresh transcription status')
   await waitUntil(() => evaluate('[...document.querySelectorAll("button")].some(el => el.textContent.trim() === "Refresh transcription status" && !el.disabled)'), 'live manual refresh')
   assert.equal(await evaluate('document.getElementById("reviewed-transcript").value'), 'A reviewed draft for this disposable UI check.')
   await click('Use this transcript')
-  await waitText('Audio-derived project saving is unavailable.')
+  await waitText('Replace the existing discussion?')
+  await click('Replace discussion')
+  await waitText('Audio source retained for saving.')
   assert.equal(await evaluate('document.getElementById("discussion_text").value'), 'A reviewed draft for this disposable UI check.')
   assert.equal(await evaluate('document.getElementById("name").value'), 'Disposable live audio review')
-  assert.equal(await evaluate('document.getElementById("description").value'), 'No project should be saved by this verification.')
-  assert.equal(await evaluate('[...document.querySelectorAll("button")].find(el => el.textContent.trim() === "Save and open project").disabled'), true)
+  assert.equal(await evaluate('document.getElementById("description").value'), 'Disposable provenance workflow verification.')
+  assert.equal(await evaluate('[...document.querySelectorAll("button")].find(el => el.textContent.trim() === "Save and open project").disabled'), false)
   assert.equal(await evaluate('document.querySelector(".workspace-notice .audio-original pre").textContent.length'), metadata.characters)
+  await click('Save and open project')
+  await waitText('Saved audio source')
+  const projectId = await evaluate('location.hash.split("/")[1]')
+  assert.equal(await evaluate('document.querySelector(".discussion pre").textContent'), 'A reviewed draft for this disposable UI check.')
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source .audio-original pre").textContent.length'), metadata.characters)
+  await evaluate('window.__beforeReload = true')
+  await command('Page.reload')
+  await waitUntil(async () => {
+    try { return await evaluate('window.__beforeReload === undefined && document.readyState === "complete"') }
+    catch { return false }
+  }, 'fresh live document after refresh')
+  await waitText('Saved audio source')
+  await click('+ New project')
+  await waitText('Create a project')
+  await evaluate('[...document.querySelectorAll(".project-name")].find(el => el.textContent === "Disposable live audio review").closest("button").click()')
+  await waitText('Saved audio source')
+  assert.equal(await evaluate('location.hash.split("/")[1]'), projectId)
+  assert.equal(await evaluate('document.querySelector(".saved-audio-source code").textContent'), identifier)
+  assert.equal(await evaluate('document.querySelector(".discussion pre").textContent'), 'A reviewed draft for this disposable UI check.')
   await click('Retry connection')
   await waitText('Connected')
-  t.diagnostic(JSON.stringify({ check: 'actual ASR through frontend browser', transcription_id: identifier, ...metadata }))
+  t.diagnostic(JSON.stringify({ check: 'actual ASR + reviewed project save + refresh + reopen', transcription_id: identifier, project_id: projectId, ...metadata }))
 })

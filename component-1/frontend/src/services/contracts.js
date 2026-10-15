@@ -1,4 +1,5 @@
 // Verified against component-1-backend e78da735, not inferred from UI fixtures.
+import { validProjectProvenance } from './projectProvenance.js'
 export const PROJECT_LIMITS = { name: 120, description: 2000, discussion_text: 100000 }
 export const PAGE_LIMIT = 10
 export const MAX_OFFSET = 10000
@@ -27,7 +28,8 @@ export function validProject(value, full = true) {
   return object(value) && validProjectId(value.id) && text(value.name, 120) && !blank.test(value.name)
     && (value.description === null || text(value.description, 2000, 0))
     && value.status === 'draft' && date(value.created_at) && date(value.updated_at)
-    && (!full || (text(value.discussion_text, 100000) && !blank.test(value.discussion_text)))
+    && (!full || (text(value.discussion_text, 100000) && !blank.test(value.discussion_text)
+      && (value.transcription_provenance == null || validProjectProvenance(value.transcription_provenance))))
 }
 
 export function validProjectPage(value, limit, offset) {

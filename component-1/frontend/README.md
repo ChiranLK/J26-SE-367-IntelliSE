@@ -38,9 +38,10 @@ approval. FR/NFR predictions are available in the saved classification panel. Ed
 persistence controls, quality scores, RAG and SRS generation remain future work.
 All source and model text is rendered as text nodes, never raw HTML.
 
-Optional **Upload audio → transcribe → review → use transcript** is available in
-the project form. Audio-derived project saving is blocked by the provenance
-contract gap described below; text-only creation retains its existing behavior.
+Optional **Upload audio → transcribe → review → use transcript → save** is available
+when the configured backend exposes the provenance contract described below.
+Older/incompatible backends keep the audio-saving guard; text-only creation
+retains its existing behavior.
 
 ## macOS setup and run commands
 
@@ -263,35 +264,64 @@ an explicit Replace/Keep confirmation when that field already has any content.
 It preserves project name/description and never saves, extracts or classifies
 automatically. The model can invent or omit speech; human review remains required.
 
-### Provenance contract blocker
+### Provenance contract and saving
 
-The current `ProjectCreate` schema permits only `name`, `description` and
-`discussion_text`, with `additionalProperties: false`. Project records contain
-no transcription reference. Transcription jobs retain an immutable original,
-but `reviewed_text` is currently null and there is no review-write or project-link
-API. Sending invented provenance fields would fail validation; embedding them in
-the description/discussion would corrupt those fields.
+The frontend reads the configured backend's **/openapi.json** on opening a form
+and rechecks immediately before an audio-derived POST. It requires ProjectCreate's
+optional UUID **transcription_id**, and project POST/detail responses advertising
+the **transcription_provenance** v1 snapshot. Local schema references and nullable
+fields are resolved. An unavailable/malformed/older contract keeps saving blocked
+for audio-derived drafts, with **Check audio saving support** to retry discovery.
+Text-only saves do not require OpenAPI availability. A deployment path in
+VITE_API_BASE_URL also prefixes the OpenAPI URL.
 
-After **Use this transcript**, the form therefore retains the reviewed discussion
-and its complete source-job snapshot locally, displays the source ID/model/language
-and original, and **blocks project saving**. The submit handler also enforces
-this guard, including Enter/programmatic submission. Later discussion edits or
-tab switches do not erase the pending association. No browser storage contains
-audio/transcripts; local drafts are lost when leaving/reloading the form. The
-server-side original remains retrievable by job ID.
+After **Use this transcript**, the complete source-job snapshot remains separate
+from discussion_text. Further discussion edits and tab changes retain its ID.
+When the contract is available, **Save and open project** sends only:
 
-Backend follow-up is required: an explicit project input/output association to a
-saved completed transcription and a persistable review association, retaining
-the generated original independently. No such backend change is made here.
-An explicit **Clear audio-derived discussion** confirmation clears both discussion
-and pending association, retains name/description and the saved transcription,
-and restores text-only creation. There is no save-without-provenance bypass.
+```json
+{
+  "name": "Client portal",
+  "description": "Reviewed stakeholder discussion",
+  "discussion_text": "The user's edited review text.",
+  "transcription_id": "668a97af-dda2-48ef-969a-1eb4d9a86076"
+}
+```
+
+Replace the illustrative ID with the selected completed job. Model, original
+text, timestamps and hashes are never sent as client metadata. The backend
+retrieves them from storage. Omit the ID for text-only creation. HTTP 404/409/422,
+network failures and bad acknowledgements retain the draft/reference; there is
+no retry with the reference removed. A fresh contract check prevents a POST after
+a backend downgrade. The response must retain the requested source ID and exact
+submitted discussion; an absent/mismatched provenance is an uncertain failed save.
+
+Full project responses are checked against the v1 snapshot structure, and browser
+Web Crypto recomputes SHA-256 of both original and reviewed UTF-8 text before
+accepting a save/detail response. Mismatches show an error rather than degrading
+to a text-only project. Audio source verification needs Web Crypto in a secure
+browser context (HTTPS or localhost); legacy text-only records are unaffected.
+Native textarea editing normalizes line endings to LF; API submission/hashing
+does not otherwise normalize text, and the separate original stays unchanged.
+
+Reopening or refreshing a saved project shows **Reviewed client discussion** and
+**Saved audio source**: transcription ID, provider/model/language, source/review
+timestamps, duration/processing time, original ASR text/segments, hashes and
+provenance version. User-reviewed does not mean independently verified. All text
+is rendered safely as text nodes. Extraction/classification remain explicit and
+use the saved reviewed discussion. The source transcription job stays unchanged.
+
+Unsaved drafts/source snapshots stay local to the form and are lost on navigation
+or reload; saved provenance is retrieved from the project API. An explicit
+**Clear audio-derived discussion** confirmation clears discussion and pending
+association together, retaining name/description and the source job. There is no
+save-without-provenance bypass.
 
 ### Contract and live verification
 
-Inspected the actual generated transcription OpenAPI fragment at
-`/private/tmp/intellise-c1-audio-backend/component-1/backend/docs/transcriptions-openapi.json`,
-its result schemas, routes and upload settings. Also inspected the running 8001
+Inspected the actual generated project-provenance/transcription OpenAPI and schemas
+in the durable `.worktrees/component-1-backend` backend checkout, then verified
+the contract from the separate live backend used by the browser. Also inspected the running 8001
 OpenAPI: that server currently exposes projects/health only, with no transcription,
 extraction or classification routes. Run the audio-enabled backend worktree and
 point `VITE_API_BASE_URL` at it; health alone cannot prove feature availability.
@@ -312,11 +342,12 @@ C1_LIVE_UI_PORT=18020 C1_LIVE_AUDIO_FILE=/absolute/path/to/short-english.wav \
 ```
 
 This launches its own Vite and headless Chrome, uploads the supplied recording,
-checks retrieval, edits/refreshes the draft and verifies the provenance save
-guard. It does not train/download models or save a project. This opt-in check
-creates a real transcription job; use a disposable database and apply cleanup
+checks retrieval, edits/refreshes the draft, confirms replacement, saves with
+provenance, refreshes the page and reopens from the project list. It does not
+train/download models. This opt-in check creates one real transcription job and
+one explicitly saved project; use a disposable database and apply cleanup
 explicitly. The normal browser test skips live ASR unless its environment is set.
-See [audio verification results](docs/audio-verification.md) for actual timings,
+See [audio-save verification results](docs/audio-save-verification.md) for actual timings,
 commands, files and remaining limitations. Existing within-corpus classifier
 metrics do not establish project-held-out performance or prediction confidence.
 

@@ -1,5 +1,10 @@
 # Audio upload and transcript review verification
 
+Historical upload/review verification. The new backend provenance contract is
+now connected conditionally; see [current save/reopen verification](audio-save-verification.md).
+The unconditional save block and old temporary source paths below describe the
+earlier implementation only.
+
 Verified October 15, 2026 on `component-1-frontend`. No applicable AGENTS.md was
 found. Root/frontend instructions, existing form/API/classification/health code,
 dependency lock and actual backend schemas/OpenAPI were inspected. Existing

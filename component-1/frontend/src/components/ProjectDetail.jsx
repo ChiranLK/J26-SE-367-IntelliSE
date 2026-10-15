@@ -3,6 +3,7 @@ import { extractRequirements, getLatestExtraction, getProject, isNoExtraction } 
 import { formatDate } from '../services/format.js'
 import { openNewProject, pendingExtraction } from '../services/navigation.js'
 import ExtractionResults from './ExtractionResults.jsx'
+import ProjectSource from './ProjectSource.jsx'
 
 export default function ProjectDetail({ projectId, onExtractionSaved }) {
   const [project, setProject] = useState(null)
@@ -109,7 +110,8 @@ export default function ProjectDetail({ projectId, onExtractionSaved }) {
       <h2 id="project-heading" ref={heading} tabIndex={-1}>{project.name}</h2>
       <div className="project-meta"><span className="draft-tag">{project.status}</span><span>Created <time dateTime={project.created_at}>{formatDate(project.created_at)}</time></span></div>
       {project.description !== null && <p className="project-description">{project.description}</p>}
-      <details className="discussion" open><summary>Original client discussion</summary><pre tabIndex={0} aria-label="Saved original discussion">{project.discussion_text}</pre></details>
+      <details className="discussion" open><summary>{project.transcription_provenance ? 'Reviewed client discussion' : 'Original client discussion'}</summary><pre tabIndex={0} aria-label={project.transcription_provenance ? 'Saved reviewed discussion' : 'Saved original discussion'}>{project.discussion_text}</pre></details>
+      {project.transcription_provenance && <ProjectSource source={project.transcription_provenance} />}
     </section>
     <section className="panel extraction-panel" aria-labelledby="extraction-heading" aria-busy={processing}>
       <p className="eyebrow section-eyebrow">03 · EXTRACT & REVIEW</p>

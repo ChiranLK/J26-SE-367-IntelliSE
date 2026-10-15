@@ -4,7 +4,7 @@ import { terminalTranscription, validateAudioFile } from '../services/transcript
 import { pollTranscription } from '../services/transcriptionPolling.js'
 import { characterCount, PROJECT_LIMITS } from '../services/contracts.js'
 
-export default function AudioTranscription({ disabled, onUse }) {
+export default function AudioTranscription({ disabled, onUse, provenanceAvailable = false }) {
   const [file, setFile] = useState(null)
   const [job, setJob] = useState(null)
   const [activity, setActivity] = useState(null)
@@ -118,7 +118,7 @@ export default function AudioTranscription({ disabled, onUse }) {
         </div>
         <button type="button" className="workspace-button primary" disabled={disabled || Boolean(activity) || !usable || !reviewed.trim() || characterCount(reviewed) > PROJECT_LIMITS.discussion_text}
           onClick={() => onUse(job, reviewed)}>Use this transcript</button>
-        <p className="field-help">Copies your reviewed draft to the discussion field. Does not save a project or run extraction. Audio-derived project saving is currently blocked because the backend cannot retain its provenance.</p>
+        <p className="field-help">Copies your reviewed draft to the discussion field. Does not save a project or run extraction. {provenanceAvailable ? 'Explicit project saving will include its source transcription reference.' : 'Audio saving remains blocked until the configured backend confirms provenance support.'}</p>
       </>}
     </div>}
     {failure?.message && <div className="error-message" role="alert"><p>{failure.status === 404 ? 'The backend transcription endpoint or job is unavailable. Check that the audio-enabled backend is running.' : failure.message}</p>

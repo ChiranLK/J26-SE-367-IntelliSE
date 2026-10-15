@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createProject } from '../services/api.js'
+import { checkProjectProvenanceContract, createProject } from '../services/api.js'
 import { characterCount, PROJECT_LIMITS, validateProjectInput } from '../services/contracts.js'
 import AudioTranscription from './AudioTranscription.jsx'
 
@@ -12,13 +12,23 @@ export default function CreateProjectForm({ onSaved }) {
   const [provenance, setProvenance] = useState(null)
   const [replacement, setReplacement] = useState(null)
   const [clearing, setClearing] = useState(false)
+  const [contract, setContract] = useState({ phase: 'loading', error: '' })
+  const [contractRevision, setContractRevision] = useState(0)
   const pending = useRef(null)
   const form = useRef(null)
   useEffect(() => () => pending.current?.abort(), [])
+  useEffect(() => {
+    const controller = new AbortController()
+    checkProjectProvenanceContract({ signal: controller.signal })
+      .then((supported) => { if (!controller.signal.aborted) setContract({ phase: supported ? 'supported' : 'unavailable', error: '' }) })
+      .catch((error) => { if (!controller.signal.aborted) setContract({ phase: 'unavailable', error: error.message }) })
+    return () => controller.abort()
+  }, [contractRevision])
+  const audioSaveBlocked = Boolean(provenance) && contract.phase !== 'supported'
 
   async function submit(event) {
     event.preventDefault()
-    if (pending.current || provenance) return
+    if (pending.current || audioSaveBlocked) return
     const invalid = validateProjectInput(input)
     setErrors(invalid)
     if (Object.keys(invalid).length) {
@@ -30,10 +40,15 @@ export default function CreateProjectForm({ onSaved }) {
     setSaving(true)
     setFailure(null)
     try {
-      const project = await createProject({ ...input, description: input.description === '' ? null : input.description }, { signal: controller.signal })
+      const project = await createProject({ ...input, description: input.description === '' ? null : input.description,
+        ...(provenance ? { transcription_id: provenance.transcription_id } : {}),
+      }, { signal: controller.signal })
       if (!controller.signal.aborted) onSaved(project)
     } catch (error) {
-      if (!controller.signal.aborted) setFailure(error)
+      if (!controller.signal.aborted) {
+        setFailure(error)
+        if (error.code === 'provenance-unavailable') setContract({ phase: 'unavailable', error: error.message })
+      }
     } finally {
       if (!controller.signal.aborted) { pending.current = null; setSaving(false) }
     }
@@ -87,7 +102,7 @@ export default function CreateProjectForm({ onSaved }) {
         <p className="field-help">Paste or edit the discussion below. Audio never replaces this text without your explicit action.</p>
       </div>
       <div id="source-audio-panel" role="tabpanel" aria-labelledby="source-audio-tab" hidden={tab !== 'audio'}>
-        <AudioTranscription disabled={saving} onUse={useTranscript} />
+        <AudioTranscription disabled={saving} onUse={useTranscript} provenanceAvailable={contract.phase === 'supported'} />
       </div>
       {replacement && <div role="alertdialog" aria-modal="false" aria-labelledby="replace-discussion-heading" className="workspace-notice">
         <h3 id="replace-discussion-heading">Replace the existing discussion?</h3>
@@ -99,11 +114,15 @@ export default function CreateProjectForm({ onSaved }) {
       </div>}
       {field('discussion_text', 'Original client discussion', true, 9)}
       {provenance && <div className="workspace-notice" role="status">
-        <p><strong>Audio-derived project saving is unavailable.</strong> The current project API cannot retain transcription provenance. Your reviewed discussion is kept here; saving is blocked so the source is not silently discarded.</p>
+        {audioSaveBlocked ? <>
+          <p><strong>Audio-derived project saving is unavailable.</strong> {contract.phase === 'loading' ? 'Checking the backend provenance contract.' : 'The configured backend does not currently provide the required provenance contract.'} Your discussion and source reference are retained; saving is blocked.</p>
+          {contract.error && <p className="field-help">{contract.error}</p>}
+          <button type="button" className="workspace-button" disabled={contract.phase === 'loading'} onClick={() => { setContract({ phase: 'loading', error: '' }); setContractRevision((value) => value + 1) }}>Check audio saving support</button>
+        </> : <p><strong>Audio source retained for saving.</strong> Save explicitly to store this reviewed discussion with its transcription reference and backend-sourced original. User-reviewed does not mean independently verified.</p>}
         <p className="record-id">Source transcription: <code>{provenance.transcription_id}</code> · {provenance.model} · {provenance.language}</p>
         <details className="audio-original"><summary>Applied original ASR transcript (unchanged)</summary><pre>{provenance.original_transcript}</pre></details>
-        <p className="field-help">Required backend contract: persist a transcription reference and its review association with the project. Reviewed text is not written back to the transcription job by this API.</p>
-        <button type="button" className="workspace-button" onClick={() => setClearing(true)}>Clear audio-derived discussion</button>
+        <p className="field-help">Further discussion edits retain this source association. The source job stays unchanged.</p>
+        <button type="button" className="workspace-button" disabled={saving} onClick={() => setClearing(true)}>Clear audio-derived discussion</button>
         {clearing && <div role="alertdialog" aria-modal="false" aria-label="Clear audio discussion confirmation">
           <p>Clear the discussion and its pending source association? The saved transcription job remains in the backend. Project name and description stay unchanged.</p>
           <button type="button" className="workspace-button" onClick={() => { setInput((previous) => ({ ...previous, discussion_text: '' })); setProvenance(null); setClearing(false) }}>Clear discussion and association</button>
@@ -112,7 +131,7 @@ export default function CreateProjectForm({ onSaved }) {
       </div>}
       <p className="field-help">Project saving supports 100,000 characters. The backend's extraction limit defaults to 30,000 and may be configured differently.</p>
       {failure && <div className="error-message" role="alert"><p>{failure.message}</p>{failure.uncertain && <p>Saving may have completed. Refresh the project list before submitting again to avoid creating a duplicate.</p>}</div>}
-      <button className="primary-button" type="submit" disabled={saving || Boolean(provenance)}>{saving ? 'Saving project…' : 'Save and open project'}</button>
+      <button className="primary-button" type="submit" disabled={saving || audioSaveBlocked}>{saving ? 'Saving project…' : 'Save and open project'}</button>
       <p className="sr-only" role="status">{saving ? 'Saving project. Please wait.' : ''}</p>
     </form>
   </section>
