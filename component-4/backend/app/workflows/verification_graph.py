@@ -5,9 +5,11 @@ from langgraph.graph import END, START, StateGraph
 from app.core.logging import logger
 from app.schemas.common import ProgrammingLanguage, TestResultStatus, TestType, VerificationStatus
 from app.schemas.defect_report import DefectReport
+from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPayload
 from app.schemas.test_result import TestResult
 from app.services.defect_analysis_service import DefectAnalysisService
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
+from app.services.feedback_service import TechnicalFeedbackService
 
 
 class VerificationWorkflowState(TypedDict, total=False):
@@ -30,10 +32,13 @@ class VerificationWorkflowState(TypedDict, total=False):
     status: str
     test_results: List[TestResult]
     defect_reports: List[DefectReport]
+    technical_feedback: Optional[TechnicalFeedbackPayload]
+    feedback_iterations: List[FeedbackIteration]
     telemetry: Dict[str, Any]
     stdout: str
     stderr: str
     duration_ms: float
+
 
 
 
@@ -172,6 +177,60 @@ def analyze_defects_node(state: VerificationWorkflowState) -> Dict[str, Any]:
     return {"defect_reports": reports}
 
 
+def prepare_technical_feedback_node(state: VerificationWorkflowState) -> Dict[str, Any]:
+    """Node 5: Prepares structured technical feedback package for Component 3 if eligible."""
+    status_str = state.get("status", "")
+    defect_reports = state.get("defect_reports", [])
+    run_id = state.get("run_id", "unknown_run")
+    submission_id = state.get("submission_id", "unknown_submission")
+    test_results = state.get("test_results", [])
+    telemetry = state.get("telemetry", {})
+    error_msg = state.get("error_message")
+    filename = state.get("filename")
+    existing_iterations = state.get("feedback_iterations") or []
+
+    try:
+        v_status = VerificationStatus(status_str)
+    except ValueError:
+        v_status = VerificationStatus.ERROR
+
+    from app.schemas.verification import VerificationRunResponse
+    from app.schemas.submission import CodeSubmissionResponse
+
+    run_obj = VerificationRunResponse(
+        id=run_id,
+        submission_id=submission_id,
+        status=v_status,
+        test_results=test_results,
+        defect_reports=defect_reports,
+        feedback_iterations=list(existing_iterations),
+        execution_telemetry=telemetry,
+        error_message=error_msg,
+    )
+    submission_obj = CodeSubmissionResponse(
+        id=submission_id,
+        code=state.get("source_code", ""),
+        language=ProgrammingLanguage(state.get("language", "python")),
+        filename=filename,
+    )
+
+    feedback_service = TechnicalFeedbackService()
+    is_eligible, _ = feedback_service.check_eligibility(run_obj)
+    if not is_eligible:
+        return {
+            "technical_feedback": None,
+            "feedback_iterations": existing_iterations,
+        }
+
+    payload = feedback_service.build_feedback_payload(run_obj, submission_obj)
+    updated_run, iteration, created = feedback_service.record_feedback_iteration(run_obj, payload)
+
+    return {
+        "technical_feedback": payload,
+        "feedback_iterations": updated_run.feedback_iterations,
+    }
+
+
 def should_execute_tests(state: VerificationWorkflowState) -> str:
     """Conditional router determining whether to proceed to sandbox execution."""
     if not state.get("is_supported", False):
@@ -190,6 +249,7 @@ def build_verification_graph():
     workflow.add_node("check_docker", check_docker_node)
     workflow.add_node("execute_tests", execute_tests_node)
     workflow.add_node("analyze_defects", analyze_defects_node)
+    workflow.add_node("prepare_technical_feedback", prepare_technical_feedback_node)
 
     # Define edges and conditional transitions
     workflow.add_edge(START, "validate_submission")
@@ -203,11 +263,13 @@ def build_verification_graph():
         },
     )
     workflow.add_edge("execute_tests", "analyze_defects")
-    workflow.add_edge("analyze_defects", END)
+    workflow.add_edge("analyze_defects", "prepare_technical_feedback")
+    workflow.add_edge("prepare_technical_feedback", END)
 
     return workflow.compile()
 
 
 # Precompiled singleton graph instance
 verification_pipeline = build_verification_graph()
+
 
