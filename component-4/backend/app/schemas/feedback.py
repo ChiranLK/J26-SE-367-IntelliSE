@@ -1,7 +1,39 @@
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
+
+
+class DeliveryStatus(str, Enum):
+    """Lifecycle states for technical feedback delivery to Component 3."""
+
+    NOT_DISPATCHED = "NOT_DISPATCHED"
+    PENDING_DELIVERY = "PENDING_DELIVERY"
+    DISPATCHED = "DISPATCHED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
+# Forbidden keys that must NEVER be included in machine-directed technical feedback
+FORBIDDEN_EXPLANATION_KEYS = frozenset({
+    "xai_explanation",
+    "summary",
+    "what_failed",
+    "confirmed_observations",
+    "evidence_based_interpretation",
+    "recommendation",
+    "recommendations",
+    "suggested_investigations",
+    "explanation_method",
+    "provider",
+    "model_name",
+    "tokens_used",
+    "narrative",
+    "internal_reasoning",
+    "executive_summary",
+})
 
 
 class TechnicalFeedbackPayload(BaseModel):
@@ -113,7 +145,7 @@ class FeedbackIteration(BaseModel):
         description="Timestamp when feedback iteration record was initiated",
     )
 
-    # Phase 4 Milestone 1: Dispatch lifecycle & governance fields
+    # Phase 4 Milestone 1 & 2: Dispatch lifecycle, governance, & audit fields
     dispatch_attempt_id: Optional[str] = Field(
         default=None,
         description="Unique identifier for the dispatch attempt (e.g. disp-...)",
@@ -128,11 +160,14 @@ class FeedbackIteration(BaseModel):
     )
     approved_by: Optional[str] = Field(
         default=None,
-        description="Identifier of the human reviewer who authorized dispatch",
+        description=(
+            "Identifier of the human reviewer who authorized dispatch. "
+            "Note: This field is client-supplied for audit logging and is not independently authenticated."
+        ),
     )
     delivery_status: str = Field(
-        default="NOT_DISPATCHED",
-        description="Delivery state (NOT_DISPATCHED, PENDING_DELIVERY, DISPATCHED, ACKNOWLEDGED, FAILED)",
+        default=DeliveryStatus.NOT_DISPATCHED.value,
+        description="Delivery state (NOT_DISPATCHED, PENDING_DELIVERY, DISPATCHED, ACKNOWLEDGED, FAILED, UNKNOWN)",
     )
     component_3_job_id: Optional[str] = Field(
         default=None,
@@ -140,7 +175,24 @@ class FeedbackIteration(BaseModel):
     )
     error_category: Optional[str] = Field(
         default=None,
-        description="Category of failure if delivery fails (e.g. COMPONENT_3_UNAVAILABLE, TIMEOUT, CLIENT_ERROR)",
+        description="Category of failure if delivery fails (e.g. COMPONENT_3_DISABLED, TIMEOUT, CONNECTION_ERROR, CLIENT_ERROR)",
+    )
+    sanitized_error_message: Optional[str] = Field(
+        default=None,
+        description="Sanitized diagnostic error excerpt, free of secrets, credentials, or internal stack traces",
+    )
+    attempt_count: int = Field(
+        default=0,
+        ge=0,
+        description="Total count of outbound dispatch transmission attempts executed for this cycle",
+    )
+    attempt_timestamps: List[datetime] = Field(
+        default_factory=list,
+        description="Historical UTC timestamps of all outbound dispatch attempts",
+    )
+    last_attempt_at: Optional[datetime] = Field(
+        default=None,
+        description="UTC timestamp when the most recent dispatch attempt was executed",
     )
     correlation_id: Optional[str] = Field(
         default=None,
@@ -161,11 +213,14 @@ class FeedbackIteration(BaseModel):
 
 
 class FeedbackApprovalRequest(BaseModel):
-    """Payload for explicit human approval of technical feedback before dispatch."""
+    """
+    Payload for explicit human approval of technical feedback before dispatch.
+    Reviewer identity is client-supplied for audit tracking and is not independently authenticated.
+    """
 
     approver: Optional[str] = Field(
         default="human_engineer",
-        description="Identifier or name of the human engineer granting approval",
+        description="Identifier or name of the human engineer granting approval (client-supplied, not authenticated)",
     )
     notes: Optional[str] = Field(
         default=None,
@@ -174,7 +229,10 @@ class FeedbackApprovalRequest(BaseModel):
 
 
 class FeedbackDispatchRequest(BaseModel):
-    """Payload to request dispatch of an approved technical feedback package to Component 3."""
+    """
+    Payload to request dispatch of an approved technical feedback package to Component 3.
+    Reviewer identity is client-supplied for audit tracking and is not independently authenticated.
+    """
 
     approved: bool = Field(
         default=True,
@@ -182,7 +240,7 @@ class FeedbackDispatchRequest(BaseModel):
     )
     approver: Optional[str] = Field(
         default="human_engineer",
-        description="Identifier of the human authorizing this dispatch request",
+        description="Identifier of the human authorizing this dispatch request (client-supplied, not authenticated)",
     )
     notes: Optional[str] = Field(
         default=None,
@@ -201,7 +259,9 @@ class FeedbackDispatchResponse(BaseModel):
     feedback_id: str = Field(description="Unique technical feedback package ID")
     dispatch_attempt_id: str = Field(description="Unique dispatch attempt identifier")
     approval_status: str = Field(description="Approval state (e.g. APPROVED, NOT_REQUESTED)")
-    delivery_status: str = Field(description="Delivery status (e.g. ACKNOWLEDGED, FAILED, NOT_DISPATCHED)")
+    delivery_status: str = Field(
+        description="Delivery status (e.g. ACKNOWLEDGED, FAILED, NOT_DISPATCHED, PENDING_DELIVERY, UNKNOWN)"
+    )
     component_3_acknowledged: bool = Field(description="Whether Component 3 confirmed receipt")
     component_3_job_id: Optional[str] = Field(
         default=None,
@@ -212,6 +272,15 @@ class FeedbackDispatchResponse(BaseModel):
     error_category: Optional[str] = Field(
         default=None,
         description="Category of error if dispatch did not succeed",
+    )
+    sanitized_error_message: Optional[str] = Field(
+        default=None,
+        description="Sanitized diagnostic failure description without secrets or internal stack traces",
+    )
+    attempt_count: int = Field(
+        default=1,
+        ge=0,
+        description="Count of dispatch attempts recorded for this feedback iteration",
     )
     iteration: Optional[FeedbackIteration] = Field(
         default=None,
@@ -237,6 +306,33 @@ class Component3StatusResponse(BaseModel):
         description="Whether live dispatch can be executed in the current environment",
     )
     reason: str = Field(description="Detailed explanation of integration readiness")
+
+    # Contract Readiness Checklist criteria (Milestone 2)
+    verified_receiver_url: bool = Field(
+        default=False,
+        description="Whether the receiver base URL has been verified as external and non-placeholder",
+    )
+    confirmed_endpoint: bool = Field(
+        default=False,
+        description="Whether the correction-feedback HTTP endpoint is confirmed on receiver",
+    )
+    agreed_request_schema: bool = Field(
+        default=False,
+        description="Whether the technical feedback request contract has been formally confirmed",
+    )
+    agreed_acknowledgment_schema: bool = Field(
+        default=False,
+        description="Whether the remote response/acknowledgment contract has been agreed",
+    )
+    safe_idempotency_defined: bool = Field(
+        default=False,
+        description="Whether idempotent receiver deduplication is verified for retries",
+    )
+    readiness_checklist: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Comprehensive integration readiness conditions required before live dispatch",
+    )
+
 
 
 

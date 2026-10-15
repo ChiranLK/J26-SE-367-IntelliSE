@@ -247,7 +247,7 @@ def test_mock_http_client_successful_dispatch():
     run, sub = _create_sample_run(run_status=VerificationStatus.FAILED, with_defects=True)
 
     mock_client = Component3Client(
-        base_url="http://127.0.0.1:8000",
+        base_url="https://mock-c3-receiver.internal:8080",
         feedback_endpoint="/api/v1/correction-feedback",
         enabled=True,
     )
@@ -293,12 +293,13 @@ def test_mock_http_client_successful_dispatch():
 
 def test_mock_http_client_timeout_handling():
     """
-    Verifies that HTTP connection / read timeouts fail gracefully with error_category='TIMEOUT'.
+    Verifies that HTTP connection / read timeouts result in UNKNOWN delivery state
+    (remote outcome ambiguous) rather than assumed delivery failure.
     """
     run, sub = _create_sample_run(run_status=VerificationStatus.FAILED, with_defects=True)
 
     mock_client = Component3Client(
-        base_url="http://127.0.0.1:8000",
+        base_url="https://mock-c3-receiver.internal:8080",
         feedback_endpoint="/api/v1/correction-feedback",
         enabled=True,
     )
@@ -320,7 +321,7 @@ def test_mock_http_client_timeout_handling():
             )
         )
 
-        assert dispatch_resp.delivery_status == "FAILED"
+        assert dispatch_resp.delivery_status == "UNKNOWN"
         assert dispatch_resp.component_3_acknowledged is False
         assert dispatch_resp.error_category == "TIMEOUT"
         assert "timeout" in dispatch_resp.message.lower()
@@ -333,7 +334,7 @@ def test_mock_http_client_server_error_handling():
     run, sub = _create_sample_run(run_status=VerificationStatus.FAILED, with_defects=True)
 
     mock_client = Component3Client(
-        base_url="http://127.0.0.1:8000",
+        base_url="https://mock-c3-receiver.internal:8080",
         feedback_endpoint="/api/v1/correction-feedback",
         enabled=True,
     )
@@ -372,7 +373,7 @@ def test_duplicate_dispatch_idempotency():
     run, sub = _create_sample_run(run_status=VerificationStatus.FAILED, with_defects=True)
 
     mock_client = Component3Client(
-        base_url="http://127.0.0.1:8000",
+        base_url="https://mock-c3-receiver.internal:8080",
         feedback_endpoint="/api/v1/correction-feedback",
         enabled=True,
     )
@@ -433,7 +434,7 @@ def test_strict_exclusion_of_xai_narratives_from_c3_payload():
     and NEVER contains human-facing XAI narratives, explanations, or recommendations.
     """
     client = Component3Client(
-        base_url="http://127.0.0.1:8000",
+        base_url="https://mock-c3-receiver.internal:8080",
         feedback_endpoint="/api/v1/correction-feedback",
         enabled=True,
     )

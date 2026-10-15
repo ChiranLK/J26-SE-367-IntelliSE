@@ -194,7 +194,9 @@ async def get_verification_explanation(
     description=(
         "Explicitly records human approval for an eligible verification run's technical feedback. "
         "Strictly requires the run to be in FAILED status with valid defect reports. "
-        "Does not transmit data to Component 3."
+        "Repeated approvals do not create duplicate iterations. "
+        "Does not transmit data to Component 3. "
+        "Note: Reviewer identity is client-supplied for audit trail and is not independently authenticated."
     ),
 )
 async def approve_feedback(
@@ -213,8 +215,11 @@ async def approve_feedback(
     summary="Dispatch Technical Feedback to Component 3",
     description=(
         "Dispatches an approved technical feedback package to Component 3. "
-        "Strictly requires human approval and eligible FAILED status with defects. "
-        "Fails closed safely if Component 3 integration is disabled or contract is not ready."
+        "Strictly requires prior human approval and eligible FAILED status with defects. "
+        "Guarantees idempotency (returns existing record for already acknowledged iterations) "
+        "and concurrency protection (rejects overlapping in-flight dispatch attempts). "
+        "Fails closed safely if Component 3 integration is disabled, receiver is self-referential, "
+        "or contract is unconfirmed. If request times out after transmission, returns UNKNOWN delivery status."
     ),
 )
 async def dispatch_feedback(
