@@ -7,15 +7,23 @@ from app.core.logging import logger
 from app.repositories.base import BaseSubmissionRepository, BaseVerificationRunRepository
 from app.schemas.common import VerificationStatus
 from app.schemas.defect_report import DefectReportListResponse
-from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPreviewResponse
+from app.schemas.feedback import (
+    Component3StatusResponse,
+    FeedbackDispatchResponse,
+    FeedbackIteration,
+    TechnicalFeedbackPreviewResponse,
+)
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunListResponse,
     VerificationRunResponse,
     VerificationStatusResponse,
 )
+from app.schemas.xai import XaiExplanationResponse
+from app.services.component3_client import Component3Client
 from app.services.defect_analysis_service import DefectAnalysisService
 from app.services.feedback_service import TechnicalFeedbackService
+from app.services.xai_service import XaiExplanationService
 from app.workflows.verification_graph import verification_pipeline
 
 
@@ -222,6 +230,17 @@ class VerificationService:
         service = TechnicalFeedbackService()
         return service.get_feedback_preview(run, submission)
 
+    async def get_explanation(self, run_id: str) -> XaiExplanationResponse:
+        """
+        Retrieves a human-facing, evidence-grounded XAI explanation for a verification run.
+        Strictly for human consumption (never dispatched to Component 3).
+        Purely read-only and side-effect free; does not mutate storage or execute code.
+        """
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        service = XaiExplanationService()
+        return service.generate_explanation(run, submission)
+
     async def record_feedback_iteration(
         self,
         run_id: str,
@@ -243,6 +262,94 @@ class VerificationService:
         if created:
             await self.verification_repo.save(updated_run)
         return iteration
+
+    def get_component3_status(self) -> Component3StatusResponse:
+        """Retrieves Component 3 connectivity, configuration, and contract readiness status."""
+        client = Component3Client()
+        return client.get_status()
+
+    async def approve_feedback(
+        self,
+        run_id: str,
+        approver: str = "human_engineer",
+        notes: Optional[str] = None,
+    ) -> FeedbackIteration:
+        """
+        Explicitly records human approval for an eligible verification run's technical feedback.
+        """
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        service = TechnicalFeedbackService()
+        updated_run, iteration = service.approve_feedback(
+            run=run, submission=submission, approver=approver, notes=notes
+        )
+        await self.verification_repo.save(updated_run)
+        return iteration
+
+    async def dispatch_feedback(
+        self,
+        run_id: str,
+        approved: bool = True,
+        approver: str = "human_engineer",
+        notes: Optional[str] = None,
+        force_retry: bool = False,
+        client: Optional[Component3Client] = None,
+    ) -> FeedbackDispatchResponse:
+        """
+        Dispatches an approved technical feedback package to Component 3.
+        Enforces human approval and safe fail-closed behavior when Component 3 is not ready.
+        """
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        service = TechnicalFeedbackService()
+
+        # If user explicitly approves in dispatch request and not yet approved, mark approved first
+        latest_iter = run.feedback_iterations[-1] if run.feedback_iterations else None
+        if (not latest_iter or latest_iter.approval_status != "APPROVED") and approved:
+            run, _ = service.approve_feedback(
+                run=run, submission=submission, approver=approver, notes=notes
+            )
+
+        updated_run, iteration, already_dispatched, result = await service.dispatch_feedback(
+            run=run,
+            submission=submission,
+            client=client,
+            approver=approver,
+            notes=notes,
+            force_retry=force_retry,
+        )
+        await self.verification_repo.save(updated_run)
+
+        feedback_id = iteration.payload.feedback_id if iteration.payload else f"fb-{run.id}"
+
+        if already_dispatched:
+            return FeedbackDispatchResponse(
+                verification_run_id=run.id,
+                feedback_id=feedback_id,
+                dispatch_attempt_id=iteration.dispatch_attempt_id or f"disp-{uuid.uuid4().hex[:12]}",
+                approval_status=iteration.approval_status,
+                delivery_status=iteration.delivery_status,
+                component_3_acknowledged=iteration.component_3_acknowledged,
+                component_3_job_id=iteration.component_3_job_id,
+                correlation_id=iteration.correlation_id or f"corr-{uuid.uuid4().hex[:12]}",
+                message="Feedback already delivered and acknowledged by Component 3.",
+                error_category=None,
+                iteration=iteration,
+            )
+
+        return FeedbackDispatchResponse(
+            verification_run_id=run.id,
+            feedback_id=feedback_id,
+            dispatch_attempt_id=result.dispatch_attempt_id,
+            approval_status=iteration.approval_status,
+            delivery_status=iteration.delivery_status,
+            component_3_acknowledged=result.acknowledged,
+            component_3_job_id=result.job_id,
+            correlation_id=result.correlation_id,
+            message=result.message,
+            error_category=result.error_category,
+            iteration=iteration,
+        )
 
     async def list_runs(
         self,

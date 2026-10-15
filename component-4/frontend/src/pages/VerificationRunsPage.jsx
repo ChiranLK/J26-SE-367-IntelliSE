@@ -24,6 +24,11 @@ import {
   Bug,
   ShieldAlert,
   FileJson,
+  BrainCircuit,
+  Send,
+  Lock,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -41,6 +46,10 @@ import {
   getVerificationStatus,
   executeVerificationRun,
   getFeedbackPreview,
+  getXaiExplanation,
+  getComponent3Status,
+  approveFeedback,
+  dispatchFeedback,
 } from '../api/verificationApi';
 import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
@@ -88,6 +97,12 @@ export default function VerificationRunsPage() {
   const [feedbackPreview, setFeedbackPreview] = useState(null);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [copiedFeedbackJson, setCopiedFeedbackJson] = useState(false);
+  const [xaiExplanation, setXaiExplanation] = useState(null);
+  const [loadingXai, setLoadingXai] = useState(false);
+  const [c3Status, setC3Status] = useState(null);
+  const [approvingFeedback, setApprovingFeedback] = useState(false);
+  const [dispatchingFeedback, setDispatchingFeedback] = useState(false);
+  const [dispatchMessage, setDispatchMessage] = useState(null);
 
 
   const fetchRuns = async (offset = skip, isRefresh = false) => {
@@ -156,12 +171,19 @@ export default function VerificationRunsPage() {
       setSelectedRun(updatedRun);
       setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
 
-      // Fetch technical feedback preview for the executed run
+      // Fetch technical feedback preview and XAI explanation for the executed run
       try {
         const preview = await getFeedbackPreview(runId);
         setFeedbackPreview(preview);
       } catch {
         setFeedbackPreview(null);
+      }
+
+      try {
+        const xai = await getXaiExplanation(runId);
+        setXaiExplanation(xai);
+      } catch {
+        setXaiExplanation(null);
       }
     } catch (err) {
       setError(`Failed to execute verification pipeline: ${err.message}`);
@@ -224,6 +246,7 @@ export default function VerificationRunsPage() {
     setSelectedRun(null);
     setRelatedSubmission(null);
     setFeedbackPreview(null);
+    setXaiExplanation(null);
 
     try {
       const run = await getVerificationRunById(runId);
@@ -237,6 +260,7 @@ export default function VerificationRunsPage() {
       }
 
       setLoadingFeedback(true);
+      setLoadingXai(true);
       try {
         const preview = await getFeedbackPreview(run.id);
         setFeedbackPreview(preview);
@@ -245,12 +269,94 @@ export default function VerificationRunsPage() {
       } finally {
         setLoadingFeedback(false);
       }
+
+      try {
+        const xai = await getXaiExplanation(run.id);
+        setXaiExplanation(xai);
+      } catch {
+        setXaiExplanation(null);
+      } finally {
+        setLoadingXai(false);
+      }
+
+      // Fetch repair integration status
+      try {
+        const c3 = await getComponent3Status();
+        setC3Status(c3);
+      } catch {
+        setC3Status(null);
+      }
     } catch (err) {
       setError(`Failed to retrieve verification run details: ${err.message}`);
     } finally {
       setLoadingDetails(false);
     }
   };
+
+  const handleApproveFeedback = async (runId) => {
+    setApprovingFeedback(true);
+    setDispatchMessage(null);
+    try {
+      const iteration = await approveFeedback(runId, {
+        approver: 'human_engineer',
+        notes: 'Approved via Verification Explorer for repair feedback loop',
+      });
+      // Refresh run to show updated iterations
+      const updatedRun = await getVerificationRunById(runId);
+      setSelectedRun(updatedRun);
+      setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
+      setDispatchMessage({
+        type: 'success',
+        text: `Feedback iteration #${iteration.iteration_number} successfully approved by human reviewer. Ready for dispatch when repair service is connected.`,
+      });
+    } catch (err) {
+      setDispatchMessage({
+        type: 'error',
+        text: `Approval failed: ${err.message || 'Unknown error'}`,
+      });
+    } finally {
+      setApprovingFeedback(false);
+    }
+  };
+
+  const handleDispatchFeedback = async (runId) => {
+    setDispatchingFeedback(true);
+    setDispatchMessage(null);
+    try {
+      const res = await dispatchFeedback(runId, {
+        approved: true,
+        approver: 'human_engineer',
+      });
+      const updatedRun = await getVerificationRunById(runId);
+      setSelectedRun(updatedRun);
+      setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
+
+      if (res.delivery_status === 'ACKNOWLEDGED') {
+        setDispatchMessage({
+          type: 'success',
+          text: `Delivered for repair! Repair Job ID: ${res.component_3_job_id || 'N/A'}. Correlation ID: ${res.correlation_id}`,
+        });
+      } else if (res.delivery_status === 'NOT_DISPATCHED') {
+        setDispatchMessage({
+          type: 'info',
+          text: `Safe fail-closed: ${res.message} (Delivery Status: NOT_DISPATCHED, Category: ${res.error_category})`,
+        });
+      } else {
+        setDispatchMessage({
+          type: 'warning',
+          text: `Dispatch outcome: ${res.message} [Category: ${res.error_category || 'FAILED'}]`,
+        });
+      }
+    } catch (err) {
+      setDispatchMessage({
+        type: 'error',
+        text: `Dispatch request failed: ${err.message || 'Unknown error'}`,
+      });
+    } finally {
+      setDispatchingFeedback(false);
+    }
+  };
+
 
 
   const handleRefreshSingleStatus = async (runId) => {
@@ -353,9 +459,8 @@ export default function VerificationRunsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Activity size={15} color="var(--status-running)" />
           <span style={{ color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Pipeline Lifecycle Contract:</strong> Runs initialize in{' '}
-            <code style={{ color: 'var(--status-pending)', fontFamily: 'var(--font-mono)' }}>PENDING</code>.
-            Autonomous testing agents execute in Phase 2B.
+            <strong style={{ color: 'var(--text-primary)' }}>Pipeline Lifecycle:</strong> Runs initialize in{' '}
+            <code style={{ color: 'var(--status-pending)', fontFamily: 'var(--font-mono)' }}>PENDING</code> and execute in an isolated test environment.
           </span>
         </div>
 
@@ -698,7 +803,7 @@ export default function VerificationRunsPage() {
                 style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}
               />
               <span className="form-hint">
-                Phase 2B requirement: Only explicitly authorized test specifications determine correctness.
+                Verification Standard: Only explicitly authorized test specifications determine correctness.
               </span>
             </div>
 
@@ -1113,7 +1218,93 @@ export default function VerificationRunsPage() {
             )}
           </div>
 
-          {/* Technical Feedback Preview Section (Component 3 Integration) */}
+          {/* Human-Facing XAI Explanation Section (Human Engineer Review) */}
+          <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <BrainCircuit size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Human-Facing XAI Explanation
+                </span>
+                <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
+                  Target: Human Reviewer
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                {xaiExplanation?.recommendation?.action === 'RETURN_TO_COMPONENT_3' ? (
+                  <Badge variant="danger" dot style={{ fontSize: '0.65rem' }}>
+                    Action: Send for Repair
+                  </Badge>
+                ) : xaiExplanation?.recommendation?.action === 'ACCEPT_VERIFICATION' ? (
+                  <Badge variant="success" dot style={{ fontSize: '0.65rem' }}>
+                    Action: Accept Verification
+                  </Badge>
+                ) : xaiExplanation?.recommendation?.action === 'RETRY_INFRASTRUCTURE' ? (
+                  <Badge variant="warning" dot style={{ fontSize: '0.65rem' }}>
+                    Action: Retry Infrastructure
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>
+                    {xaiExplanation?.recommendation?.action || 'Awaiting Analysis'}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Explanation Preview Card */}
+            <div
+              style={{
+                padding: '0.75rem',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-xs)',
+                fontSize: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
+              <div style={{ color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                {xaiExplanation?.summary || (selectedRun.status === 'PASSED'
+                  ? 'All executed test cases passed successfully. No defects detected.'
+                  : 'Evaluating XAI explanation telemetry...')}
+              </div>
+
+              {xaiExplanation?.recommendation?.reason && (
+                <div
+                  style={{
+                    padding: '0.5rem 0.65rem',
+                    backgroundColor: 'var(--bg-input)',
+                    borderRadius: 'var(--radius-xs)',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <strong style={{ color: 'var(--primary-300)' }}>Recommendation:</strong>{' '}
+                  {xaiExplanation.recommendation.reason}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ExternalLink}
+                  onClick={() => {
+                    const targetRunId = selectedRun.id;
+                    setSelectedRun(null);
+                    navigate(`/xai?runId=${targetRunId}`);
+                  }}
+                  style={{ height: '26px', fontSize: '0.7rem' }}
+                >
+                  Open Full XAI Explanation Page
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Technical Feedback & Component 3 Integration Section */}
           <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1122,7 +1313,7 @@ export default function VerificationRunsPage() {
                   Technical Feedback Preview
                 </span>
                 <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
-                  Target: Component 3
+                  Target: Repair Service
                 </Badge>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1135,7 +1326,61 @@ export default function VerificationRunsPage() {
                     Corrective Feedback Ineligible
                   </Badge>
                 )}
+                {/* Governance Lifecycle Pill */}
+                {(() => {
+                  const latestIter = selectedRun?.feedback_iterations?.length
+                    ? selectedRun.feedback_iterations[selectedRun.feedback_iterations.length - 1]
+                    : null;
+                  if (!feedbackPreview?.eligible) return null;
+                  if (latestIter?.delivery_status === 'ACKNOWLEDGED') {
+                    return <Badge variant="success" style={{ fontSize: '0.65rem' }}>ACKNOWLEDGED</Badge>;
+                  }
+                  if (latestIter?.delivery_status === 'NOT_DISPATCHED') {
+                    return <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>NOT DISPATCHED (Fail-Closed)</Badge>;
+                  }
+                  if (latestIter?.delivery_status === 'FAILED') {
+                    return <Badge variant="danger" style={{ fontSize: '0.65rem' }}>DISPATCH FAILED</Badge>;
+                  }
+                  if (latestIter?.approval_status === 'APPROVED') {
+                    return <Badge variant="accent" style={{ fontSize: '0.65rem' }}>APPROVED</Badge>;
+                  }
+                  return <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>PREVIEW (Awaiting Approval)</Badge>;
+                })()}
               </div>
+            </div>
+
+            {/* Repair Integration Status Banner */}
+            <div
+              style={{
+                padding: '0.625rem 0.75rem',
+                backgroundColor: 'rgba(234, 88, 12, 0.05)',
+                border: '1px solid rgba(234, 88, 12, 0.25)',
+                borderRadius: 'var(--radius-xs)',
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.3rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <ShieldAlert size={14} color="var(--primary-400)" />
+                  Repair Integration Status:
+                </span>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <Badge variant="outline" style={{ fontSize: '0.625rem' }}>
+                    Contract: {c3Status?.contract_status || 'UNDER_DEVELOPMENT'}
+                  </Badge>
+                  <Badge variant={c3Status?.dispatch_allowed ? 'success' : 'secondary'} style={{ fontSize: '0.625rem' }}>
+                    Delivery: {c3Status?.dispatch_allowed ? 'Enabled' : 'Disabled (Safety Lock)'}
+                  </Badge>
+                </div>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                {c3Status?.reason ? c3Status.reason.replace(/Component 3 code correction contract is currently under development\.?/i, 'Automatic repair delivery is currently unavailable.') : 'Automatic repair delivery is currently unavailable. Automated feedback delivery is safely disabled to prevent invalid outbound requests.'}
+              </p>
             </div>
 
             {/* Explanation / Eligibility Status Message */}
@@ -1158,85 +1403,184 @@ export default function VerificationRunsPage() {
                 : 'Evaluating technical feedback eligibility...')}
             </div>
 
-            {/* If Eligible: Show Technical Findings and Structured JSON Preview */}
-            {feedbackPreview?.eligible && feedbackPreview.feedback && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {/* Findings Summary Pills */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.75rem' }}>
-                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Package ID</span>
-                    <code style={{ color: 'var(--primary-300)' }}>{feedbackPreview.feedback.feedback_id}</code>
-                  </div>
-                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Affected Files</span>
-                    <span className="text-mono" style={{ color: 'var(--text-primary)' }}>
-                      {feedbackPreview.feedback.affected_files?.join(', ') || 'solution.py'}
-                    </span>
-                  </div>
-                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Failed Assertions</span>
-                    <span style={{ color: 'var(--status-failed)', fontWeight: 600 }}>
-                      {feedbackPreview.feedback.failed_assertions?.length || 0} statement(s)
-                    </span>
-                  </div>
-                </div>
+            {/* Dispatch Action Notification */}
+            {dispatchMessage && (
+              <div
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.72rem',
+                  marginBottom: '0.75rem',
+                  backgroundColor: dispatchMessage.type === 'success'
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : dispatchMessage.type === 'error'
+                    ? 'rgba(239, 68, 68, 0.1)'
+                    : 'rgba(59, 130, 246, 0.1)',
+                  border: `1px solid ${
+                    dispatchMessage.type === 'success'
+                      ? 'rgba(34, 197, 94, 0.3)'
+                      : dispatchMessage.type === 'error'
+                      ? 'rgba(239, 68, 68, 0.3)'
+                      : 'rgba(59, 130, 246, 0.3)'
+                  }`,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {dispatchMessage.text}
+              </div>
+            )}
 
-                {/* Formatted JSON Payload Card */}
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
+            {/* If Eligible: Show Technical Findings, Governance Controls, and Structured JSON Preview */}
+            {feedbackPreview?.eligible && feedbackPreview.feedback && (() => {
+              const latestIter = selectedRun?.feedback_iterations?.length
+                ? selectedRun.feedback_iterations[selectedRun.feedback_iterations.length - 1]
+                : null;
+              const isApproved = latestIter?.approval_status === 'APPROVED';
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  {/* Findings Summary Pills */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.75rem' }}>
+                    <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Package ID</span>
+                      <code style={{ color: 'var(--primary-300)' }}>{feedbackPreview.feedback.feedback_id}</code>
+                    </div>
+                    <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Affected Files</span>
+                      <span className="text-mono" style={{ color: 'var(--text-primary)' }}>
+                        {feedbackPreview.feedback.affected_files?.join(', ') || 'solution.py'}
+                      </span>
+                    </div>
+                    <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Failed Assertions</span>
+                      <span style={{ color: 'var(--status-failed)', fontWeight: 600 }}>
+                        {feedbackPreview.feedback.failed_assertions?.length || 0} statement(s)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Governance & Approval Controls Bar */}
                   <div
                     style={{
+                      padding: '0.625rem 0.75rem',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-xs)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '0.4rem 0.625rem',
-                      background: 'var(--bg-tertiary)',
-                      borderBottom: '1px solid var(--border-color)',
-                      fontSize: '0.72rem',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
                     }}
                   >
-                    <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                      payload.json (Schema v{feedbackPreview.feedback.schema_version})
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Human Review & Dispatch Authorization
+                      </div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                        {isApproved
+                          ? `Approved by ${latestIter.approved_by || 'Reviewer'} at ${formatDate(latestIter.approved_at)}`
+                          : 'Explicit human approval is mandatory prior to sending defect payload for repair.'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {!isApproved ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={CheckCircle}
+                          onClick={() => handleApproveFeedback(selectedRun.id)}
+                          loading={approvingFeedback}
+                          style={{ height: '26px', fontSize: '0.7rem' }}
+                        >
+                          Approve for Repair
+                        </Button>
+                      ) : (
+                        <Badge variant="success" style={{ fontSize: '0.6875rem' }}>
+                          ✓ Approved
+                        </Badge>
+                      )}
+
+                      {/* Dispatch Button with Tooltip and Safety Lock */}
+                      <Button
+                        variant={c3Status?.dispatch_allowed ? 'primary' : 'secondary'}
+                        size="sm"
+                        icon={c3Status?.dispatch_allowed ? Send : Lock}
+                        disabled={!c3Status?.dispatch_allowed}
+                        title={
+                          !c3Status?.dispatch_allowed
+                            ? 'Automatic repair delivery is currently unavailable. Outbound delivery is safely disabled.'
+                            : 'Send technical feedback for repair'
+                        }
+                        onClick={() => handleDispatchFeedback(selectedRun.id)}
+                        loading={dispatchingFeedback}
+                        style={{ height: '26px', fontSize: '0.7rem', opacity: c3Status?.dispatch_allowed ? 1 : 0.6 }}
+                      >
+                        {c3Status?.dispatch_allowed ? 'Send for Repair' : 'Send for Repair (Unavailable)'}
+                      </Button>
+
+                      {/* Test Fail-Closed Button to demonstrate safety verification */}
                       <Button
                         variant="outline"
                         size="sm"
-                        icon={copiedFeedbackJson ? Check : Copy}
-                        onClick={handleCopyFeedbackJson}
-                        style={{ height: '24px', fontSize: '0.6875rem', padding: '0 0.5rem' }}
+                        onClick={() => handleDispatchFeedback(selectedRun.id)}
+                        loading={dispatchingFeedback}
+                        title="Verifies fail-closed behavior: attempts dispatch to demonstrate safe error category recording and rejection."
+                        style={{ height: '26px', fontSize: '0.6875rem', color: 'var(--text-muted)' }}
                       >
-                        {copiedFeedbackJson ? 'Copied' : 'Copy JSON'}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled
-                        title="Direct dispatch to Component 3 is planned for Phase 3 feedback iteration loops."
-                        style={{ height: '24px', fontSize: '0.6875rem', padding: '0 0.5rem', opacity: 0.6 }}
-                      >
-                        Dispatch to C3 (Planned)
+                        Test Fail-Closed
                       </Button>
                     </div>
                   </div>
-                  <pre
-                    style={{
-                      margin: 0,
-                      padding: '0.625rem',
-                      background: '#07090e',
-                      fontSize: '0.7rem',
-                      fontFamily: 'var(--font-mono)',
-                      color: 'var(--primary-300)',
-                      maxHeight: '200px',
-                      overflowX: 'auto',
-                      whiteSpace: 'pre',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {JSON.stringify(feedbackPreview.feedback, null, 2)}
-                  </pre>
+
+                  {/* Formatted JSON Payload Card */}
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.4rem 0.625rem',
+                        background: 'var(--bg-tertiary)',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                        payload.json (Schema v{feedbackPreview.feedback.schema_version})
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={copiedFeedbackJson ? Check : Copy}
+                          onClick={handleCopyFeedbackJson}
+                          style={{ height: '24px', fontSize: '0.6875rem', padding: '0 0.5rem' }}
+                        >
+                          {copiedFeedbackJson ? 'Copied' : 'Copy JSON'}
+                        </Button>
+                      </div>
+                    </div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        padding: '0.625rem',
+                        background: '#07090e',
+                        fontSize: '0.7rem',
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--primary-300)',
+                        maxHeight: '200px',
+                        overflowX: 'auto',
+                        whiteSpace: 'pre',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {JSON.stringify(feedbackPreview.feedback, null, 2)}
+                    </pre>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Target Code Snippet */}

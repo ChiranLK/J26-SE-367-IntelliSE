@@ -36,7 +36,7 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // Request was made but no response received (backend offline)
       errorCode = 'BACKEND_OFFLINE';
-      message = 'Unable to connect to Component 4 backend. Please ensure the FastAPI server is running at ' + baseURL;
+      message = 'Unable to connect to the INTELISE backend service. Please ensure the verification server is running at ' + baseURL;
     } else {
       message = error.message;
     }

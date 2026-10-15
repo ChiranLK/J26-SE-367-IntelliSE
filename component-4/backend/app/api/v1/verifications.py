@@ -2,7 +2,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.api.deps import get_verification_service
 from app.schemas.defect_report import DefectReportListResponse
-from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPreviewResponse
+from app.schemas.feedback import (
+    Component3StatusResponse,
+    FeedbackApprovalRequest,
+    FeedbackDispatchRequest,
+    FeedbackDispatchResponse,
+    FeedbackIteration,
+    TechnicalFeedbackPreviewResponse,
+)
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunExecute,
@@ -10,6 +17,7 @@ from app.schemas.verification import (
     VerificationRunResponse,
     VerificationStatusResponse,
 )
+from app.schemas.xai import XaiExplanationResponse
 from app.services.verification_service import VerificationService
 
 
@@ -70,6 +78,21 @@ async def list_verification_runs(
     return await service.list_runs(
         submission_id=submission_id, skip=skip, limit=limit
     )
+
+
+@router.get(
+    "/integrations/component-3/status",
+    response_model=Component3StatusResponse,
+    summary="Get Component 3 Integration Status",
+    description=(
+        "Retrieves the configuration, readiness, and contract discovery status of the Component 3 integration. "
+        "Allows frontend and clients to verify if automated feedback dispatch is enabled and safe."
+    ),
+)
+async def get_component3_status(
+    service: VerificationService = Depends(get_verification_service),
+) -> Component3StatusResponse:
+    return service.get_component3_status()
 
 
 @router.get(
@@ -146,5 +169,70 @@ async def record_feedback_iteration(
     service: VerificationService = Depends(get_verification_service),
 ) -> FeedbackIteration:
     return await service.record_feedback_iteration(run_id, notes=notes)
+
+
+@router.get(
+    "/{run_id}/explanation",
+    response_model=XaiExplanationResponse,
+    summary="Get Human-Facing XAI Explanation",
+    description=(
+        "Retrieves a human-facing, evidence-grounded Explainable AI (XAI) explanation for a specific verification run. "
+        "Strictly intended for human engineers and reviewers, NOT for Component 3. Does not mutate storage or execute code."
+    ),
+)
+async def get_verification_explanation(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> XaiExplanationResponse:
+    return await service.get_explanation(run_id)
+
+
+@router.post(
+    "/{run_id}/approve-feedback",
+    response_model=FeedbackIteration,
+    summary="Approve Feedback for Component 3 Dispatch",
+    description=(
+        "Explicitly records human approval for an eligible verification run's technical feedback. "
+        "Strictly requires the run to be in FAILED status with valid defect reports. "
+        "Does not transmit data to Component 3."
+    ),
+)
+async def approve_feedback(
+    run_id: str,
+    payload: Optional[FeedbackApprovalRequest] = None,
+    service: VerificationService = Depends(get_verification_service),
+) -> FeedbackIteration:
+    approver = payload.approver if payload and payload.approver else "human_engineer"
+    notes = payload.notes if payload else None
+    return await service.approve_feedback(run_id=run_id, approver=approver, notes=notes)
+
+
+@router.post(
+    "/{run_id}/dispatch-feedback",
+    response_model=FeedbackDispatchResponse,
+    summary="Dispatch Technical Feedback to Component 3",
+    description=(
+        "Dispatches an approved technical feedback package to Component 3. "
+        "Strictly requires human approval and eligible FAILED status with defects. "
+        "Fails closed safely if Component 3 integration is disabled or contract is not ready."
+    ),
+)
+async def dispatch_feedback(
+    run_id: str,
+    payload: Optional[FeedbackDispatchRequest] = None,
+    service: VerificationService = Depends(get_verification_service),
+) -> FeedbackDispatchResponse:
+    approved = payload.approved if payload is not None else True
+    approver = payload.approver if payload and payload.approver else "human_engineer"
+    notes = payload.notes if payload else None
+    force_retry = payload.force_retry if payload else False
+    return await service.dispatch_feedback(
+        run_id=run_id,
+        approved=approved,
+        approver=approver,
+        notes=notes,
+        force_retry=force_retry,
+    )
+
 
 

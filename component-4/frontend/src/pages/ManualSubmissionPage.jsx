@@ -167,7 +167,7 @@ export default function ManualSubmissionPage() {
           <span>Manual Code Submission</span>
         </h1>
         <p className="page-description">
-          Submit source code into the Component 4 repository for autonomous testing agent verification and defect analysis.
+          Submit source code for automated test execution, verification, and defect analysis.
         </p>
       </div>
 
@@ -448,7 +448,7 @@ export default function ManualSubmissionPage() {
           <div className="form-group" style={{ marginTop: '1rem' }}>
             <label htmlFor="testcode-textarea" className="form-label">
               <span>Trusted Test Suite / Oracle (Optional)</span>
-              <span className="form-hint">Authorized pytest test cases to verify this submission in Phase 2B</span>
+              <span className="form-hint">Authorized pytest test cases to verify this submission</span>
             </label>
             <textarea
               id="testcode-textarea"
@@ -461,7 +461,7 @@ export default function ManualSubmissionPage() {
               style={{ minHeight: '110px' }}
             />
             <span className="form-hint">
-              Phase 2B requirement: Only explicitly authorized test cases or specifications may determine correctness.
+              Verification Standard: Only explicitly authorized test cases or specifications determine correctness.
             </span>
           </div>
 

@@ -101,7 +101,7 @@ export default function SubmissionHistoryPage() {
               <span>Submission Repository</span>
             </h1>
             <p className="page-description">
-              Audit trail of source code artifacts ingested into Component 4 with requirement mappings and test pipeline triggers.
+              Audit trail of submitted source code artifacts with requirement mappings and test pipeline triggers.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -180,7 +180,7 @@ export default function SubmissionHistoryPage() {
             description={
               searchTerm
                 ? 'Try broadening your search query.'
-                : 'No code artifacts have been ingested into Component 4 yet.'
+                : 'No code artifacts have been submitted yet.'
             }
             action={
               !searchTerm && (

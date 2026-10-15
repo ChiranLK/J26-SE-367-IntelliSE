@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.core.errors import InvalidInputException
 from app.core.logging import logger
 from app.schemas.common import TestResultStatus, VerificationStatus
 from app.schemas.defect_report import DefectReport
@@ -13,6 +14,7 @@ from app.schemas.feedback import (
 from app.schemas.submission import CodeSubmissionResponse
 from app.schemas.test_result import TestResult
 from app.schemas.verification import VerificationRunResponse
+from app.services.component3_client import Component3Client
 
 
 class TechnicalFeedbackService:
@@ -282,3 +284,108 @@ class TechnicalFeedbackService:
             run.id,
         )
         return (run, iteration, True)
+
+    def approve_feedback(
+        self,
+        run: VerificationRunResponse,
+        submission: Optional[CodeSubmissionResponse] = None,
+        approver: str = "human_engineer",
+        notes: Optional[str] = None,
+    ) -> Tuple[VerificationRunResponse, FeedbackIteration]:
+        """
+        Records explicit human approval for an eligible verification run's technical feedback.
+        Guarantees that only runs with real defect evidence can be approved.
+        """
+        is_eligible, reason = self.check_eligibility(run)
+        if not is_eligible:
+            raise InvalidInputException(f"Cannot approve feedback for dispatch: {reason}")
+
+        payload = self.build_feedback_payload(run, submission)
+        updated_run, iteration, _ = self.record_feedback_iteration(run, payload, notes=notes)
+
+        now = datetime.now(timezone.utc)
+        iteration.approval_status = "APPROVED"
+        iteration.approved_at = now
+        iteration.approved_by = approver
+        iteration.updated_at = now
+        if notes:
+            iteration.notes = notes
+
+        logger.info(
+            "Feedback iteration %s for run %s approved by %s",
+            iteration.iteration_id,
+            run.id,
+            approver,
+        )
+        return (updated_run, iteration)
+
+    async def dispatch_feedback(
+        self,
+        run: VerificationRunResponse,
+        submission: Optional[CodeSubmissionResponse] = None,
+        client: Optional[Component3Client] = None,
+        approver: str = "human_engineer",
+        notes: Optional[str] = None,
+        force_retry: bool = False,
+    ) -> Tuple[VerificationRunResponse, FeedbackIteration, bool, Any]:
+        """
+        Dispatches an approved technical feedback package to Component 3 via the outbound client.
+        Enforces human approval, eligibility, and idempotency.
+        Returns: (updated_run, iteration, already_dispatched_flag, dispatch_result)
+        """
+        is_eligible, reason = self.check_eligibility(run)
+        if not is_eligible:
+            raise InvalidInputException(f"Cannot dispatch technical feedback: {reason}")
+
+        payload = self.build_feedback_payload(run, submission)
+        updated_run, iteration, _ = self.record_feedback_iteration(run, payload, notes=notes)
+
+        # Enforce explicit human approval
+        if iteration.approval_status != "APPROVED":
+            raise InvalidInputException(
+                "Feedback dispatch requires explicit human approval before delivery to Component 3. "
+                "Please approve the technical feedback package first."
+            )
+
+        # Idempotency check: already acknowledged?
+        if iteration.delivery_status == "ACKNOWLEDGED" and not force_retry:
+            logger.info(
+                "Feedback iteration %s for run %s already delivered and acknowledged; skipping duplicate dispatch.",
+                iteration.iteration_id,
+                run.id,
+            )
+            return (updated_run, iteration, True, None)
+
+        now = datetime.now(timezone.utc)
+        correlation_id = iteration.correlation_id or f"corr-{uuid.uuid4().hex[:12]}"
+        dispatch_id = f"disp-{uuid.uuid4().hex[:12]}"
+
+        c3_client = client or Component3Client()
+
+        result = await c3_client.dispatch_feedback(
+            payload=payload,
+            correlation_id=correlation_id,
+            idempotency_key=dispatch_id,
+        )
+
+        iteration.dispatch_attempt_id = result.dispatch_attempt_id
+        iteration.correlation_id = result.correlation_id
+        iteration.dispatched_at = now
+        iteration.updated_at = now
+
+        if result.success and result.acknowledged:
+            iteration.delivery_status = "ACKNOWLEDGED"
+            iteration.component_3_acknowledged = True
+            iteration.component_3_job_id = result.job_id
+            iteration.acknowledged_at = now
+            iteration.error_category = None
+            iteration.status = "AWAITING_REVISION"
+        else:
+            iteration.delivery_status = "FAILED"
+            iteration.component_3_acknowledged = False
+            iteration.error_category = result.error_category
+            if result.error_category == "COMPONENT_3_DISABLED":
+                iteration.delivery_status = "NOT_DISPATCHED"
+
+        return (updated_run, iteration, False, result)
+

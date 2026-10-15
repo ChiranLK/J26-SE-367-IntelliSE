@@ -51,21 +51,22 @@ describe('Frontend Pages Requirements', () => {
     expect(screen.getByText('.py')).toBeInTheDocument();
   });
 
-  it('renders DefectReportsPage with Phase 2 reserved notification', () => {
+  it('renders DefectReportsPage with evidence-based defect analysis description', () => {
     renderWithRouter(<DefectReportsPage />);
     expect(screen.getByText('Defect Reports')).toBeInTheDocument();
-    expect(screen.getByText(/automated defect detection not active in phase 2a/i)).toBeInTheDocument();
+    expect(screen.getByText(/evidence-based defect analysis/i)).toBeInTheDocument();
   });
 
-  it('renders XaiExplanationsPage with Phase 3 reserved notification', () => {
+  it('renders XaiExplanationsPage with engineering explanations header', () => {
     renderWithRouter(<XaiExplanationsPage />);
-    expect(screen.getByText('XAI Explanations')).toBeInTheDocument();
-    expect(screen.getByText(/explainable ai model integration reserved for phase 3/i)).toBeInTheDocument();
+    expect(screen.getByText('Human-Facing XAI Explanations')).toBeInTheDocument();
+    expect(screen.getByText(/engineering explanations/i)).toBeInTheDocument();
   });
 
-  it('renders FeedbackHistoryPage with Phase 3 reserved notification', () => {
+  it('renders FeedbackHistoryPage with repair integration badge and workflow', () => {
     renderWithRouter(<FeedbackHistoryPage />);
     expect(screen.getByText('Feedback Loop History')).toBeInTheDocument();
-    expect(screen.getByText(/component 3 integration reserved for phase 3/i)).toBeInTheDocument();
+    expect(screen.getByText('Repair Integration')).toBeInTheDocument();
+    expect(screen.getByText(/repair feedback workflow/i)).toBeInTheDocument();
   });
 });
