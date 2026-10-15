@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Bug,
   ShieldAlert,
+  FileJson,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -39,10 +40,12 @@ import {
   getVerificationRunById,
   getVerificationStatus,
   executeVerificationRun,
+  getFeedbackPreview,
 } from '../api/verificationApi';
 import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
 import { VERIFICATION_STATUSES, TEST_TYPES, DEFECT_SEVERITIES } from '../utils/constants';
+
 
 
 export default function VerificationRunsPage() {
@@ -82,6 +85,10 @@ export default function VerificationRunsPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [feedbackPreview, setFeedbackPreview] = useState(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [copiedFeedbackJson, setCopiedFeedbackJson] = useState(false);
+
 
   const fetchRuns = async (offset = skip, isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -148,10 +155,29 @@ export default function VerificationRunsPage() {
       });
       setSelectedRun(updatedRun);
       setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
+
+      // Fetch technical feedback preview for the executed run
+      try {
+        const preview = await getFeedbackPreview(runId);
+        setFeedbackPreview(preview);
+      } catch {
+        setFeedbackPreview(null);
+      }
     } catch (err) {
       setError(`Failed to execute verification pipeline: ${err.message}`);
     } finally {
       setExecutingRun(false);
+    }
+  };
+
+  const handleCopyFeedbackJson = async () => {
+    if (!feedbackPreview?.feedback) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(feedbackPreview.feedback, null, 2));
+      setCopiedFeedbackJson(true);
+      setTimeout(() => setCopiedFeedbackJson(false), 2000);
+    } catch {
+      setCopiedFeedbackJson(false);
     }
   };
 
@@ -197,6 +223,7 @@ export default function VerificationRunsPage() {
     setLoadingDetails(true);
     setSelectedRun(null);
     setRelatedSubmission(null);
+    setFeedbackPreview(null);
 
     try {
       const run = await getVerificationRunById(runId);
@@ -208,12 +235,23 @@ export default function VerificationRunsPage() {
       } catch {
         setRelatedSubmission(null);
       }
+
+      setLoadingFeedback(true);
+      try {
+        const preview = await getFeedbackPreview(run.id);
+        setFeedbackPreview(preview);
+      } catch {
+        setFeedbackPreview(null);
+      } finally {
+        setLoadingFeedback(false);
+      }
     } catch (err) {
       setError(`Failed to retrieve verification run details: ${err.message}`);
     } finally {
       setLoadingDetails(false);
     }
   };
+
 
   const handleRefreshSingleStatus = async (runId) => {
     setRefreshingStatus(true);
@@ -502,7 +540,7 @@ export default function VerificationRunsPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                            {run.requested_test_types.map((tt) => (
+                            {(run.requested_test_types || []).map((tt) => (
                               <Badge key={tt} variant="secondary" style={{ fontSize: '0.65rem' }}>
                                 {tt}
                               </Badge>
@@ -1075,8 +1113,135 @@ export default function VerificationRunsPage() {
             )}
           </div>
 
+          {/* Technical Feedback Preview Section (Component 3 Integration) */}
+          <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <FileJson size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Technical Feedback Preview
+                </span>
+                <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
+                  Target: Component 3
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                {feedbackPreview?.eligible ? (
+                  <Badge variant="success" dot style={{ fontSize: '0.65rem' }}>
+                    Eligible for Repair Loop
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>
+                    Corrective Feedback Ineligible
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Explanation / Eligibility Status Message */}
+            <div
+              style={{
+                padding: '0.625rem 0.75rem',
+                backgroundColor: feedbackPreview?.eligible ? 'rgba(249, 115, 22, 0.06)' : 'var(--bg-tertiary)',
+                border: feedbackPreview?.eligible ? '1px solid rgba(249, 115, 22, 0.2)' : '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-xs)',
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem',
+              }}
+            >
+              <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '0.15rem' }}>
+                Eligibility Decision:
+              </div>
+              {feedbackPreview?.reason || (selectedRun.status === 'PASSED'
+                ? 'Verification run passed successfully; zero defects detected, so no corrective feedback is applicable.'
+                : 'Evaluating technical feedback eligibility...')}
+            </div>
+
+            {/* If Eligible: Show Technical Findings and Structured JSON Preview */}
+            {feedbackPreview?.eligible && feedbackPreview.feedback && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {/* Findings Summary Pills */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.75rem' }}>
+                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Package ID</span>
+                    <code style={{ color: 'var(--primary-300)' }}>{feedbackPreview.feedback.feedback_id}</code>
+                  </div>
+                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Affected Files</span>
+                    <span className="text-mono" style={{ color: 'var(--text-primary)' }}>
+                      {feedbackPreview.feedback.affected_files?.join(', ') || 'solution.py'}
+                    </span>
+                  </div>
+                  <div style={{ padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase', display: 'block' }}>Failed Assertions</span>
+                    <span style={{ color: 'var(--status-failed)', fontWeight: 600 }}>
+                      {feedbackPreview.feedback.failed_assertions?.length || 0} statement(s)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Formatted JSON Payload Card */}
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.4rem 0.625rem',
+                      background: 'var(--bg-tertiary)',
+                      borderBottom: '1px solid var(--border-color)',
+                      fontSize: '0.72rem',
+                    }}
+                  >
+                    <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                      payload.json (Schema v{feedbackPreview.feedback.schema_version})
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={copiedFeedbackJson ? Check : Copy}
+                        onClick={handleCopyFeedbackJson}
+                        style={{ height: '24px', fontSize: '0.6875rem', padding: '0 0.5rem' }}
+                      >
+                        {copiedFeedbackJson ? 'Copied' : 'Copy JSON'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        title="Direct dispatch to Component 3 is planned for Phase 3 feedback iteration loops."
+                        style={{ height: '24px', fontSize: '0.6875rem', padding: '0 0.5rem', opacity: 0.6 }}
+                      >
+                        Dispatch to C3 (Planned)
+                      </Button>
+                    </div>
+                  </div>
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: '0.625rem',
+                      background: '#07090e',
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--primary-300)',
+                      maxHeight: '200px',
+                      overflowX: 'auto',
+                      whiteSpace: 'pre',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {JSON.stringify(feedbackPreview.feedback, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Target Code Snippet */}
           {relatedSubmission && (
+
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>

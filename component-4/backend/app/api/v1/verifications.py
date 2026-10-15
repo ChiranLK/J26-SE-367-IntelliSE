@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.api.deps import get_verification_service
 from app.schemas.defect_report import DefectReportListResponse
+from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPreviewResponse
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunExecute,
@@ -10,6 +11,7 @@ from app.schemas.verification import (
     VerificationStatusResponse,
 )
 from app.services.verification_service import VerificationService
+
 
 
 router = APIRouter(prefix="/verifications", tags=["Verifications"])
@@ -110,4 +112,39 @@ async def get_verification_defects(
     service: VerificationService = Depends(get_verification_service),
 ) -> DefectReportListResponse:
     return await service.get_verification_defects(run_id)
+
+
+@router.get(
+    "/{run_id}/feedback-preview",
+    response_model=TechnicalFeedbackPreviewResponse,
+    summary="Preview Technical Feedback Package",
+    description=(
+        "Returns a deterministic, read-only preview of the structured technical feedback package "
+        "and eligibility decision for Component 3. Does not mutate storage or send data to Component 3."
+    ),
+)
+async def get_feedback_preview(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> TechnicalFeedbackPreviewResponse:
+    return await service.get_feedback_preview(run_id)
+
+
+@router.post(
+    "/{run_id}/feedback-iterations",
+    response_model=FeedbackIteration,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record Technical Feedback Iteration",
+    description=(
+        "Explicitly records a feedback iteration for an eligible verification run. "
+        "Idempotent: prevents duplicate iteration creation if an identical defect set was already recorded."
+    ),
+)
+async def record_feedback_iteration(
+    run_id: str,
+    notes: Optional[str] = Query(None, description="Optional notes regarding this feedback iteration"),
+    service: VerificationService = Depends(get_verification_service),
+) -> FeedbackIteration:
+    return await service.record_feedback_iteration(run_id, notes=notes)
+
 

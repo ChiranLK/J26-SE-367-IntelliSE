@@ -71,4 +71,31 @@ export async function getVerificationDefects(runId) {
   return response.data;
 }
 
+/**
+ * Retrieves read-only technical feedback preview and eligibility decision for a verification run.
+ * @param {string} runId
+ */
+export async function getFeedbackPreview(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/feedback-preview`
+  );
+  return response.data;
+}
+
+/**
+ * Explicitly records a technical feedback iteration for an eligible verification run.
+ * @param {string} runId
+ * @param {string} [notes]
+ */
+export async function recordFeedbackIteration(runId, notes) {
+  const params = notes ? { notes } : {};
+  const response = await apiClient.post(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/feedback-iterations`,
+    null,
+    { params }
+  );
+  return response.data;
+}
+
+
 

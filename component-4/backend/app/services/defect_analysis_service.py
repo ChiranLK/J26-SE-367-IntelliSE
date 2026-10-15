@@ -446,12 +446,22 @@ class DefectAnalysisService:
             if t.status in (TestResultStatus.FAILED, TestResultStatus.ERROR, TestResultStatus.TIMEOUT)
         ]
 
+        failed_tests = [
+            d.failed_test for d in defect_reports if d.failed_test
+        ]
+        defect_ids = [d.defect_id for d in defect_reports]
+        feedback_id = f"fb-{uuid.uuid5(uuid.NAMESPACE_DNS, f'{run_id}:{len(defect_reports)}').hex[:12]}"
+
         return TechnicalFeedbackPayload(
+            feedback_id=feedback_id,
             verification_run_id=run_id,
             submission_id=submission_id,
+            failed_tests=failed_tests,
             failed_assertions=failed_assertions,
             error_logs=error_logs,
             affected_files=affected_files,
+            defect_ids=defect_ids,
             test_failure_details=test_failure_details,
             generated_at=datetime.now(timezone.utc),
         )
+

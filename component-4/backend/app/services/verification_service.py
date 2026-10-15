@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from app.core.errors import ResourceNotFoundException
+from app.core.errors import InvalidInputException, ResourceNotFoundException
 from app.core.logging import logger
 from app.repositories.base import BaseSubmissionRepository, BaseVerificationRunRepository
 from app.schemas.common import VerificationStatus
 from app.schemas.defect_report import DefectReportListResponse
+from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPreviewResponse
 from app.schemas.verification import (
     VerificationRunCreate,
     VerificationRunListResponse,
@@ -14,7 +15,9 @@ from app.schemas.verification import (
     VerificationStatusResponse,
 )
 from app.services.defect_analysis_service import DefectAnalysisService
+from app.services.feedback_service import TechnicalFeedbackService
 from app.workflows.verification_graph import verification_pipeline
+
 
 
 
@@ -115,6 +118,7 @@ class VerificationService:
             "requirement_ids": submission.requirement_ids,
             "trusted_test_cases": effective_test_cases,
             "timeout_seconds": timeout_seconds,
+            "feedback_iterations": list(run.feedback_iterations or []),
             "telemetry": {},
         }
 
@@ -129,6 +133,7 @@ class VerificationService:
 
         final_results = result_state.get("test_results", [])
         final_defects = result_state.get("defect_reports", [])
+        final_iterations = result_state.get("feedback_iterations", run.feedback_iterations)
         final_error = result_state.get("error_message")
         final_telemetry = result_state.get("telemetry", {})
 
@@ -141,7 +146,7 @@ class VerificationService:
             requested_test_types=run.requested_test_types,
             test_results=final_results,
             defect_reports=final_defects,
-            feedback_iterations=run.feedback_iterations,
+            feedback_iterations=final_iterations,
             execution_telemetry=final_telemetry,
             error_message=final_error,
             created_at=run.created_at,
@@ -150,13 +155,15 @@ class VerificationService:
 
         saved = await self.verification_repo.save(updated_run)
         logger.info(
-            "Completed verification run %s with status %s (test count: %d, defect count: %d)",
+            "Completed verification run %s with status %s (test count: %d, defect count: %d, iterations: %d)",
             run_id,
             saved.status.value,
             len(saved.test_results),
             len(saved.defect_reports),
+            len(saved.feedback_iterations),
         )
         return saved
+
 
     async def get_verification_run(self, run_id: str) -> VerificationRunResponse:
         """Retrieves complete details for a verification run."""
@@ -205,6 +212,38 @@ class VerificationService:
 
         return DefectReportListResponse(total=len(reports), items=reports)
 
+    async def get_feedback_preview(self, run_id: str) -> TechnicalFeedbackPreviewResponse:
+        """
+        Retrieves a deterministic read-only preview of technical feedback for a verification run.
+        Does NOT mutate repository storage or create duplicate iterations.
+        """
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        service = TechnicalFeedbackService()
+        return service.get_feedback_preview(run, submission)
+
+    async def record_feedback_iteration(
+        self,
+        run_id: str,
+        notes: Optional[str] = None,
+    ) -> FeedbackIteration:
+        """
+        Explicitly records a feedback iteration for an eligible verification run.
+        Idempotent: will not create duplicates if an iteration for identical defects already exists.
+        """
+        run = await self.get_verification_run(run_id)
+        service = TechnicalFeedbackService()
+        is_eligible, reason = service.check_eligibility(run)
+        if not is_eligible:
+            raise InvalidInputException(f"Cannot record feedback iteration: {reason}")
+
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        payload = service.build_feedback_payload(run, submission)
+        updated_run, iteration, created = service.record_feedback_iteration(run, payload, notes=notes)
+        if created:
+            await self.verification_repo.save(updated_run)
+        return iteration
+
     async def list_runs(
         self,
         submission_id: Optional[str] = None,
@@ -221,4 +260,5 @@ class VerificationService:
         items = await self.verification_repo.list_all(skip=skip, limit=limit)
         total = await self.verification_repo.count()
         return VerificationRunListResponse(total=total, items=items)
+
 
