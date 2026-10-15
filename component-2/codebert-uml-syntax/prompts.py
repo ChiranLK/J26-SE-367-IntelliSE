@@ -131,6 +131,4 @@ TEMPLATES = {"USE_CASE": USE_CASE, "CLASS": CLASS}
 
 
 def generation_prompt(srs_text, diagram_type):
-    # replace() instead of format(): the PlantUML example contains { } braces,
-    # which format() would try to read as placeholders.
     return TEMPLATES[diagram_type].replace("{srs}", srs_text.strip())

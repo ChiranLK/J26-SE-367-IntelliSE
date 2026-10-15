@@ -1,8 +1,9 @@
 import json
 import urllib.error
+import os
 import urllib.request
 
-OLLAMA_URL = "http://localhost:11434"
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 DEFAULT_MODEL = "qwen2.5-coder:7b"
 
 
