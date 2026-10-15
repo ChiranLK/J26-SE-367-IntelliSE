@@ -28,7 +28,7 @@ temp/
 *.tmp
 *.temp
 
-# Demo dashboard (npm install / vite build output)
-dashboard/node_modules/
-dashboard/dist/
-dashboard/.vite/
+# C3 research UI (npm install / vite build output)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

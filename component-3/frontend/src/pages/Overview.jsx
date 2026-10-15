@@ -30,7 +30,7 @@ export default function Overview({ navigate }) {
         }
       />
 
-      <Callout tone="info" title="What this dashboard is">
+      <Callout tone="info" title="What this Component 3 Research UI is">
         This is the C3 research demo interface. Every button calls the real Component 3 FastAPI
         service. It is not the React application that Component 3 generates, and it never
         executes generated code.

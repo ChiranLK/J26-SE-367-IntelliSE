@@ -67,7 +67,7 @@ describe("apiRequest", () => {
     expect(notFound.errors).toEqual([{ code: "HTTP_ERROR", field: null, message: "Not Found" }]);
     expect(gateway).toMatchObject({ kind: "http", status: 502, errors: [] });
     expect(gateway.message).toBe(
-      "The Component 3 API or local dashboard proxy is unavailable (HTTP 502).",
+      "The Component 3 API or local frontend proxy is unavailable (HTTP 502).",
     );
   });
 

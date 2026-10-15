@@ -202,15 +202,15 @@ python -m intelise_c3.scripts.scoped_regeneration_experiment --model ollama
 See `docs/defect-feedback-scoped-regeneration.md` for the algorithm, worked
 example, metric status, and limitations.
 
-## Research demo dashboard (UI)
+## Research demo UI (frontend)
 
-A React dashboard in `dashboard/` demonstrates the whole C3 workflow through a
-browser UI backed by the real FastAPI services (C1/C2 inputs and C4 defects are
-clearly labeled **SIMULATED**; C4 retest stays `PENDING` and deployment stays
+A React app in `frontend/` demonstrates the whole C3 workflow through a browser
+UI backed by the real FastAPI services (C1/C2 inputs and C4 defects are clearly
+labeled **SIMULATED**; C4 retest stays `PENDING` and deployment stays
 `BLOCKED`). With FastAPI running on port 8000:
 
 ```powershell
-Set-Location .\component-3\dashboard
+Set-Location .\component-3\frontend
 npm install
 npm run dev     # then open http://127.0.0.1:5173
 ```

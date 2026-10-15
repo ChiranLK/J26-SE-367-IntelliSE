@@ -97,7 +97,7 @@ export async function apiRequest(
       message:
         errors[0]?.message ||
         (unavailableThroughProxy
-          ? `The Component 3 API or local dashboard proxy is unavailable (HTTP ${response.status}).`
+          ? `The Component 3 API or local frontend proxy is unavailable (HTTP ${response.status}).`
           : `The API answered HTTP ${response.status}.`),
     });
   }

@@ -1,10 +1,10 @@
-# Component 3 research demo dashboard
+# Component 3 Research UI
 
-This React dashboard is the **graphical interface for demonstrating Component 3 (C3)**.
+This React application is the **graphical interface for demonstrating Component 3 (C3)**.
 It is not the web application that C3 generates. Every action calls the real C3
 FastAPI services; Swagger and the terminal are not needed during the demo.
 
-The dashboard lives in `component-3/dashboard/` and only talks to
+The demo UI lives in `component-3/frontend/` and only talks to
 `http://127.0.0.1:8000/api/v1` through the Vite dev proxy. It never executes,
 installs, or builds generated code. The generated files are shown as escaped text.
 
@@ -60,29 +60,29 @@ python -m uvicorn intelise_c3.main:app --host 127.0.0.1 --port 8000
 Keep the same two environment values for that FastAPI process. For another clean
 run, start FastAPI with a new `$demoRun`; do not delete or overwrite prior runs.
 
-### C. React dashboard
+### C. Component 3 Research UI
 
 Node.js 20 or newer is required.
 
 ```powershell
-Set-Location .\component-3\dashboard
+Set-Location .\component-3\frontend
 npm install
 npm run dev
 ```
 
 Open <http://127.0.0.1:5173>. The port is fixed; if it is taken Vite exits
-instead of choosing another one. Use `DASHBOARD_API_TARGET` if FastAPI runs
+instead of choosing another one. Use `C3_FRONTEND_API_TARGET` if FastAPI runs
 elsewhere:
 
 ```powershell
-$env:DASHBOARD_API_TARGET = "http://127.0.0.1:8000"
+$env:C3_FRONTEND_API_TARGET = "http://127.0.0.1:8000"
 ```
 
 Frontend checks:
 
 ```powershell
 npm test        # Vitest, mocked HTTP boundary only
-npm run build   # production build to dashboard/dist (git-ignored)
+npm run build   # production build to frontend/dist (git-ignored)
 ```
 
 ## Five-minute supervisor walkthrough
@@ -139,7 +139,7 @@ status it returns, including rejection.
 - A repaired baseline cannot be repaired again, because its graph version has
   advanced. Create a fresh baseline to try the other mode.
 
-## Helper endpoints added for the dashboard (read-only except baseline)
+## Helper endpoints added for the Component 3 Research UI (read-only except baseline)
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -156,7 +156,7 @@ Everything else uses the existing C3 endpoints unchanged.
 
 - **Component 4 integration:** no defect reports, retest, XAI, or semantic-preservation results.
 - **Deployment:** not implemented in C3.
-- **Graph update, compare, and ground-truth evaluate endpoints** (`/traceability/graphs/{id}/updates`, `/compare`, `/versions/{n}/evaluate`): exist in the API but are not surfaced in the dashboard.
+- **Graph update, compare, and ground-truth evaluate endpoints** (`/traceability/graphs/{id}/updates`, `/compare`, `/versions/{n}/evaluate`): exist in the API but are not surfaced in the research UI.
 - **Generation of non-React stacks:** other candidates are scored but have no generator.
 - **Real C1/C2 handoff:** only simulated packages.
 
@@ -166,7 +166,7 @@ Everything else uses the existing C3 endpoints unchanged.
   expected scopes are authored by the implementer and not independently reviewed.
 - Scores, weights, and confidences in stack selection are provisional policy
   assumptions. Approvals are caller-asserted; the approver is not authenticated.
-- Generated code is never installed, built, or run by C3 or the dashboard.
+- Generated code is never installed, built, or run by C3 or the research UI.
   Structural verification is static inspection, not testing.
 - `MOCK` repair proves the pipeline only and repairs a single scenario (the
   service module); other scenarios fail visibly.
