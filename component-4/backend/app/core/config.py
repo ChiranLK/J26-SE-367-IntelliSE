@@ -107,6 +107,17 @@ class Settings(BaseSettings):
             raise ValueError("COMPONENT_3_BASE_URL must begin with http:// or https://")
         return v.rstrip("/")
 
+    # Ollama Local LLM Configuration (Research Proposal Gap Closure)
+    OLLAMA_ENABLED: bool = True
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen2.5-coder:3b"
+    OLLAMA_TIMEOUT_SECONDS: float = 60.0
+
+    # Multi-Agent Test Runner Configuration
+    PERFORMANCE_TEST_ITERATIONS: int = 10
+    PERFORMANCE_LATENCY_THRESHOLD_MS: float = 200.0
+
 
 settings = Settings()
+
 

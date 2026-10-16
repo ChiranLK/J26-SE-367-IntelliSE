@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import apiClient from '../api/client';
 import { checkBackendHealth } from '../api/healthApi';
 import { submitCode, uploadSourceFile, getSubmissions, getSubmissionById } from '../api/submissionApi';
-import { createVerificationRun, getVerificationRuns, getVerificationRunById, getVerificationStatus } from '../api/verificationApi';
+import { createVerificationRun, getVerificationRuns, getVerificationRunById, getVerificationStatus, getXaiExplanation } from '../api/verificationApi';
 
 describe('API Client & Endpoints', () => {
   beforeEach(() => {
@@ -109,5 +109,16 @@ describe('API Client & Endpoints', () => {
     const res = await getVerificationStatus('run-1');
     expect(apiClient.get).toHaveBeenCalledWith('/api/v1/verifications/run-1/status');
     expect(res.status).toBe('PENDING');
+  });
+
+  it('calls GET /api/v1/verifications/:id/explanation with extended timeout', async () => {
+    const mockExplanation = { verification_run_id: 'run-1', summary: 'AI Analysis' };
+    vi.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: mockExplanation });
+
+    const res = await getXaiExplanation('run-1');
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/verifications/run-1/explanation', {
+      timeout: 90000,
+    });
+    expect(res.summary).toBe('AI Analysis');
   });
 });

@@ -156,6 +156,102 @@ class RepairResponseIngestRequest(BaseModel):
         return cleaned
 
 
+class Component3RepairDeliveryRequest(BaseModel):
+    """
+    Formalized inbound delivery contract for Component 3 to submit repaired Python source code.
+    Enforces strict identifier validation, contract versioning, syntax safety, and audit traceability.
+    """
+
+    contract_version: str = Field(
+        default="1.0",
+        description="Agreed contract version for Component 3 repair delivery",
+    )
+    verification_run_id: str = Field(
+        description="Original failed verification run ID this repair addresses",
+    )
+    feedback_iteration_id: str = Field(
+        description="Approved feedback iteration ID this repair corresponds to",
+    )
+    correlation_id: Optional[str] = Field(
+        default=None,
+        description="Correlation ID assigned during outbound feedback dispatch",
+    )
+    external_repair_job_id: str = Field(
+        min_length=1,
+        max_length=255,
+        description="Component 3 repair job or task identifier",
+    )
+    corrected_code: str = Field(
+        min_length=1,
+        max_length=500_000,
+        description="Repaired Python source code",
+    )
+    filename: Optional[str] = Field(
+        default="solution.py",
+        max_length=255,
+        description="Filename of the repaired source file (must end in .py)",
+    )
+    repair_provenance: RepairSource = Field(
+        default=RepairSource.EXTERNAL_COMPONENT_3,
+        description="Provenance of the repair (fixed to EXTERNAL_COMPONENT_3)",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        max_length=1000,
+        description="Optional repair generation metadata, strategy, or notes from Component 3",
+    )
+
+    @field_validator("contract_version")
+    @classmethod
+    def validate_contract_version(cls, v: str) -> str:
+        if v != "1.0":
+            raise ValueError(f"Unsupported contract version '{v}'. Supported versions: '1.0'.")
+        return v
+
+    @field_validator("corrected_code")
+    @classmethod
+    def validate_code_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Corrected source code cannot be empty or whitespace only.")
+        if "\0" in v:
+            raise ValueError("Corrected source code cannot contain null bytes.")
+        return v
+
+    @field_validator("external_repair_job_id")
+    @classmethod
+    def validate_job_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("external_repair_job_id must be a non-empty string.")
+        return v.strip()
+
+    @field_validator("filename")
+    @classmethod
+    def validate_filename_security(cls, v: Optional[str]) -> str:
+        if not v or not v.strip():
+            return "solution.py"
+        cleaned = v.strip()
+        if ".." in cleaned or "/" in cleaned or "\\" in cleaned:
+            raise ValueError("Filename cannot contain directory separators or path traversal sequences.")
+        if not cleaned.endswith(".py"):
+            raise ValueError("Only Python source files (.py) are supported for repair ingestion.")
+        return cleaned
+
+
+class Component3RepairDeliveryResponse(BaseModel):
+    """Response returned upon successful ingestion of a Component 3 repair delivery."""
+
+    repair_id: str = Field(description="Component 4 repair attempt identifier (rep-...)")
+    original_run_id: str = Field(description="Associated original verification run ID")
+    feedback_iteration_id: str = Field(description="Associated feedback iteration ID")
+    external_repair_job_id: str = Field(description="Component 3 repair job ID")
+    correlation_id: Optional[str] = Field(default=None, description="Correlation identifier")
+    status: RepairResponseStatus = Field(description="Current status of the repair attempt (INGESTED)")
+    corrected_submission_id: str = Field(description="Newly created submission ID containing the corrected code")
+    filename: str = Field(description="Filename of the ingested code")
+    message: str = Field(description="Status message confirming ingestion and next steps")
+    ingested_at: datetime = Field(description="Timestamp when repair was ingested")
+
+
 def is_inconsistent_repair_attempt(data: Any) -> bool:
     """
     Detects if a repair attempt record has an inconsistent lifecycle status:

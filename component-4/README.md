@@ -335,11 +335,14 @@ All 27 frontend tests validate:
 
 - [x] **Phase 1 (Completed)**: Backend foundation, API contracts, in-memory & Atlas repository abstraction, verification run lifecycle.
 - [x] **Phase 2A (Completed)**: React.js frontend implementation, live dashboard, manual submission, drag-and-drop file upload, submission history, verification run management, and design system.
-- [ ] **Phase 2B (Next Phase)**: Multi-agent test execution (Unit, Integration, Performance agents orchestrated via LangGraph and local Ollama LLMs).
-- [ ] **Phase 3**: Explainable AI (XAI) feedback engine and automated defect communication loop with Component 3.
+- [x] **Milestones 2 & 3 (Completed)**: Isolated Docker test execution, defect analysis, human-facing Explainable AI (XAI), repair response ingestion, and closed-loop re-verification.
+- [x] **Milestone 4 (Completed)**: Integration readiness, formal Component 3 bilateral API contracts (outbound feedback and inbound repair delivery), delivery safeguards, bounded retries with timeout safety, and isolated mock testing suite (12 scenarios).
+- [ ] **Live Integration (Next Phase)**: Bilateral connection to Component 3 once Component 3 publishes live endpoints and confirms contracts.
 
-### Current Limitations
-- **Ephemeral Storage**: In development mode (`STORAGE_BACKEND=memory`), data is stored in memory and resets when FastAPI restarts.
-- **Pending Verification**: Autonomous test agent runners are scheduled for Phase 2B. Verification runs currently initialize and remain in `PENDING` status without simulating test execution.
-- **Defects & XAI Reserved**: Defect reporting and Explainable AI tabs display roadmap notices and will become active once Phase 2B and Phase 3 are implemented.
+For full technical specifications and mock testing guides, see:
+- [Component 3 Integration Contract & Readiness Guide](file:///d:/GitHub%20Projects/Research%20Project/J26-SE-367-IntelliSE/component-4/backend/docs/COMPONENT_3_INTEGRATION_CONTRACT.md)
+- [Technical Feedback Loop Hardening & Integration Contract Readiness](file:///d:/GitHub%20Projects/Research%20Project/J26-SE-367-IntelliSE/component-4/backend/docs/INTEGRATION_CONTRACT_READINESS.md)
+- [Repair Re-Verification Workflow](file:///d:/GitHub%20Projects/Research%20Project/J26-SE-367-IntelliSE/component-4/backend/docs/REPAIR_REVERIFICATION_WORKFLOW.md)
+- [Research Methodology Integrity Report & Re-Evaluation](file:///d:/GitHub%20Projects/Research%20Project/J26-SE-367-IntelliSE/component-4/docs/RESEARCH_METHODOLOGY_INTEGRITY_REPORT.md)
+
 

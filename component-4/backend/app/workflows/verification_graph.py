@@ -7,6 +7,7 @@ from app.schemas.common import ProgrammingLanguage, TestResultStatus, TestType, 
 from app.schemas.defect_report import DefectReport
 from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPayload
 from app.schemas.test_result import TestResult
+from app.services.agent_testing_service import TestCoordinationService
 from app.services.defect_analysis_service import DefectAnalysisService
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
 from app.services.feedback_service import TechnicalFeedbackService
@@ -23,6 +24,7 @@ class VerificationWorkflowState(TypedDict, total=False):
     requirement_ids: Optional[List[str]]
     trusted_test_cases: Optional[str]
     timeout_seconds: Optional[int]
+    requested_test_types: Optional[List[str]]
 
     # Flow evaluation flags
     is_supported: bool
@@ -34,6 +36,7 @@ class VerificationWorkflowState(TypedDict, total=False):
     defect_reports: List[DefectReport]
     technical_feedback: Optional[TechnicalFeedbackPayload]
     feedback_iterations: List[FeedbackIteration]
+    agent_reports: Optional[Dict[str, Any]]
     telemetry: Dict[str, Any]
     stdout: str
     stderr: str
@@ -103,50 +106,94 @@ def check_docker_node(state: VerificationWorkflowState) -> Dict[str, Any]:
 
 
 async def execute_tests_node(state: VerificationWorkflowState) -> Dict[str, Any]:
-    """Node 3: Executes tests inside the short-lived, unprivileged Docker container."""
+    """Node 3: Executes tests inside the short-lived Docker sandbox via specialized testing agents."""
     if not state.get("is_supported", False) or state.get("status") == VerificationStatus.ERROR.value:
         return {}
 
     source_code = state.get("source_code", "")
     trusted_test_cases = state.get("trusted_test_cases")
-    filename = state.get("filename")
-    timeout = state.get("timeout_seconds")
+    filename = state.get("filename") or "solution.py"
+    timeout = state.get("timeout_seconds") or 25
+    run_id = state.get("run_id", "run-default")
+
+    # Respect requested_test_types; default to ["unit"] for unit-only backwards compatibility
+    raw_requested = state.get("requested_test_types") or ["unit"]
+    normalized_agents = []
+    for t in raw_requested:
+        val = t.value if hasattr(t, "value") else str(t)
+        normalized_agents.append(val.lower())
+    if not normalized_agents:
+        normalized_agents = ["unit"]
 
     runner = DockerTestRunner()
-    exec_result: SandboxExecutionResult = await runner.execute_verification(
+    coordination_service = TestCoordinationService(runner=runner)
+
+    plan = coordination_service.create_coordination_plan(
+        run_id=run_id,
         source_code=source_code,
-        trusted_test_cases=trusted_test_cases,
+        requested_test_types=normalized_agents,
+    )
+
+    coord_result = await coordination_service.execute_coordinated_verification(
+        plan=plan,
+        source_code=source_code,
+        test_code=trusted_test_cases or "",
         filename=filename,
         timeout_seconds=timeout,
     )
 
-    # Determine final verification run status
-    # If no oracle, retain PENDING or SKIPPED
-    if exec_result.no_oracle:
-        final_status = VerificationStatus.PENDING.value
-    elif exec_result.is_timeout:
-        final_status = VerificationStatus.ERROR.value
-    elif exec_result.status == TestResultStatus.PASSED.value:
+    raw_overall = coord_result.get("overall_status", "FAILED")
+    if raw_overall == "PASSED":
         final_status = VerificationStatus.PASSED.value
-    elif exec_result.status == TestResultStatus.FAILED.value:
-        final_status = VerificationStatus.FAILED.value
-    else:
+    elif raw_overall == "PENDING":
+        final_status = VerificationStatus.PENDING.value
+    elif raw_overall == "ERROR":
         final_status = VerificationStatus.ERROR.value
+    else:
+        final_status = VerificationStatus.FAILED.value
+
+    # Serialize agent reports for telemetry and persistence
+    agent_reports_serialized = {}
+    for agent_key, rep in coord_result.get("agent_reports", {}).items():
+        if hasattr(rep, "model_dump"):
+            agent_reports_serialized[agent_key] = rep.model_dump()
+        elif hasattr(rep, "dict"):
+            agent_reports_serialized[agent_key] = rep.dict()
+        else:
+            agent_reports_serialized[agent_key] = rep
+
+    test_results = coord_result.get("test_results", [])
+    duration_ms = coord_result.get("duration_ms", 0.0)
+
+    # Capture diagnostic error message if any agent produced an error
+    error_msg = state.get("error_message")
+    if not error_msg and final_status == VerificationStatus.ERROR.value:
+        for r in coord_result.get("agent_reports", {}).values():
+            if getattr(r, "status", None) == "ERROR":
+                for tr in getattr(r, "test_results", []):
+                    if tr.status in (TestResultStatus.ERROR, TestResultStatus.TIMEOUT) and tr.error_message:
+                        error_msg = tr.error_message
+                        break
+
+    agent_telemetry = {
+        "coordination_plan_id": plan.plan_id,
+        "assigned_agents": plan.assigned_agents,
+        "agent_reports": agent_reports_serialized,
+        "total_coordinated_tests": len(test_results),
+        "duration_ms": duration_ms,
+    }
 
     return {
         "status": final_status,
-        "test_results": exec_result.test_results,
-        "error_message": exec_result.error_message,
-        "stdout": exec_result.stdout,
-        "stderr": exec_result.stderr,
-        "duration_ms": exec_result.duration_ms,
+        "test_results": test_results,
+        "agent_reports": agent_reports_serialized,
+        "error_message": error_msg,
+        "stdout": "",
+        "stderr": "",
+        "duration_ms": duration_ms,
         "telemetry": {
             **state.get("telemetry", {}),
-            **exec_result.telemetry,
-            "exit_code": exec_result.exit_code,
-            "duration_ms": exec_result.duration_ms,
-            "is_timeout": exec_result.is_timeout,
-            "no_oracle": exec_result.no_oracle,
+            **agent_telemetry,
         },
     }
 
@@ -173,8 +220,14 @@ def analyze_defects_node(state: VerificationWorkflowState) -> Dict[str, Any]:
         execution_telemetry=telemetry,
         error_message=error_msg,
         requirement_id=req_id,
+        source_code=state.get("source_code"),
     )
-    return {"defect_reports": reports}
+    updates: Dict[str, Any] = {"defect_reports": reports}
+    if reports and status_str == VerificationStatus.PASSED.value:
+        updates["status"] = VerificationStatus.FAILED.value
+        updates["telemetry"] = {**telemetry, "status_overridden_by_security_analysis": True}
+
+    return updates
 
 
 def prepare_technical_feedback_node(state: VerificationWorkflowState) -> Dict[str, Any]:

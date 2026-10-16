@@ -19,7 +19,7 @@ class VerificationRunCreate(BaseModel):
         description="Source entity that triggered the run (e.g. 'manual', 'component_3_pipeline')",
     )
     test_types: List[TestType] = Field(
-        default_factory=lambda: [TestType.UNIT, TestType.INTEGRATION, TestType.PERFORMANCE],
+        default_factory=lambda: [TestType.UNIT],
         description="Requested test types for this verification run",
     )
     trusted_test_cases: Optional[str] = Field(

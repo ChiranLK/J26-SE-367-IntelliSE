@@ -2,7 +2,7 @@ import ast
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from app.core.errors import FileValidationException, InvalidInputException, ResourceNotFoundException
 from app.core.logging import logger
@@ -32,9 +32,18 @@ from app.schemas.verification import (
     VerificationStatusResponse,
 )
 from app.schemas.xai import XaiExplanationResponse
+from app.schemas.research_reports import (
+    DeploymentReadinessReport,
+    ModuleConvergenceRiskReport,
+    SemanticDriftReport,
+    TraceabilityScopedXaiPayload,
+)
 from app.services.component3_client import Component3Client
 from app.services.defect_analysis_service import DefectAnalysisService
 from app.services.feedback_service import TechnicalFeedbackService
+from app.services.governance_report_service import GovernanceReportService
+from app.services.ollama_client import OllamaClient
+from app.services.semantic_drift_service import SemanticDriftService
 from app.services.xai_service import XaiExplanationService
 from app.workflows.verification_graph import verification_pipeline
 
@@ -178,6 +187,7 @@ class VerificationService:
             "requirement_ids": submission.requirement_ids,
             "trusted_test_cases": effective_test_cases,
             "timeout_seconds": timeout_seconds,
+            "requested_test_types": run.requested_test_types or ["unit"],
             "feedback_iterations": list(run.feedback_iterations or []),
             "telemetry": {},
         }
@@ -598,5 +608,86 @@ class VerificationService:
             return sub.test_code
 
         return None
+
+    async def get_convergence_risk_report(self, run_id: str) -> ModuleConvergenceRiskReport:
+        """Synthesizes proposal-required Module Convergence Risk Report (SO5, FR10)."""
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        drift_report = None
+        if self.test_suite_repo:
+            suite = await self.test_suite_repo.get_by_run_id(run_id)
+            if suite and submission and submission.test_code and suite.test_code != submission.test_code:
+                drift_service = SemanticDriftService()
+                drift_report = drift_service.analyze_test_suite_drift(
+                    original_test_code=suite.test_code,
+                    candidate_test_code=submission.test_code,
+                    verification_run_id=run.id,
+                )
+        gov_service = GovernanceReportService()
+        return gov_service.generate_convergence_risk_report(run, submission, drift_report)
+
+    async def get_deployment_readiness_report(self, run_id: str) -> DeploymentReadinessReport:
+        """Synthesizes proposal-required Deployment Readiness Report with gating checks (FR11, NFR01)."""
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        drift_report = None
+        if self.test_suite_repo:
+            suite = await self.test_suite_repo.get_by_run_id(run_id)
+            if suite and submission and submission.test_code and suite.test_code != submission.test_code:
+                drift_service = SemanticDriftService()
+                drift_report = drift_service.analyze_test_suite_drift(
+                    original_test_code=suite.test_code,
+                    candidate_test_code=submission.test_code,
+                    verification_run_id=run.id,
+                )
+        gov_service = GovernanceReportService()
+        conv_report = gov_service.generate_convergence_risk_report(run, submission, drift_report)
+        return gov_service.generate_deployment_readiness_report(run, submission, drift_report, conv_report)
+
+    async def analyze_test_suite_drift(self, run_id: str, candidate_test_code: str) -> SemanticDriftReport:
+        """Performs AST-based semantic drift analysis on a candidate test suite (FR07, NFR01)."""
+        run = await self.get_verification_run(run_id)
+        original_test_code = ""
+        if self.test_suite_repo:
+            suite = await self.test_suite_repo.get_by_run_id(run_id)
+            if suite:
+                original_test_code = suite.test_code
+        if not original_test_code:
+            submission = await self.submission_repo.get_by_id(run.submission_id)
+            if submission:
+                original_test_code = submission.test_code or ""
+
+        drift_service = SemanticDriftService()
+        return drift_service.analyze_test_suite_drift(
+            original_test_code=original_test_code,
+            candidate_test_code=candidate_test_code,
+            verification_run_id=run_id,
+        )
+
+    async def get_traceability_scoped_explanations(self, run_id: str) -> List[TraceabilityScopedXaiPayload]:
+        """Synthesizes machine-readable defect reports scoped to RTM and test seams (SO3, FR04)."""
+        run = await self.get_verification_run(run_id)
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        service = XaiExplanationService()
+        explanations = []
+        for defect in run.defect_reports:
+            exp = service.generate_traceability_scoped_explanation(run, defect, submission)
+            explanations.append(exp)
+        return explanations
+
+    async def get_ai_engine_status(self) -> Dict[str, Any]:
+        """Queries local Ollama runtime and reports model availability and active XAI provider."""
+        client = OllamaClient()
+        is_ok, models, msg = await client.check_availability()
+        return {
+            "ollama_enabled": client.enabled,
+            "ollama_base_url": client.base_url,
+            "configured_model": client.model_name,
+            "ollama_connected": is_ok,
+            "available_models": models,
+            "status_message": msg,
+            "active_xai_provider": "ollama_inference_v1 (with deterministic fallback)",
+        }
+
 
 

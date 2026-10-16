@@ -4,7 +4,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export const apiClient = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Accept': 'application/json',
   },
@@ -34,9 +34,14 @@ apiClient.interceptors.response.use(
         errorCode = `HTTP_${error.response.status}`;
       }
     } else if (error.request) {
-      // Request was made but no response received (backend offline)
-      errorCode = 'BACKEND_OFFLINE';
-      message = 'Unable to connect to the INTELISE backend service. Please ensure the verification server is running at ' + baseURL;
+      // Request was made but no response received
+      if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
+        errorCode = 'REQUEST_TIMEOUT';
+        message = 'The request timed out while waiting for the INTELISE backend service. Local AI inference may take up to 60-90 seconds.';
+      } else {
+        errorCode = 'BACKEND_OFFLINE';
+        message = 'Unable to connect to the INTELISE backend service. Please ensure the verification server is running at ' + baseURL;
+      }
     } else {
       message = error.message;
     }

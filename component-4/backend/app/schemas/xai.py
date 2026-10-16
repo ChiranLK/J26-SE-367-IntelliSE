@@ -57,6 +57,17 @@ class CorrectionRecommendation(BaseModel):
     )
 
 
+class InferenceProvenance(BaseModel):
+    """Trustworthy provenance exposing whether genuine LLM inference occurred or fallback was used."""
+
+    provider: str = Field(description="Inference provider (e.g. 'ollama', 'deterministic')")
+    model: Optional[str] = Field(default=None, description="Model identifier if LLM was invoked (e.g. 'qwen2.5-coder:3b')")
+    genuine_inference: bool = Field(default=False, description="True if real model inference was executed successfully")
+    fallback_used: bool = Field(default=False, description="True if fallback to deterministic evidence was triggered")
+    fallback_reason: Optional[str] = Field(default=None, description="Detailed reason why fallback was used if applicable")
+    duration_ms: Optional[float] = Field(default=None, description="Inference execution latency in milliseconds")
+
+
 class XaiExplanationResponse(BaseModel):
     """
     Human-facing Explainable AI (XAI) explanation response.
@@ -117,6 +128,10 @@ class XaiExplanationResponse(BaseModel):
     provider: str = Field(
         default="deterministic_evidence_v1",
         description="Provider identifier for explainability generation",
+    )
+    inference_provenance: Optional[InferenceProvenance] = Field(
+        default=None,
+        description="Trustworthy provenance detailing whether genuine LLM inference occurred or fallback was used",
     )
     generated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

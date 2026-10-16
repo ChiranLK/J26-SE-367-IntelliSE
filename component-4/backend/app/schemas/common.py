@@ -63,3 +63,31 @@ class SubmissionSource(str, Enum):
     MANUAL_ENTRY = "manual_entry"
     FILE_UPLOAD = "file_upload"
     COMPONENT_3_API = "component_3_api"
+
+
+class DefectCategory(str, Enum):
+    """Proposal-aligned defect category taxonomy (Table 4 & SO2)."""
+
+    FUNCTIONAL_BUG = "functional_bug"
+    SECURITY_VULNERABILITY = "security_vulnerability"
+    PERFORMANCE_BOTTLENECK = "performance_bottleneck"
+    REGRESSION = "regression"
+    UNKNOWN = "unknown"
+
+
+class ConvergenceRiskLevel(str, Enum):
+    """Architectural risk levels for module convergence (SO5)."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class DeploymentReadinessStatus(str, Enum):
+    """Deployment readiness gate outcome (FR11, NFR01)."""
+
+    READY = "READY"
+    BLOCKED = "BLOCKED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+

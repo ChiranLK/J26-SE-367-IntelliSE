@@ -57,6 +57,9 @@ import {
   ingestRepairResponse,
   reverifyRepair,
   getRepairAttempts,
+  getConvergenceRiskReport,
+  getDeploymentReadinessReport,
+  getAiEngineStatus,
 } from '../api/verificationApi';
 import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
@@ -126,6 +129,15 @@ export default function VerificationRunsPage() {
   const [repairSuccessMessage, setRepairSuccessMessage] = useState(null);
   const [forceConfirmRepair, setForceConfirmRepair] = useState(null);
 
+  // Verification Governance & Deployment Readiness States
+  const [convergenceReport, setConvergenceReport] = useState(null);
+  const [loadingConvergence, setLoadingConvergence] = useState(false);
+  const [showConvergenceModal, setShowConvergenceModal] = useState(false);
+  const [readinessReport, setReadinessReport] = useState(null);
+  const [loadingReadiness, setLoadingReadiness] = useState(false);
+  const [showReadinessModal, setShowReadinessModal] = useState(false);
+  const [aiEngineStatus, setAiEngineStatus] = useState(null);
+
 
   const fetchRuns = async (offset = skip, isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -162,6 +174,12 @@ export default function VerificationRunsPage() {
       setSearchParams(nextParams, { replace: true });
     }
   }, [createForParam]);
+
+  useEffect(() => {
+    getAiEngineStatus()
+      .then((st) => setAiEngineStatus(st))
+      .catch(() => setAiEngineStatus(null));
+  }, []);
 
   const handleCopy = async (id) => {
     try {
@@ -275,6 +293,8 @@ export default function VerificationRunsPage() {
     setRepairError(null);
     setRepairSuccessMessage(null);
     setForceConfirmRepair(null);
+    setConvergenceReport(null);
+    setReadinessReport(null);
 
     try {
       const run = await getVerificationRunById(runId);
@@ -327,6 +347,27 @@ export default function VerificationRunsPage() {
         setRepairAttempts([]);
       } finally {
         setLoadingRepairs(false);
+      }
+
+      // Fetch Governance Reports (Convergence Risk & Deployment Readiness)
+      setLoadingConvergence(true);
+      setLoadingReadiness(true);
+      try {
+        const conv = await getConvergenceRiskReport(run.id);
+        setConvergenceReport(conv);
+      } catch {
+        setConvergenceReport(null);
+      } finally {
+        setLoadingConvergence(false);
+      }
+
+      try {
+        const ready = await getDeploymentReadinessReport(run.id);
+        setReadinessReport(ready);
+      } catch {
+        setReadinessReport(null);
+      } finally {
+        setLoadingReadiness(false);
       }
     } catch (err) {
       setError(`Failed to retrieve verification run details: ${err.message}`);
@@ -2258,6 +2299,125 @@ export default function VerificationRunsPage() {
             )}
           </div>
 
+          {/* Verification Governance & Deployment Readiness Section */}
+          <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <ShieldCheck size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Verification Governance & Deployment Readiness
+                </span>
+                <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
+                  Safety Gates
+                </Badge>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+              {/* Convergence Risk Assessment Card */}
+              <div
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-xs)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      Module Convergence Risk
+                    </span>
+                    <Badge
+                      variant={
+                        convergenceReport?.risk_level === 'LOW'
+                          ? 'success'
+                          : convergenceReport?.risk_level === 'MEDIUM'
+                          ? 'warning'
+                          : 'danger'
+                      }
+                      style={{ fontSize: '0.65rem' }}
+                    >
+                      {convergenceReport?.risk_level ? `${convergenceReport.risk_level} RISK` : 'EVALUATING'}
+                    </Badge>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.5rem', lineHeight: 1.4 }}>
+                    {convergenceReport?.risk_justification || 'Analyzes iteration cycles, defect stability, and potential test weakening across revisions.'}
+                  </p>
+                  {convergenceReport?.escalation_required && (
+                    <div style={{ padding: '0.35rem 0.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '3px', fontSize: '0.6875rem', color: 'var(--status-failed)', marginBottom: '0.35rem' }}>
+                      <strong>Human Review Required:</strong> {convergenceReport.escalation_reason || 'Escalation triggered due to cycle threshold.'}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowConvergenceModal(true)}
+                  style={{ alignSelf: 'flex-start', fontSize: '0.7rem' }}
+                >
+                  View Convergence Risk Report
+                </Button>
+              </div>
+
+              {/* Deployment Readiness Certificate Card */}
+              <div
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-xs)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      Deployment Authorization
+                    </span>
+                    <Badge
+                      variant={
+                        readinessReport?.readiness_status === 'READY'
+                          ? 'success'
+                          : readinessReport?.readiness_status === 'NEEDS_REVIEW'
+                          ? 'warning'
+                          : 'danger'
+                      }
+                      style={{ fontSize: '0.65rem' }}
+                    >
+                      {readinessReport?.readiness_status ? `GATE: ${readinessReport.readiness_status}` : 'GATE: EVALUATING'}
+                    </Badge>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.5rem', lineHeight: 1.4 }}>
+                    {readinessReport?.is_ready_for_deployment
+                      ? 'All verification safety gates satisfied. Module is formally authorized for downstream promotion.'
+                      : `Deployment blocked by ${readinessReport?.blocking_reasons?.length || 1} outstanding safety gate condition(s).`}
+                  </p>
+                  {readinessReport?.provenance_hash && (
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      Provenance SHA: {readinessReport.provenance_hash.slice(0, 16)}...
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowReadinessModal(true)}
+                  style={{ alignSelf: 'flex-start', fontSize: '0.7rem' }}
+                >
+                  View Deployment Readiness Report
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Target Code Snippet */}
           {relatedSubmission && (
 
@@ -2376,6 +2536,247 @@ export default function VerificationRunsPage() {
           </ul>
         </div>
       </Modal>
+
+      {/* Module Convergence Risk Report Modal */}
+      {showConvergenceModal && (
+        <Modal
+          isOpen={showConvergenceModal}
+          onClose={() => setShowConvergenceModal(false)}
+          title={`Module Convergence Risk Report: ${selectedRun?.id}`}
+          size="lg"
+          footer={
+            <Button variant="secondary" size="sm" onClick={() => setShowConvergenceModal(false)}>
+              Close
+            </Button>
+          }
+        >
+          {convergenceReport ? (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Risk Level</span>
+                  <div>
+                    <Badge
+                      variant={
+                        convergenceReport.risk_level === 'LOW'
+                          ? 'success'
+                          : convergenceReport.risk_level === 'MEDIUM'
+                          ? 'warning'
+                          : 'danger'
+                      }
+                      dot
+                    >
+                      {convergenceReport.risk_level}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Iterations</span>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {convergenceReport.total_iterations}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Superficial Convergence</span>
+                  <div>
+                    <Badge variant={convergenceReport.is_superficial_convergence ? 'danger' : 'success'}>
+                      {convergenceReport.is_superficial_convergence ? 'DRIFT DETECTED' : 'SAFE'}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Escalation Status</span>
+                  <div>
+                    <Badge variant={convergenceReport.escalation_required ? 'danger' : 'secondary'}>
+                      {convergenceReport.escalation_required ? 'ESCALATION REQUIRED' : 'NORMAL'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '1rem', fontSize: '0.75rem' }}>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                  Risk Justification & Diagnostic Analysis
+                </span>
+                <p style={{ color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+                  {convergenceReport.risk_justification}
+                </p>
+              </div>
+
+              {convergenceReport.diagnostic_signals && convergenceReport.diagnostic_signals.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                    Observed Diagnostic Signals
+                  </span>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {convergenceReport.diagnostic_signals.map((signal, idx) => (
+                      <li key={idx} style={{ marginBottom: '0.2rem' }}>{signal}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {convergenceReport.iteration_history && convergenceReport.iteration_history.length > 0 && (
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                    Iteration Cycle History
+                  </span>
+                  <div className="table-responsive">
+                    <table className="data-table" style={{ fontSize: '0.72rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Cycle #</th>
+                          <th>Status</th>
+                          <th>Defects Reported</th>
+                          <th>Resolved Defects</th>
+                          <th>Timestamp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {convergenceReport.iteration_history.map((it, idx) => (
+                          <tr key={idx}>
+                            <td className="text-mono" style={{ fontWeight: 600 }}>#{it.iteration_number}</td>
+                            <td><Badge variant="secondary">{it.status}</Badge></td>
+                            <td style={{ color: it.defects_count > 0 ? 'var(--status-failed)' : 'var(--status-passed)' }}>
+                              {it.defects_count}
+                            </td>
+                            <td style={{ color: 'var(--status-passed)' }}>{it.resolved_defects}</td>
+                            <td style={{ color: 'var(--text-muted)' }}>{formatDate(it.timestamp)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading convergence risk evaluation...
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Deployment Readiness Certificate Modal */}
+      {showReadinessModal && (
+        <Modal
+          isOpen={showReadinessModal}
+          onClose={() => setShowReadinessModal(false)}
+          title={`Deployment Readiness Certificate: ${readinessReport?.report_id || selectedRun?.id}`}
+          size="lg"
+          footer={
+            <Button variant="secondary" size="sm" onClick={() => setShowReadinessModal(false)}>
+              Close
+            </Button>
+          }
+        >
+          {readinessReport ? (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Release Status</span>
+                  <div>
+                    <Badge
+                      variant={
+                        readinessReport.readiness_status === 'READY'
+                          ? 'success'
+                          : readinessReport.readiness_status === 'NEEDS_REVIEW'
+                          ? 'warning'
+                          : 'danger'
+                      }
+                      dot
+                    >
+                      {readinessReport.readiness_status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target Module</span>
+                  <div className="text-mono" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {readinessReport.module_name}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Sign-Off Authority</span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {readinessReport.sign_off_authority}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Certified At</span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {formatDate(readinessReport.issued_at)}
+                  </div>
+                </div>
+              </div>
+
+              {readinessReport.blocking_reasons && readinessReport.blocking_reasons.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <Alert type="danger" title="Deployment Safety Gate Violations">
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.75rem' }}>
+                      {readinessReport.blocking_reasons.map((reason, idx) => (
+                        <li key={idx} style={{ marginBottom: '0.2rem' }}>{reason}</li>
+                      ))}
+                    </ul>
+                  </Alert>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+                  Mandatory Safety Gating Checks
+                </span>
+                <div className="table-responsive">
+                  <table className="data-table" style={{ fontSize: '0.72rem' }}>
+                    <thead>
+                      <tr>
+                        <th>Gating Condition</th>
+                        <th>Status</th>
+                        <th>Required</th>
+                        <th>Evaluation Rationale</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {readinessReport.gating_checks.map((gate, idx) => (
+                        <tr key={idx}>
+                          <td className="text-mono" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {gate.gate_name}
+                          </td>
+                          <td>
+                            <Badge variant={gate.status === 'PASSED' ? 'success' : 'danger'}>
+                              {gate.status}
+                            </Badge>
+                          </td>
+                          <td>
+                            <span style={{ color: gate.required ? 'var(--status-failed)' : 'var(--text-muted)' }}>
+                              {gate.required ? 'MANDATORY' : 'OPTIONAL'}
+                            </span>
+                          </td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{gate.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.7rem' }}>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                  Cryptographic Provenance Hash
+                </span>
+                <span className="text-mono" style={{ color: 'var(--primary-300)', wordBreak: 'break-all' }}>
+                  {readinessReport.provenance_hash}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading deployment readiness assessment...
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

@@ -475,7 +475,11 @@ class TechnicalFeedbackService:
         iteration.last_attempt_at = now
         iteration.attempt_timestamps = (iteration.attempt_timestamps or []) + [now]
         iteration.dispatched_at = now
+        iteration.correlation_id = correlation_id
         iteration.updated_at = now
+
+        payload.feedback_iteration_id = iteration.iteration_id
+        payload.correlation_id = correlation_id
 
         c3_client = client or Component3Client()
 
