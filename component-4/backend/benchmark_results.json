@@ -1,0 +1,314 @@
+{
+  "evaluation_mode": "real_docker",
+  "timestamp": "2026-10-16T05:54:41.859165+00:00",
+  "total_scenarios": 18,
+  "overall_precision": 1.0,
+  "overall_recall": 0.867,
+  "overall_f1": 0.929,
+  "category_metrics": {
+    "functional_bug": {
+      "category": "functional_bug",
+      "true_positives": 5,
+      "false_positives": 0,
+      "false_negatives": 1,
+      "precision": 1.0,
+      "recall": 0.833,
+      "f1_score": 0.909,
+      "target_recall": 0.85,
+      "target_met": false
+    },
+    "security_vulnerability": {
+      "category": "security_vulnerability",
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 1,
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1_score": 0.857,
+      "target_recall": 0.9,
+      "target_met": false
+    },
+    "performance_bottleneck": {
+      "category": "performance_bottleneck",
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "target_recall": 0.85,
+      "target_met": true
+    },
+    "regression": {
+      "category": "regression",
+      "true_positives": 2,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "target_recall": 0.85,
+      "target_met": true
+    }
+  },
+  "baselines": {
+    "conventional_ci_f1": 0.8,
+    "conventional_ci_recall": 0.667,
+    "conventional_ci_precision": 1.0,
+    "static_analysis_recall": 0.267,
+    "static_analysis_precision": 1.0
+  },
+  "reproducibility": {
+    "docker_sandbox_isolated": true,
+    "nfr_latency_threshold_ms": 200.0,
+    "specialized_agents_active": [
+      "UnitTestAgent",
+      "IntegrationTestAgent",
+      "PerformanceTestAgent"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario_id": "TX01-01",
+      "name": "Clean Calculator Operations",
+      "group": "clean_control",
+      "has_defect": false,
+      "expected_category": "unknown",
+      "detected_categories": [],
+      "matched_expected": true,
+      "duration_ms": 1442.31,
+      "test_count": 2,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX01-02",
+      "name": "Clean String Formatter Utility",
+      "group": "clean_control",
+      "has_defect": false,
+      "expected_category": "unknown",
+      "detected_categories": [],
+      "matched_expected": true,
+      "duration_ms": 1437.56,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX01-03",
+      "name": "Clean Input Range Validator",
+      "group": "clean_control",
+      "has_defect": false,
+      "expected_category": "unknown",
+      "detected_categories": [],
+      "matched_expected": true,
+      "duration_ms": 1628.99,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX02-01",
+      "name": "Off-by-One Pagination Slice Boundary",
+      "group": "functional_bug",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [
+        "functional_bug"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1625.89,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX02-02",
+      "name": "Tax Calculation Missing Tax Rate Branch",
+      "group": "functional_bug",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [
+        "functional_bug"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1688.97,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX02-03",
+      "name": "Inverted Boolean In-Stock Filter",
+      "group": "functional_bug",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [
+        "functional_bug"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1631.56,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX02-04",
+      "name": "Discount Tier Strict Inequality Boundary",
+      "group": "functional_bug",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [
+        "functional_bug"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1538.02,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX03-01",
+      "name": "OS Command Injection via os.system (CWE-78)",
+      "group": "security_vulnerability",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "detected_categories": [],
+      "matched_expected": false,
+      "duration_ms": 1575.52,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX03-02",
+      "name": "Hardcoded Secret Credential (CWE-798)",
+      "group": "security_vulnerability",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "detected_categories": [
+        "security_vulnerability"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1455.93,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX03-03",
+      "name": "Path Traversal File Reader (CWE-22)",
+      "group": "security_vulnerability",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "detected_categories": [
+        "security_vulnerability"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1524.21,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX03-04",
+      "name": "Dynamic Execution via Unsafe Eval (CWE-95)",
+      "group": "security_vulnerability",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "detected_categories": [
+        "security_vulnerability"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1614.7,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX04-01",
+      "name": "Quadratic String Concatenation In Loop",
+      "group": "performance_bottleneck",
+      "has_defect": true,
+      "expected_category": "performance_bottleneck",
+      "detected_categories": [
+        "performance_bottleneck"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1937.61,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX04-02",
+      "name": "Simulated N+1 Query Bottleneck",
+      "group": "performance_bottleneck",
+      "has_defect": true,
+      "expected_category": "performance_bottleneck",
+      "detected_categories": [
+        "performance_bottleneck"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1786.8,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX04-03",
+      "name": "Unmemoized Exponential Fibonacci",
+      "group": "performance_bottleneck",
+      "has_defect": true,
+      "expected_category": "performance_bottleneck",
+      "detected_categories": [
+        "performance_bottleneck"
+      ],
+      "matched_expected": true,
+      "duration_ms": 4737.19,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX05-01",
+      "name": "Re-introduced Discount Calculation Bug",
+      "group": "regression",
+      "has_defect": true,
+      "expected_category": "regression",
+      "detected_categories": [
+        "regression"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1488.24,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX05-02",
+      "name": "Re-introduced NoneType Omission Regression",
+      "group": "regression",
+      "has_defect": true,
+      "expected_category": "regression",
+      "detected_categories": [
+        "regression"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1482.36,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX06-01",
+      "name": "Contradictory Requirements Non-Convergent By Design",
+      "group": "non_convergent_by_design",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [
+        "functional_bug"
+      ],
+      "matched_expected": true,
+      "duration_ms": 1305.32,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "TX07-01",
+      "name": "Assertion Weakened to Trivially Satisfied (Semantic Drift)",
+      "group": "semantic_drift",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "detected_categories": [],
+      "matched_expected": false,
+      "duration_ms": 1415.27,
+      "test_count": 1,
+      "execution_mode": "real_docker"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ from app.schemas.feedback import (
     FeedbackIteration,
     TechnicalFeedbackPayload,
     TechnicalFeedbackPreviewResponse,
+    Component3Acknowledgment,
 )
 from app.schemas.submission import (
     CodeSubmissionCreate,
@@ -31,10 +32,13 @@ from app.schemas.verification import (
 from app.schemas.xai import (
     CorrectionRecommendation,
     EvidenceItem,
+    InferenceProvenance,
     XaiExplanationResponse,
 )
 
 from app.schemas.repair import (
+    Component3RepairDeliveryRequest,
+    Component3RepairDeliveryResponse,
     DefectResolutionComparison,
     DefectResolutionDetail,
     OverallResolutionVerdict,
@@ -52,6 +56,21 @@ from app.schemas.test_suite import (
     TrustedTestSuite,
     TrustedTestSuiteAttachRequest,
     TrustedTestSuiteResponse,
+)
+from app.schemas.research_reports import (
+    DeploymentReadinessReport,
+    DriftDetail,
+    IntegrationTestReport,
+    IterationCycleSummary,
+    ModuleConvergenceRiskReport,
+    MultiAgentCoordinationPlan,
+    PerformanceMetrics,
+    PerformanceTestReport,
+    ReadinessGatingCheck,
+    SemanticDriftReport,
+    TestSuiteDriftAnalysisRequest,
+    TraceabilityScopedXaiPayload,
+    UnitTestReport,
 )
 
 __all__ = [
@@ -79,6 +98,7 @@ __all__ = [
     "VerificationRunListResponse",
     "EvidenceItem",
     "CorrectionRecommendation",
+    "InferenceProvenance",
     "XaiExplanationResponse",
     "RepairSource",
     "RepairResponseStatus",
@@ -90,9 +110,24 @@ __all__ = [
     "RepairResponseIngestRequest",
     "RepairAttempt",
     "RepairAttemptResponse",
-    "RepairAttemptListResponse",
+    "Component3Acknowledgment",
+    "Component3RepairDeliveryRequest",
+    "Component3RepairDeliveryResponse",
     "TrustedTestSuite",
     "TrustedTestSuiteResponse",
     "TrustedTestSuiteAttachRequest",
     "TestSuiteProvenance",
+    "UnitTestReport",
+    "IntegrationTestReport",
+    "PerformanceMetrics",
+    "PerformanceTestReport",
+    "MultiAgentCoordinationPlan",
+    "DriftDetail",
+    "SemanticDriftReport",
+    "IterationCycleSummary",
+    "ModuleConvergenceRiskReport",
+    "ReadinessGatingCheck",
+    "DeploymentReadinessReport",
+    "TraceabilityScopedXaiPayload",
 ]
+

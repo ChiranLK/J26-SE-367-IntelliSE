@@ -111,6 +111,14 @@ class RepairService:
                 )
             target_iteration = approved_iterations[-1]
 
+        # Validate correlation ID match if both iteration and request specify it
+        if request.correlation_id and target_iteration.correlation_id:
+            if request.correlation_id.strip() != target_iteration.correlation_id.strip():
+                raise InvalidInputException(
+                    f"Correlation identifier mismatch: request correlation_id '{request.correlation_id}' "
+                    f"does not match approved feedback iteration correlation_id '{target_iteration.correlation_id}'."
+                )
+
         # 3. Fetch original submission
         orig_submission = await self.submission_repo.get_by_id(orig_run.submission_id)
         if not orig_submission:
@@ -156,16 +164,24 @@ class RepairService:
         except Exception as parse_err:
             raise FileValidationException(f"Failed to parse source code statically: {parse_err}")
 
-        # 5. Check idempotency for existing repair attempts
+        # 5. Check idempotency for existing repair attempts (by content or external_repair_job_id)
         existing_attempts = await self.repair_repo.get_by_original_run_id(orig_run.id)
         for att in existing_attempts:
-            if (
+            same_code = (
                 att.feedback_iteration_id == target_iteration.iteration_id
                 and att.corrected_code
                 and att.corrected_code.strip() == cleaned_code
-            ):
+            )
+            same_job_id = bool(
+                request.external_repair_job_id
+                and att.external_repair_job_id
+                and att.external_repair_job_id.strip() == request.external_repair_job_id.strip()
+            )
+            if same_code or same_job_id:
                 logger.info(
-                    "Idempotent repair ingestion detected: returning existing repair attempt %s",
+                    "Idempotent repair ingestion detected (same_code=%s, same_job_id=%s): returning existing repair attempt %s",
+                    same_code,
+                    same_job_id,
                     att.id,
                 )
                 return att

@@ -93,6 +93,29 @@ class TechnicalFeedbackPayload(BaseModel):
         default="1.0",
         description="Payload schema version for downstream contract stability",
     )
+    feedback_iteration_id: Optional[str] = Field(
+        default=None,
+        description="Associated feedback iteration identifier for end-to-end cycle tracking",
+    )
+    correlation_id: Optional[str] = Field(
+        default=None,
+        description="End-to-end tracing correlation identifier (X-Correlation-ID)",
+    )
+
+
+class Component3Acknowledgment(BaseModel):
+    """
+    Proposed contract response from Component 3 upon acknowledging receipt of technical feedback.
+    """
+
+    job_id: str = Field(description="Unique repair job identifier assigned by Component 3")
+    status: str = Field(default="RECEIVED", description="Initial processing state (e.g. RECEIVED, QUEUED, IN_PROGRESS)")
+    correlation_id: Optional[str] = Field(default=None, description="Echoed correlation identifier for request tracing")
+    message: Optional[str] = Field(default=None, description="Optional informational message from Component 3")
+    received_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp when Component 3 received the feedback",
+    )
 
 
 class TechnicalFeedbackPreviewResponse(BaseModel):

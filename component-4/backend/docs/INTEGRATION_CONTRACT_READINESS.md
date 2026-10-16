@@ -14,11 +14,16 @@ The technical feedback package is formatted as `TechnicalFeedbackPayload` (Schem
 
 ### Payload Schema
 
+> [!NOTE]
+> For the comprehensive bilateral contract specification, inbound repair delivery contract, and mock testing guide, refer to [COMPONENT_3_INTEGRATION_CONTRACT.md](file:///d:/GitHub%20Projects/Research%20Project/J26-SE-367-IntelliSE/component-4/backend/docs/COMPONENT_3_INTEGRATION_CONTRACT.md).
+
 | Field Name | Type | Presence | Description |
 | :--- | :--- | :--- | :--- |
 | `feedback_id` | `string` | Required | Unique feedback package identifier (`fb-...`) |
 | `verification_run_id` | `string` | Required | Associated verification run identifier (`run-...`) |
 | `submission_id` | `string` | Required | Associated code submission identifier (`sub-...`) |
+| `feedback_iteration_id` | `string` | Optional | Specific feedback cycle identifier (`iter-...`) |
+| `correlation_id` | `string` | Optional | Tracing correlation identifier (`corr-...`) |
 | `verification_status` | `string` | Required | Run outcome status (`FAILED` or `ERROR`) |
 | `affected_files` | `list[string]` | Required | Confirmed source files involved in failure (from metadata/defects) |
 | `failed_tests` | `list[string]` | Required | Specific test case names that failed or encountered errors |

@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -78,6 +79,7 @@ class Component3Client:
         connect_timeout_seconds: Optional[float] = None,
         enabled: Optional[bool] = None,
         api_key: Optional[str] = None,
+        max_retries: Optional[int] = None,
         http_client: Optional[httpx.AsyncClient] = None,
         allow_placeholder_url: bool = False,
     ):
@@ -87,6 +89,7 @@ class Component3Client:
         self.connect_timeout_seconds = connect_timeout_seconds or settings.COMPONENT_3_CONNECT_TIMEOUT_SECONDS
         self.enabled = enabled if enabled is not None else settings.COMPONENT_3_ENABLED
         self.api_key = api_key or settings.COMPONENT_3_API_KEY
+        self.max_retries = max_retries if max_retries is not None else settings.COMPONENT_3_MAX_RETRIES
         self._external_client = http_client
         self.allow_placeholder_url = allow_placeholder_url
 
@@ -202,6 +205,8 @@ class Component3Client:
             "feedback_id": raw_dict.get("feedback_id"),
             "verification_run_id": raw_dict.get("verification_run_id"),
             "submission_id": raw_dict.get("submission_id"),
+            "feedback_iteration_id": raw_dict.get("feedback_iteration_id"),
+            "correlation_id": raw_dict.get("correlation_id"),
             "verification_status": raw_dict.get("verification_status"),
             "affected_files": raw_dict.get("affected_files", []),
             "failed_tests": raw_dict.get("failed_tests", []),
@@ -301,125 +306,232 @@ class Component3Client:
             connect=self.connect_timeout_seconds,
         )
 
-        try:
-            if self._external_client:
-                response = await self._external_client.post(
-                    url, json=body, headers=headers, timeout=timeout
-                )
-            else:
-                async with httpx.AsyncClient(verify=True) as client:
-                    response = await client.post(
+        total_attempts = 1 + max(0, self.max_retries)
+        last_error_category = None
+        last_message = ""
+        last_status_code = None
+
+        for attempt in range(1, total_attempts + 1):
+            try:
+                if self._external_client:
+                    response = await self._external_client.post(
                         url, json=body, headers=headers, timeout=timeout
                     )
+                else:
+                    async with httpx.AsyncClient(verify=True) as client:
+                        response = await client.post(
+                            url, json=body, headers=headers, timeout=timeout
+                        )
 
-            # Check HTTP outcome
-            status_code = response.status_code
-            if status_code in (200, 201, 202):
-                job_id = None
-                try:
-                    res_json = response.json()
-                    job_id = (
-                        res_json.get("job_id")
-                        or res_json.get("correction_job_id")
-                        or res_json.get("task_id")
-                    )
-                except Exception:
-                    res_json = None
+                # Check HTTP outcome
+                status_code = response.status_code
+                if status_code in (200, 201, 202):
+                    job_id = None
+                    try:
+                        res_json = response.json()
+                        job_id = (
+                            res_json.get("job_id")
+                            or res_json.get("correction_job_id")
+                            or res_json.get("task_id")
+                        )
+                    except Exception:
+                        res_json = None
 
-                # Require a verified non-empty acknowledgment identifier
-                if not job_id or not isinstance(job_id, str) or not job_id.strip():
-                    logger.warning(
-                        "Component 3 responded with status %d but missing valid acknowledgment job_id. Corr: %s",
+                    # Require a verified non-empty acknowledgment identifier
+                    if not job_id or not isinstance(job_id, str) or not job_id.strip():
+                        logger.warning(
+                            "Component 3 responded with status %d but missing valid acknowledgment job_id. Corr: %s",
+                            status_code,
+                            corr_id,
+                        )
+                        return Component3DispatchResult(
+                            success=False,
+                            acknowledged=False,
+                            job_id=None,
+                            status_code=status_code,
+                            message=(
+                                f"Component 3 responded with HTTP {status_code} but returned an invalid or missing "
+                                "acknowledgment identifier (expected 'job_id' or 'task_id')."
+                            ),
+                            error_category="INVALID_ACKNOWLEDGMENT",
+                            correlation_id=corr_id,
+                            dispatch_attempt_id=dispatch_id,
+                        )
+
+                    logger.info(
+                        "Component 3 successfully acknowledged feedback %s (status %d, job_id=%s) on attempt %d. Corr: %s",
+                        payload.feedback_id,
                         status_code,
+                        job_id,
+                        attempt,
                         corr_id,
                     )
+                    return Component3DispatchResult(
+                        success=True,
+                        acknowledged=True,
+                        job_id=job_id.strip(),
+                        status_code=status_code,
+                        message=f"Component 3 confirmed receipt of feedback (HTTP {status_code}).",
+                        error_category=None,
+                        correlation_id=corr_id,
+                        dispatch_attempt_id=dispatch_id,
+                    )
+                else:
+                    resp_text = response.text[:300]
+                    last_status_code = status_code
+                    logger.warning(
+                        "Component 3 returned non-success HTTP status %d on attempt %d: %s. Corr: %s",
+                        status_code,
+                        attempt,
+                        resp_text,
+                        corr_id,
+                    )
+
+                    # 1. Authentication failure: NOT retryable
+                    if status_code in (401, 403):
+                        return Component3DispatchResult(
+                            success=False,
+                            acknowledged=False,
+                            job_id=None,
+                            status_code=status_code,
+                            message=f"Component 3 rejected request: authentication failed (HTTP {status_code}).",
+                            error_category="AUTHENTICATION_FAILURE",
+                            correlation_id=corr_id,
+                            dispatch_attempt_id=dispatch_id,
+                        )
+
+                    # 2. Validation error: NOT retryable
+                    if status_code in (400, 422):
+                        return Component3DispatchResult(
+                            success=False,
+                            acknowledged=False,
+                            job_id=None,
+                            status_code=status_code,
+                            message=f"Component 3 rejected feedback payload: validation error (HTTP {status_code}): {resp_text}",
+                            error_category="VALIDATION_ERROR",
+                            correlation_id=corr_id,
+                            dispatch_attempt_id=dispatch_id,
+                        )
+
+                    # 3. Idempotency conflict / duplicate delivery
+                    if status_code == 409:
+                        return Component3DispatchResult(
+                            success=False,
+                            acknowledged=False,
+                            job_id=None,
+                            status_code=status_code,
+                            message=f"Component 3 reported an idempotency conflict or duplicate submission (HTTP {status_code}): {resp_text}",
+                            error_category="IDEMPOTENCY_CONFLICT",
+                            correlation_id=corr_id,
+                            dispatch_attempt_id=dispatch_id,
+                        )
+
+                    # 4. Transient 502/503/504 server failures: retryable if attempts remain
+                    if status_code in (502, 503, 504) and attempt < total_attempts:
+                        logger.warning(
+                            "Transient server error %d from Component 3 on attempt %d/%d. Retrying...",
+                            status_code,
+                            attempt,
+                            total_attempts,
+                        )
+                        last_error_category = "SERVER_ERROR"
+                        last_message = f"Component 3 returned transient HTTP {status_code}: {resp_text}"
+                        await asyncio.sleep(0.05 * (2 ** (attempt - 1)))
+                        continue
+
+                    # 5. Non-retryable 500 or retry exhausted
                     return Component3DispatchResult(
                         success=False,
                         acknowledged=False,
                         job_id=None,
                         status_code=status_code,
-                        message=(
-                            f"Component 3 responded with HTTP {status_code} but returned an invalid or missing "
-                            "acknowledgment identifier (expected 'job_id' or 'task_id')."
-                        ),
-                        error_category="INVALID_ACKNOWLEDGMENT",
+                        message=f"Component 3 rejected feedback with HTTP {status_code}: {resp_text}",
+                        error_category="COMPONENT_3_ERROR_RESPONSE",
                         correlation_id=corr_id,
                         dispatch_attempt_id=dispatch_id,
                     )
 
-                logger.info(
-                    "Component 3 successfully acknowledged feedback %s (status %d, job_id=%s). Corr: %s",
-                    payload.feedback_id,
-                    status_code,
-                    job_id,
-                    corr_id,
-                )
-                return Component3DispatchResult(
-                    success=True,
-                    acknowledged=True,
-                    job_id=job_id.strip(),
-                    status_code=status_code,
-                    message=f"Component 3 confirmed receipt of feedback (HTTP {status_code}).",
-                    error_category=None,
-                    correlation_id=corr_id,
-                    dispatch_attempt_id=dispatch_id,
-                )
-            else:
-                resp_text = response.text[:300]
-                logger.warning(
-                    "Component 3 returned non-success HTTP status %d: %s. Corr: %s",
-                    status_code,
-                    resp_text,
-                    corr_id,
-                )
+            except httpx.ConnectTimeout as exc:
+                if attempt < total_attempts:
+                    logger.warning(
+                        "Connection timeout to Component 3 on attempt %d/%d: %s. Retrying...",
+                        attempt,
+                        total_attempts,
+                        exc,
+                    )
+                    await asyncio.sleep(0.05 * (2 ** (attempt - 1)))
+                    continue
                 return Component3DispatchResult(
                     success=False,
                     acknowledged=False,
                     job_id=None,
-                    status_code=status_code,
-                    message=f"Component 3 rejected feedback with HTTP {status_code}: {resp_text}",
-                    error_category="COMPONENT_3_ERROR_RESPONSE",
+                    status_code=None,
+                    message=f"Connection to external repair service timed out after {attempt} attempts: {exc}",
+                    error_category="TIMEOUT",
                     correlation_id=corr_id,
                     dispatch_attempt_id=dispatch_id,
                 )
 
-        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.TimeoutException) as exc:
-            logger.error("Component 3 timeout on dispatch: %s. Corr: %s", exc, corr_id)
-            return Component3DispatchResult(
-                success=False,
-                acknowledged=False,
-                job_id=None,
-                status_code=None,
-                message=(
-                    f"Dispatch request timed out after transmission ({type(exc).__name__}). "
-                    "Remote delivery outcome is unknown. Automatic retry suppressed."
-                ),
-                error_category="TIMEOUT",
-                correlation_id=corr_id,
-                dispatch_attempt_id=dispatch_id,
-            )
-        except httpx.ConnectError as exc:
-            logger.error("Component 3 connection refused/unreachable: %s. Corr: %s", exc, corr_id)
-            return Component3DispatchResult(
-                success=False,
-                acknowledged=False,
-                job_id=None,
-                status_code=None,
-                message=f"Cannot establish connection to external repair service: {exc}",
-                error_category="CONNECTION_ERROR",
-                correlation_id=corr_id,
-                dispatch_attempt_id=dispatch_id,
-            )
-        except Exception as exc:
-            logger.error("Unexpected error during Component 3 dispatch: %s. Corr: %s", exc, corr_id)
-            return Component3DispatchResult(
-                success=False,
-                acknowledged=False,
-                job_id=None,
-                status_code=None,
-                message=f"Unexpected error communicating with external repair service: {exc}",
-                error_category="CLIENT_ERROR",
-                correlation_id=corr_id,
-                dispatch_attempt_id=dispatch_id,
-            )
+            except (httpx.ReadTimeout, httpx.TimeoutException) as exc:
+                # Ambiguous timeout after transmission: DO NOT RETRY to prevent duplicate work on Component 3
+                logger.error("Component 3 timeout after transmission on attempt %d: %s. Corr: %s", attempt, exc, corr_id)
+                return Component3DispatchResult(
+                    success=False,
+                    acknowledged=False,
+                    job_id=None,
+                    status_code=None,
+                    message=(
+                        f"Dispatch request timed out after transmission ({type(exc).__name__}). "
+                        "Remote delivery outcome is unknown. Automatic retry suppressed to prevent duplicate work."
+                    ),
+                    error_category="TIMEOUT",
+                    correlation_id=corr_id,
+                    dispatch_attempt_id=dispatch_id,
+                )
+
+            except httpx.ConnectError as exc:
+                if attempt < total_attempts:
+                    logger.warning(
+                        "Component 3 connection refused on attempt %d/%d: %s. Retrying...",
+                        attempt,
+                        total_attempts,
+                        exc,
+                    )
+                    await asyncio.sleep(0.05 * (2 ** (attempt - 1)))
+                    continue
+                return Component3DispatchResult(
+                    success=False,
+                    acknowledged=False,
+                    job_id=None,
+                    status_code=None,
+                    message=f"Cannot establish connection to external repair service after {attempt} attempts: {exc}",
+                    error_category="CONNECTION_ERROR",
+                    correlation_id=corr_id,
+                    dispatch_attempt_id=dispatch_id,
+                )
+
+            except Exception as exc:
+                logger.error("Unexpected error during Component 3 dispatch: %s. Corr: %s", exc, corr_id)
+                return Component3DispatchResult(
+                    success=False,
+                    acknowledged=False,
+                    job_id=None,
+                    status_code=None,
+                    message=f"Unexpected error communicating with external repair service: {exc}",
+                    error_category="CLIENT_ERROR",
+                    correlation_id=corr_id,
+                    dispatch_attempt_id=dispatch_id,
+                )
+
+        # In case all retries are exhausted
+        return Component3DispatchResult(
+            success=False,
+            acknowledged=False,
+            job_id=None,
+            status_code=last_status_code,
+            message=last_message or f"Component 3 dispatch exhausted all {total_attempts} attempts without success.",
+            error_category=last_error_category or "SERVER_ERROR",
+            correlation_id=corr_id,
+            dispatch_attempt_id=dispatch_id,
+        )
 

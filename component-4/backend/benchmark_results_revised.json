@@ -1,0 +1,872 @@
+{
+  "evaluation_version": "v2_methodology_corrected",
+  "evaluation_mode": "real_docker",
+  "timestamp": "2026-10-16T07:58:29.025760+00:00",
+  "total_scenarios": 24,
+  "binary_detection_metrics": {
+    "true_positives": 17,
+    "false_positives": 0,
+    "true_negatives": 7,
+    "false_negatives": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0
+  },
+  "classification_metrics": {
+    "overall_precision": 1.0,
+    "overall_recall": 1.0,
+    "overall_f1": 1.0,
+    "categories": {
+      "functional_bug": {
+        "category": "functional_bug",
+        "true_positives": 8,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "target_recall": 0.85,
+        "target_met": true
+      },
+      "security_vulnerability": {
+        "category": "security_vulnerability",
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "target_recall": 0.9,
+        "target_met": true
+      },
+      "performance_bottleneck": {
+        "category": "performance_bottleneck",
+        "true_positives": 3,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "target_recall": 0.85,
+        "target_met": true
+      },
+      "regression": {
+        "category": "regression",
+        "true_positives": 2,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "target_recall": 0.85,
+        "target_met": true
+      }
+    }
+  },
+  "confusion_matrix": {
+    "clean_control": {
+      "clean_control": 7,
+      "functional_bug": 0,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "functional_bug": {
+      "clean_control": 0,
+      "functional_bug": 8,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "security_vulnerability": {
+      "clean_control": 0,
+      "functional_bug": 0,
+      "security_vulnerability": 4,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "performance_bottleneck": {
+      "clean_control": 0,
+      "functional_bug": 0,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 3,
+      "regression": 0
+    },
+    "regression": {
+      "clean_control": 0,
+      "functional_bug": 0,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 2
+    }
+  },
+  "localization_metrics": {
+    "scenarios_evaluated": 13,
+    "exact_line_matches": 0,
+    "exact_line_accuracy": 0.0,
+    "near_line_matches": 12,
+    "near_line_accuracy": 0.923
+  },
+  "semantic_drift_metrics": {
+    "scenarios_evaluated": 4,
+    "true_positives": 2,
+    "false_positives": 0,
+    "true_negatives": 2,
+    "false_negatives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0
+  },
+  "convergence_repair_metrics": {
+    "scenarios_evaluated": 2,
+    "correct_escalations": 2,
+    "correct_escalation_rate": 1.0,
+    "evaluation_mode": "LOCAL_CONTROLLED_REPAIR_HARNESS",
+    "component_3_live_integration": false
+  },
+  "baselines": {
+    "conventional_ci_f1": 0.786,
+    "conventional_ci_recall": 0.647,
+    "conventional_ci_precision": 1.0,
+    "static_analysis_recall": 0.176,
+    "static_analysis_precision": 1.0
+  },
+  "reproducibility": {
+    "docker_sandbox_isolated": true,
+    "nfr_latency_threshold_ms": 200.0,
+    "specialized_agents_active": [
+      "UnitTestAgent",
+      "IntegrationTestAgent",
+      "PerformanceTestAgent"
+    ],
+    "zero_ground_truth_leakage_verified": true
+  },
+  "explicit_limitations": [
+    "Component 3 repair is evaluated through controlled local candidate patches (COMPONENT_3_ENABLED=false).",
+    "Static analysis baseline is limited to AST patterns and cannot detect dynamic runtime logic bugs.",
+    "Performance scenarios require container host CPU availability to measure latency accurately."
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "REV-CLEAN-01",
+      "name": "Safe Mathematical Utilities",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 2473.32,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CLEAN-02",
+      "name": "Safe Parameterized Query (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1425.44,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CLEAN-03",
+      "name": "Safe Subprocess Runner (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1569.53,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CLEAN-04",
+      "name": "Safe Path Confinement Resolver (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1362.35,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CLEAN-05",
+      "name": "Safe Secret Configuration Loader (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1426.75,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-FUNC-01",
+      "name": "Pagination Slice Offset Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1404.22,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-FUNC-02",
+      "name": "Tax Rate Calculation Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1511.38,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-FUNC-03",
+      "name": "Inventory In-Stock Filter Inversion",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1477.26,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-FUNC-04",
+      "name": "Discount Boundary Strict Inequality",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1551.6,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-SEC-01",
+      "name": "OS Command Injection via os.system (CWE-78)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-78",
+        "expected_line": 6,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-78",
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1475.99,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-SEC-02",
+      "name": "Hardcoded Secret Credential (CWE-798)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-798",
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-798",
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1327.98,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-SEC-03",
+      "name": "Path Traversal File Access (CWE-22)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-22",
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-22",
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1641.61,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-SEC-04",
+      "name": "Dynamic Code Execution via Unsafe Eval (CWE-95)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-95",
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-95",
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1518.92,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-PERF-01",
+      "name": "Quadratic O(N^2) Pair Complement Search (No Artificial Sleep)",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "predicted_cwe": null,
+        "localized_line": 6,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1988.21,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-PERF-02",
+      "name": "Unmemoized Exponential Fibonacci O(2^N) (No Artificial Sleep)",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "predicted_cwe": null,
+        "localized_line": 6,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1837.76,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-PERF-03",
+      "name": "Inefficient Nested Collection Lookup (No Artificial Sleep)",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "predicted_cwe": null,
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 2014.39,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-REG-01",
+      "name": "Re-introduced Discount Calculation Regression",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "regression",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1524.75,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-REG-02",
+      "name": "Re-introduced Null-Profile Key Regression",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "regression",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1675.24,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-DRIFT-POS-01",
+      "name": "Assertion Weakened to Trivial True (Drift Positive)",
+      "group": "semantic_drift",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": true,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": true,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1517.6,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-DRIFT-POS-02",
+      "name": "Test Case Silently Deleted (Drift Positive)",
+      "group": "semantic_drift",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": true,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": true,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1465.97,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-DRIFT-NEG-01",
+      "name": "Legitimate Assertion Refactoring (Drift Negative / Clean Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": false,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1519.24,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-DRIFT-NEG-02",
+      "name": "Test Suite Extension with Additional Assertions (Drift Negative / Clean Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": false,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1463.04,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CONV-01",
+      "name": "Contradictory Requirements (Non-Convergent By Design)",
+      "group": "non_convergent_by_design",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": true
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 3,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": true,
+        "stopping_condition": "STOP_ITERATION_CAP_REACHED",
+        "iterations": 3,
+        "converged": false,
+        "escalation_required": true
+      },
+      "duration_ms": 1537.47,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "REV-CONV-02",
+      "name": "Convergent Defect Resolved on Iteration 2",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": true,
+        "stopping_condition": "CONVERGED_SUCCESSFULLY",
+        "iterations": 2,
+        "converged": true,
+        "escalation_required": false
+      },
+      "duration_ms": 1476.62,
+      "execution_mode": "real_docker"
+    }
+  ]
+}

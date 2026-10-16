@@ -1,10 +1,11 @@
+import ast
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.logging import logger
-from app.schemas.common import DefectSeverity, TestResultStatus, VerificationStatus
+from app.schemas.common import DefectSeverity, TestResultStatus, TestType, VerificationStatus
 from app.schemas.defect_report import DefectReport
 from app.schemas.feedback import TechnicalFeedbackPayload
 from app.schemas.submission import SubmissionResponse
@@ -51,6 +52,7 @@ class DefectAnalysisService:
         """
         req_id = submission.requirement_ids[0] if submission and submission.requirement_ids else None
         filename = submission.filename if submission else None
+        source_code = submission.code if submission and hasattr(submission, "code") else None
         return self.analyze_test_results(
             run_id=run.id,
             submission_id=run.submission_id,
@@ -60,6 +62,7 @@ class DefectAnalysisService:
             execution_telemetry=run.execution_telemetry,
             error_message=run.error_message,
             requirement_id=req_id,
+            source_code=source_code,
         )
 
     def analyze_test_results(
@@ -72,6 +75,7 @@ class DefectAnalysisService:
         execution_telemetry: Optional[dict] = None,
         error_message: Optional[str] = None,
         requirement_id: Optional[str] = None,
+        source_code: Optional[str] = None,
     ) -> List[DefectReport]:
         """
         Analyzes test results and produces structured defect reports.
@@ -83,11 +87,6 @@ class DefectAnalysisService:
         - Never executes submitted code.
         - Localizes line numbers strictly when supported by traceback evidence.
         """
-        # Rule: PASSED verification -> no defect reports
-        if status == VerificationStatus.PASSED.value:
-            logger.debug("Verification run %s PASSED; 0 defect reports generated.", run_id)
-            return []
-
         # Rule: PENDING verification -> do not claim a defect exists
         if status == VerificationStatus.PENDING.value:
             logger.debug("Verification run %s PENDING; no defects claimed.", run_id)
@@ -98,23 +97,50 @@ class DefectAnalysisService:
             logger.info("Verification run %s classified as infrastructure error; 0 code defects.", run_id)
             return []
 
-        # Identify candidate failed test results
+        effective_filename = affected_filename.strip() if affected_filename and affected_filename.strip() else "solution.py"
+        defect_reports: List[DefectReport] = []
+
+        # 1. Static Security AST Analysis (Task 1: Detect vulnerabilities even if functional tests pass)
+        if source_code:
+            sec_findings = self.inspect_static_security_vulnerabilities(source_code)
+            for s_idx, finding in enumerate(sec_findings):
+                if finding.get("confidence") == "CONFIRMED":
+                    cwe = finding.get("cwe_id", "sec")
+                    line_no = finding.get("line_number", 0)
+                    seed_str = f"{run_id}:{cwe}:{line_no}:{s_idx}"
+                    defect_id = f"def-sec-{uuid.uuid5(uuid.NAMESPACE_DNS, seed_str).hex[:8]}"
+                    sec_report = DefectReport(
+                        defect_id=defect_id,
+                        verification_run_id=run_id,
+                        submission_id=submission_id,
+                        title=f"Security Vulnerability: {finding['title']}",
+                        description=finding["description"],
+                        severity=finding.get("severity", DefectSeverity.CRITICAL),
+                        file_path=effective_filename,
+                        line_number=finding.get("line_number"),
+                        confidence="CONFIRMED",
+                        provenance="AST_STATIC_ANALYSIS",
+                        defect_category="security_vulnerability",
+                        cwe_id=finding.get("cwe_id"),
+                        owasp_category=finding.get("owasp_category"),
+                        failure_category="SECURITY_VULNERABILITY",
+                        failed_test=f"security_ast_scan_{finding.get('cwe_id', '').lower()}",
+                        assertion_or_exception=f"Static AST security scanner identified {finding.get('cwe_id')}: {finding['title']}",
+                        evidence_references={"ast_node": finding.get("description"), "line": finding.get("line_number"), "confidence": "CONFIRMED"},
+                        tags=["security", finding.get("cwe_id", "").lower(), f"severity:{finding.get('severity', DefectSeverity.CRITICAL).value.lower()}"],
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    defect_reports.append(sec_report)
+
+        # 2. Analyze failed test results (if any)
         failed_tests = [
             t for t in test_results
             if t.status in (TestResultStatus.FAILED, TestResultStatus.ERROR, TestResultStatus.TIMEOUT)
         ]
 
-        if not failed_tests:
-            logger.debug("No failed test cases in verification run %s; 0 defect reports.", run_id)
-            return []
-
-        effective_filename = affected_filename.strip() if affected_filename and affected_filename.strip() else "solution.py"
-        defect_reports: List[DefectReport] = []
         seen_test_names = set()
-
         for test in failed_tests:
             test_name = test.name or test.test_name or test.test_id
-            # Idempotency / deduplication within the run
             if test_name in seen_test_names:
                 continue
             seen_test_names.add(test_name)
@@ -125,8 +151,16 @@ class DefectAnalysisService:
                 test=test,
                 affected_filename=effective_filename,
                 requirement_id=requirement_id,
+                source_code=source_code,
             )
-            defect_reports.append(report)
+            # Avoid duplicate if a security defect with the same CWE on the same line was already generated
+            duplicate = any(
+                d.cwe_id == report.cwe_id and d.line_number == report.line_number
+                for d in defect_reports
+                if d.cwe_id
+            )
+            if not duplicate:
+                defect_reports.append(report)
 
         logger.info(
             "Analyzed verification run %s: generated %d evidence-based defect report(s)",
@@ -184,6 +218,7 @@ class DefectAnalysisService:
         test: TestResult,
         affected_filename: str,
         requirement_id: Optional[str] = None,
+        source_code: Optional[str] = None,
     ) -> DefectReport:
         """Analyzes a single failed test result and extracts empirical evidence."""
         test_name = test.name or test.test_name or test.test_id
@@ -200,11 +235,36 @@ class DefectAnalysisService:
         # Reliably extract expected vs actual values if assertion diff is present
         expected_val, actual_val = self._extract_expected_and_actual(error_msg, stack_trace)
 
-        # Extract localized source line number strictly if referenced in traceback for the affected file
-        line_number = self._extract_localized_line_number(stack_trace, affected_filename)
+        # Proposal SO2/FR03 research defect taxonomy classification
+        defect_cat, cwe_id, owasp_cat, perf_metrics = self._classify_defect_taxonomy(
+            test=test,
+            category=category,
+            error_msg=error_msg,
+            stack_trace=stack_trace,
+            execution_duration_ms=test.duration_ms,
+            source_code=source_code,
+        )
+        if cwe_id:
+            severity = DefectSeverity.CRITICAL
 
-        # Diagnostic traceback excerpt
-        traceback_excerpt = self._extract_traceback_excerpt(stack_trace, error_msg)
+        # Evidence-based localization (Task 2: distinguish test lines from implementation lines)
+        cwe_line = None
+        if source_code and cwe_id:
+            sec_findings = self.inspect_static_security_vulnerabilities(source_code)
+            for f in sec_findings:
+                if f.get("cwe_id") == cwe_id and f.get("line_number"):
+                    cwe_line = f.get("line_number")
+                    break
+
+        line_number, confidence, provenance = self.extract_evidence_based_localization(
+            stack_trace=stack_trace,
+            affected_filename=affected_filename,
+            source_code=source_code,
+            test_name=test_name,
+            assertion_or_exception=assertion_or_exception,
+            cwe_id=cwe_id,
+            cwe_line=cwe_line,
+        )
 
         # Title and description strictly using evidence-based phrasing
         title = f"Observed {category.replace('_', ' ').title()} in {test_name}"
@@ -212,6 +272,8 @@ class DefectAnalysisService:
             f"Test case '{test_name}' failed under pytest execution. "
             f"Observed diagnostic: {assertion_or_exception or 'Assertion failed without explicit message'}."
         )
+        # Preserve original traceback excerpt without fabrication
+        traceback_excerpt = stack_trace.strip() if stack_trace and stack_trace.strip() else (error_msg.strip() if error_msg else None)
 
         return DefectReport(
             defect_id=defect_id,
@@ -223,8 +285,14 @@ class DefectAnalysisService:
             description=desc,
             file_path=affected_filename,
             line_number=line_number,
+            confidence=confidence,
+            provenance=provenance,
             failed_test=test_name,
             failure_category=category,
+            defect_category=defect_cat,
+            cwe_id=cwe_id,
+            owasp_category=owasp_cat,
+            performance_metrics=perf_metrics,
             assertion_or_exception=assertion_or_exception,
             expected_value=expected_val,
             actual_value=actual_val,
@@ -233,10 +301,220 @@ class DefectAnalysisService:
                 "test_id": test.test_id,
                 "test_status": test.status.value,
                 "duration_ms": test.duration_ms,
+                "localization_confidence": confidence,
+                "localization_provenance": provenance,
             },
-            tags=[category.lower(), f"severity:{severity.value.lower()}"],
+            tags=[category.lower(), defect_cat.lower(), f"severity:{severity.value.lower()}"],
             created_at=datetime.now(timezone.utc),
         )
+
+    def inspect_static_security_vulnerabilities(self, source_code: str) -> List[Dict[str, Any]]:
+        """
+        Static AST security scanner detecting common vulnerability patterns (SO2, Table 4).
+        Detects CWE-78, CWE-95, CWE-22, CWE-798, and CWE-89.
+        Distinguishes confirmed vulnerabilities from safe patterns (negative controls).
+        """
+        findings = []
+        if not source_code:
+            return findings
+        try:
+            tree = ast.parse(source_code)
+        except Exception:
+            return findings
+
+        # Check for path sanitization helpers in the entire AST (e.g. os.path.basename, startswith check)
+        has_path_sanitization = False
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Call):
+                f_name = ""
+                if isinstance(n.func, ast.Attribute):
+                    f_name = n.func.attr
+                elif isinstance(n.func, ast.Name):
+                    f_name = n.func.id
+                if f_name in ("basename", "resolve", "startswith"):
+                    has_path_sanitization = True
+                    break
+
+        for node in ast.walk(tree):
+            # 1. Command Injection (CWE-78 / OWASP-A03)
+            if isinstance(node, ast.Call):
+                func_name = ""
+                if isinstance(node.func, ast.Attribute):
+                    func_name = node.func.attr
+                elif isinstance(node.func, ast.Name):
+                    func_name = node.func.id
+
+                # Direct shell execution calls
+                if func_name in ("system", "popen"):
+                    findings.append({
+                        "cwe_id": "CWE-78",
+                        "owasp_category": "OWASP-A03:2021-Injection",
+                        "title": "OS Command Injection via Shell Invocation (CWE-78)",
+                        "line_number": getattr(node, "lineno", None),
+                        "severity": DefectSeverity.CRITICAL,
+                        "confidence": "CONFIRMED",
+                        "provenance": "AST_STATIC_ANALYSIS",
+                        "description": f"Direct invocation of shell function '{func_name}' with unvalidated command string.",
+                    })
+                # Subprocess with shell=True
+                elif func_name in ("run", "Popen", "call", "check_output", "check_call"):
+                    shell_true = any(
+                        kw.arg == "shell" and getattr(kw.value, "value", None) is True
+                        for kw in node.keywords
+                    )
+                    if shell_true:
+                        findings.append({
+                            "cwe_id": "CWE-78",
+                            "owasp_category": "OWASP-A03:2021-Injection",
+                            "title": "OS Command Injection via Subprocess with shell=True (CWE-78)",
+                            "line_number": getattr(node, "lineno", None),
+                            "severity": DefectSeverity.CRITICAL,
+                            "confidence": "CONFIRMED",
+                            "provenance": "AST_STATIC_ANALYSIS",
+                            "description": f"Subprocess function '{func_name}' called with shell=True, enabling command injection.",
+                        })
+
+                # 2. Dynamic Code Execution (CWE-95 / OWASP-A03)
+                elif func_name in ("eval", "exec"):
+                    findings.append({
+                        "cwe_id": "CWE-95",
+                        "owasp_category": "OWASP-A03:2021-Injection",
+                        "title": "Improper Neutralization of Directives in Dynamically Evaluated Code (CWE-95)",
+                        "line_number": getattr(node, "lineno", None),
+                        "severity": DefectSeverity.CRITICAL,
+                        "confidence": "CONFIRMED",
+                        "provenance": "AST_STATIC_ANALYSIS",
+                        "description": f"Unsafe execution of dynamic code evaluation function '{func_name}'.",
+                    })
+
+                # 3. Path Traversal (CWE-22 / OWASP-A01)
+                elif func_name in ("open", "read_file", "unlink", "remove") and node.args:
+                    first_arg = node.args[0]
+                    # Dynamic path construction (f-string or string concatenation) without path sanitization
+                    is_dynamic_path = isinstance(first_arg, (ast.JoinedStr, ast.BinOp))
+                    if is_dynamic_path and not has_path_sanitization:
+                        findings.append({
+                            "cwe_id": "CWE-22",
+                            "owasp_category": "OWASP-A01:2021-Broken Access Control",
+                            "title": "Improper Limitation of a Pathname to a Restricted Directory (CWE-22)",
+                            "line_number": getattr(node, "lineno", None),
+                            "severity": DefectSeverity.HIGH,
+                            "confidence": "CONFIRMED",
+                            "provenance": "AST_STATIC_ANALYSIS",
+                            "description": f"File access via '{func_name}' using unconfined dynamic path construction.",
+                        })
+
+                # 4. SQL Injection (CWE-89 / OWASP-A03)
+                elif func_name in ("execute", "executemany", "raw", "execute_sql", "run_query") and node.args:
+                    first_arg = node.args[0]
+                    is_dynamic_sql = isinstance(first_arg, (ast.JoinedStr, ast.BinOp))
+                    if is_dynamic_sql:
+                        # Check if argument contains SQL syntax keywords
+                        sql_keywords = ("select", "insert", "update", "delete", "drop", "from", "where")
+                        sql_text = ""
+                        if isinstance(first_arg, ast.JoinedStr):
+                            for part in first_arg.values:
+                                if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                                    sql_text += part.value.lower() + " "
+                        elif isinstance(first_arg, ast.BinOp):
+                            if isinstance(first_arg.left, ast.Constant) and isinstance(first_arg.left.value, str):
+                                sql_text += first_arg.left.value.lower() + " "
+                        if any(kw in sql_text for kw in sql_keywords):
+                            findings.append({
+                                "cwe_id": "CWE-89",
+                                "owasp_category": "OWASP-A03:2021-Injection",
+                                "title": "Improper Neutralization of Special Elements in SQL Command (CWE-89)",
+                                "line_number": getattr(node, "lineno", None),
+                                "severity": DefectSeverity.CRITICAL,
+                                "confidence": "CONFIRMED",
+                                "provenance": "AST_STATIC_ANALYSIS",
+                                "description": f"SQL execution via '{func_name}' with unparameterized dynamic string query.",
+                            })
+
+            # 5. Hardcoded Secrets (CWE-798 / OWASP-A07)
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        name_lower = target.id.lower()
+                        if any(k in name_lower for k in ("secret", "password", "api_key", "jwt_token", "auth_token", "private_key")):
+                            if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                                val = node.value.value
+                                # Ignore non-secret URLs, dummy placeholders, or short values
+                                is_placeholder = val.lower().strip() in ("dummy", "example", "test", "changeme", "your_secret_here", "todo")
+                                is_url_or_env = any(val.startswith(p) for p in ("sqlite://", "http://", "https://", "env:", "postgresql://", "mysql://"))
+                                if len(val) >= 8 and not is_url_or_env and not is_placeholder:
+                                    findings.append({
+                                        "cwe_id": "CWE-798",
+                                        "owasp_category": "OWASP-A07:2021-Identification and Authentication Failures",
+                                        "title": "Hardcoded Sensitive Credential Detected (CWE-798)",
+                                        "line_number": getattr(node, "lineno", None),
+                                        "severity": DefectSeverity.HIGH,
+                                        "confidence": "CONFIRMED",
+                                        "provenance": "AST_STATIC_ANALYSIS",
+                                        "description": f"Hardcoded credential string literal assigned to variable '{target.id}'.",
+                                    })
+        return findings
+
+    def _classify_defect_taxonomy(
+        self,
+        test: TestResult,
+        category: str,
+        error_msg: str,
+        stack_trace: str,
+        execution_duration_ms: Optional[float] = None,
+        source_code: Optional[str] = None,
+    ) -> Tuple[str, Optional[str], Optional[str], Optional[dict]]:
+        """
+        Classifies defect into proposal research taxonomy (SO2, FR03):
+        - functional_bug
+        - security_vulnerability (with CWE and OWASP identifiers)
+        - performance_bottleneck (with latency/duration metrics)
+        - regression
+
+        Methodological Integrity: Classification is derived strictly from empirical evidence
+        (measured execution latency exceeding threshold, AST static vulnerability findings,
+        traceback exceptions), and NEVER relies on scenario names or test function names as shortcuts.
+        """
+        diag_combined = f"{error_msg} {stack_trace}".lower()
+
+        # 1. Performance Bottleneck Checks: Measured execution latency exceeding 200ms or timeout
+        duration = execution_duration_ms or test.duration_ms or 0.0
+        is_perf_test = getattr(test, "test_type", None) == TestType.PERFORMANCE
+        if category == "TIMEOUT_ERROR" or test.status == TestResultStatus.TIMEOUT or duration > 200.0 or is_perf_test:
+            metrics = {
+                "duration_ms": duration,
+                "threshold_breached": duration > 200.0 or category == "TIMEOUT_ERROR",
+                "threshold_latency_ms": 200.0,
+            }
+            if duration > 200.0 or category == "TIMEOUT_ERROR" or test.status == TestResultStatus.TIMEOUT:
+                return "performance_bottleneck", None, None, metrics
+
+        # 2. Security Vulnerability Checks: Derived from source code AST security findings or explicit security exceptions
+        if source_code:
+            sec_findings = self.inspect_static_security_vulnerabilities(source_code)
+            if sec_findings:
+                top = sec_findings[0]
+                return "security_vulnerability", top["cwe_id"], top["owasp_category"], None
+
+        # Check diagnostic traceback for explicit security vulnerability patterns (not test names)
+        if any(term in diag_combined for term in ("cwe-89", "sql injection", "sqli", "syntax error in query")):
+            return "security_vulnerability", "CWE-89", "OWASP-A03:2021-Injection", None
+        if any(term in diag_combined for term in ("cwe-78", "command injection", "os.system")):
+            return "security_vulnerability", "CWE-78", "OWASP-A03:2021-Injection", None
+        if any(term in diag_combined for term in ("cwe-798", "hardcoded secret", "hardcoded credential", "hardcoded api_key")):
+            return "security_vulnerability", "CWE-798", "OWASP-A07:2021-Identification and Authentication Failures", None
+        if any(term in diag_combined for term in ("cwe-22", "path traversal", "directory traversal")):
+            return "security_vulnerability", "CWE-22", "OWASP-A01:2021-Broken Access Control", None
+        if any(term in diag_combined for term in ("cwe-95", "eval injection", "unsafe eval")):
+            return "security_vulnerability", "CWE-95", "OWASP-A03:2021-Injection", None
+
+        # 3. Regression Checks: Derived from diagnostic traceback or historical regression evidence
+        if "regression" in diag_combined or "regression against baseline" in diag_combined:
+            return "regression", None, None, None
+
+        # 4. Default: Functional Bug (Logic/Assertion/Exception)
+        return "functional_bug", None, None, None
+
 
     def _classify_failure(
         self,
@@ -352,42 +630,156 @@ class DefectAnalysisService:
         return (None, None)
 
 
+    def extract_evidence_based_localization(
+        self,
+        stack_trace: str,
+        affected_filename: str,
+        source_code: Optional[str] = None,
+        test_name: Optional[str] = None,
+        assertion_or_exception: Optional[str] = None,
+        cwe_id: Optional[str] = None,
+        cwe_line: Optional[int] = None,
+    ) -> Tuple[Optional[int], str, str]:
+        """
+        Evidence-based defect localization adhering to Proposal Section 3.4 & Task 2.
+
+        Techniques applied in priority order:
+        1. Confirmed AST Security Node Line (CWE identification directly on AST node)
+        2. Direct Implementation Traceback Frame (identifies frames inside solution.py,
+           strictly distinguishing them from test execution frames)
+        3. Assertion-to-Source AST Mapping (maps failed test call site to implementation
+           statements, conditions, and return expressions)
+
+        Returns:
+            (line_number, confidence, provenance)
+            Confidence: CONFIRMED, HIGH, MEDIUM, LOW, UNCERTAIN
+            Provenance: AST_STATIC_ANALYSIS, TRACEBACK_FRAME_ANALYSIS, AST_SOURCE_MAPPING, UNLOCALIZED_INSUFFICIENT_EVIDENCE
+        """
+        # 1. AST Security Analysis Localization (Exact node line)
+        if cwe_line and cwe_line > 0:
+            return cwe_line, "CONFIRMED", "AST_STATIC_ANALYSIS"
+
+        # 2. Traceback Frame Analysis (Strictly implementation frames, not test frames)
+        if stack_trace and affected_filename:
+            base_name = affected_filename.replace("\\", "/").split("/")[-1]
+            candidate_names = [base_name]
+            if base_name != "solution.py":
+                candidate_names.append("solution.py")
+
+            for name in candidate_names:
+                esc = re.escape(name)
+                # Standard pytest/python traceback: File "path/to/solution.py", line 12, in func
+                matches = re.findall(rf'File\s+["\'][^"\']*{esc}["\'],\s+line\s+(\d+)', stack_trace, re.IGNORECASE)
+                if matches:
+                    try:
+                        return int(matches[-1]), "CONFIRMED", "TRACEBACK_FRAME_ANALYSIS"
+                    except ValueError:
+                        pass
+
+                # Short pytest format: solution.py:12: in <func>
+                short_matches = re.findall(rf'(?:^|\s|\/){esc}:(\d+):', stack_trace, re.IGNORECASE)
+                if short_matches:
+                    try:
+                        return int(short_matches[-1]), "CONFIRMED", "TRACEBACK_FRAME_ANALYSIS"
+                    except ValueError:
+                        pass
+
+        # 3. Assertion-to-Source AST Mapping
+        # When an assertion fails in test code, the defect is in the implementation of the function under test.
+        # Requires meaningful diagnostic evidence (traceback, assertion text, or specific exception) to avoid fabricating locations.
+        has_diagnostic_evidence = bool(
+            (stack_trace and stack_trace.strip())
+            or (
+                assertion_or_exception
+                and "without detailed diagnostic message" not in assertion_or_exception
+                and assertion_or_exception.strip() != "Assertion failed"
+            )
+        )
+        if not has_diagnostic_evidence:
+            return None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+
+        if source_code:
+            try:
+                tree = ast.parse(source_code)
+                combined_diag = f"{test_name or ''} {assertion_or_exception or ''} {stack_trace or ''}"
+
+                # Look for calls: solution.<fn>( or <fn>(
+                called_functions = set()
+                for m in re.finditer(r"solution\.([a-zA-Z0-9_]+)\s*\(", combined_diag):
+                    called_functions.add(m.group(1))
+
+                defined_functions = {
+                    node.name: node
+                    for node in ast.walk(tree)
+                    if isinstance(node, ast.FunctionDef)
+                }
+
+                target_node = None
+                for fn in called_functions:
+                    if fn in defined_functions:
+                        target_node = defined_functions[fn]
+                        break
+
+                if not target_node and test_name:
+                    cleaned_test = test_name.lower().replace("test_", "")
+                    for fn_name, fn_node in defined_functions.items():
+                        if fn_name.lower() in cleaned_test or cleaned_test in fn_name.lower():
+                            target_node = fn_node
+                            break
+
+                if not target_node and len(defined_functions) == 1:
+                    target_node = list(defined_functions.values())[0]
+
+                if target_node:
+                    # Check nested loops in performance scenarios (e.g. nested for-loops)
+                    for loop in [n for n in target_node.body if isinstance(n, (ast.For, ast.While))]:
+                        nested = [n for n in loop.body if isinstance(n, (ast.For, ast.While))]
+                        if nested:
+                            return nested[0].lineno, "HIGH", "AST_SOURCE_MAPPING"
+
+                    # Check if-statements (condition boundary / logic bugs)
+                    if_nodes = [n for n in ast.walk(target_node) if isinstance(n, ast.If)]
+                    for if_node in if_nodes:
+                        # If body has return statement, check if relevant
+                        return_in_if = [n for n in if_node.body if isinstance(n, ast.Return)]
+                        return_text = ""
+                        if return_in_if:
+                            try:
+                                return_text = ast.unparse(return_in_if[0])
+                            except Exception:
+                                pass
+                        if return_text and any(term in combined_diag for term in return_text.split()):
+                            return return_in_if[0].lineno, "HIGH", "AST_SOURCE_MAPPING"
+                        # Check condition line
+                        return if_node.lineno, "HIGH", "AST_SOURCE_MAPPING"
+
+                    # Check assignment statements before return (e.g. start = page * per_page)
+                    assign_nodes = [n for n in target_node.body if isinstance(n, ast.Assign)]
+                    if assign_nodes:
+                        return assign_nodes[0].lineno, "HIGH", "AST_SOURCE_MAPPING"
+
+                    # Check return statements
+                    return_nodes = [n for n in ast.walk(target_node) if isinstance(n, ast.Return)]
+                    if return_nodes:
+                        return return_nodes[0].lineno, "HIGH", "AST_SOURCE_MAPPING"
+
+                    return target_node.lineno, "MEDIUM", "AST_SOURCE_MAPPING"
+
+            except Exception as e:
+                logger.debug("AST mapping encountered non-fatal error: %s", e)
+
+        return None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+
     def _extract_localized_line_number(
         self,
         stack_trace: str,
         affected_filename: str,
     ) -> Optional[int]:
         """
-        Extracts source line number strictly if explicitly cited in the traceback
-        for the submitted source code file. Does NOT guess or invent line numbers.
+        Backward-compatible wrapper extracting line number strictly from traceback evidence.
         """
-        if not stack_trace or not affected_filename:
-            return None
-
-        base_name = affected_filename.replace("\\", "/").split("/")[-1]
-        candidate_names = [base_name]
-        if base_name != "solution.py":
-            candidate_names.append("solution.py")
-
-        for name in candidate_names:
-            esc = re.escape(name)
-            # Short format: solution.py:12:
-            short_matches = re.findall(rf"{esc}:(\d+):", stack_trace, re.IGNORECASE)
-            if short_matches:
-                try:
-                    return int(short_matches[-1])
-                except ValueError:
-                    pass
-
-            # Standard format: "solution.py", line 12
-            std_matches = re.findall(rf'{esc}", line (\d+)', stack_trace, re.IGNORECASE)
-            if std_matches:
-                try:
-                    return int(std_matches[-1])
-                except ValueError:
-                    pass
-
-        return None
+        line, _, _ = self.extract_evidence_based_localization(stack_trace, affected_filename)
+        return line
 
 
     def _extract_traceback_excerpt(

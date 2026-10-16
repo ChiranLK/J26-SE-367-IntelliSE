@@ -27,6 +27,10 @@ from app.services.xai_service import (
     DeterministicEvidenceExplanationProvider,
     XaiExplanationService,
 )
+@pytest.fixture(autouse=True)
+def disable_ollama_for_baseline_xai_tests(monkeypatch: pytest.MonkeyPatch):
+    """Enforce deterministic provider baseline for unit regression tests."""
+    monkeypatch.setattr(settings, "OLLAMA_ENABLED", False)
 
 
 def test_defective_calculator_generates_human_facing_xai_explanation(client: TestClient):

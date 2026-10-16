@@ -104,7 +104,8 @@ export async function recordFeedbackIteration(runId, notes) {
  */
 export async function getXaiExplanation(runId) {
   const response = await apiClient.get(
-    `/api/v1/verifications/${encodeURIComponent(runId)}/explanation`
+    `/api/v1/verifications/${encodeURIComponent(runId)}/explanation`,
+    { timeout: 90000 }
   );
   return response.data;
 }
@@ -218,6 +219,37 @@ export async function getRepairComparison(runId, repairId) {
   );
   return response.data;
 }
+
+/**
+ * Retrieves the Module Convergence Risk Report for a verification run (SO5, FR10).
+ * @param {string} runId
+ */
+export async function getConvergenceRiskReport(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/convergence-risk-report`
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves the formal Deployment Readiness Report for a verification run (FR11, NFR01).
+ * @param {string} runId
+ */
+export async function getDeploymentReadinessReport(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/deployment-readiness-report`
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves local AI engine / Ollama availability and model status.
+ */
+export async function getAiEngineStatus() {
+  const response = await apiClient.get('/api/v1/verifications/status/ai-engine');
+  return response.data;
+}
+
 
 
 

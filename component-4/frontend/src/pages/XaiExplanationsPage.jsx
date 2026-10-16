@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   HelpCircle,
   FileCode2,
+  Cpu,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -340,6 +341,60 @@ Recommendation:
               <strong style={{ color: 'var(--text-primary)' }}>Eligibility Decision:</strong>{' '}
               {explanation.eligibility_reason}
             </div>
+
+            {/* Inference Provenance & Model Attestation */}
+            {explanation.inference_provenance && (
+              <div
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: explanation.inference_provenance.genuine_inference
+                    ? 'rgba(99, 102, 241, 0.08)'
+                    : 'rgba(245, 158, 11, 0.08)',
+                  border: explanation.inference_provenance.genuine_inference
+                    ? '1px solid rgba(99, 102, 241, 0.25)'
+                    : '1px solid rgba(245, 158, 11, 0.25)',
+                  borderRadius: 'var(--radius-xs)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.6rem',
+                  fontSize: '0.78rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                  <Cpu size={16} color={explanation.inference_provenance.genuine_inference ? '#818cf8' : '#f59e0b'} />
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>Inference Provenance:</strong>{' '}
+                    {explanation.inference_provenance.genuine_inference ? (
+                      <span>
+                        Synthesized by local LLM <code style={{ color: '#818cf8', fontWeight: 600 }}>{explanation.inference_provenance.model || 'qwen2.5-coder:3b'}</code> via Ollama (grounded in verified pytest observations)
+                      </span>
+                    ) : (
+                      <span>
+                        Deterministic Evidence Baseline ({explanation.inference_provenance.fallback_reason || 'Rule-based generator'})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {explanation.inference_provenance.genuine_inference ? (
+                    <Badge variant="primary" style={{ fontSize: '0.65rem' }}>
+                      GENUINE LOCAL LLM
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning" style={{ fontSize: '0.65rem' }}>
+                      DETERMINISTIC FALLBACK
+                    </Badge>
+                  )}
+                  {explanation.inference_provenance.duration_ms && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      {(explanation.inference_provenance.duration_ms / 1000).toFixed(2)}s
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 1: Executive Findings Summary */}

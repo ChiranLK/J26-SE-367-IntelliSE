@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.api.deps import get_repair_service, get_verification_service
+from app.core.errors import InvalidInputException
 from app.schemas.defect_report import DefectReportListResponse
 from app.schemas.feedback import (
     Component3StatusResponse,
@@ -11,10 +12,19 @@ from app.schemas.feedback import (
     TechnicalFeedbackPreviewResponse,
 )
 from app.schemas.repair import (
+    Component3RepairDeliveryRequest,
+    Component3RepairDeliveryResponse,
     DefectResolutionComparison,
     RepairAttemptListResponse,
     RepairAttemptResponse,
     RepairResponseIngestRequest,
+)
+from app.schemas.research_reports import (
+    DeploymentReadinessReport,
+    ModuleConvergenceRiskReport,
+    SemanticDriftReport,
+    TestSuiteDriftAnalysisRequest,
+    TraceabilityScopedXaiPayload,
 )
 from app.schemas.test_suite import (
     TrustedTestSuiteAttachRequest,
@@ -273,6 +283,53 @@ async def ingest_repair_response(
 
 
 @router.post(
+    "/{run_id}/integrations/component-3/repair-delivery",
+    response_model=Component3RepairDeliveryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Deliver Component 3 Generated Repair Response",
+    description=(
+        "Formal inbound integration endpoint for Component 3 to deliver repaired source code. "
+        "Enforces contract version validation ('1.0'), run and approved iteration matching, "
+        "correlation validation, safe host static AST validation (zero host execution), "
+        "and idempotent duplicate ingestion protection."
+    ),
+)
+async def deliver_component3_repair(
+    run_id: str,
+    payload: Component3RepairDeliveryRequest,
+    service: RepairService = Depends(get_repair_service),
+) -> Component3RepairDeliveryResponse:
+    if payload.verification_run_id != run_id:
+        raise InvalidInputException(
+            f"Path parameter run_id '{run_id}' does not match body verification_run_id '{payload.verification_run_id}'."
+        )
+
+    ingest_req = RepairResponseIngestRequest(
+        corrected_code=payload.corrected_code,
+        filename=payload.filename or "solution.py",
+        feedback_iteration_id=payload.feedback_iteration_id,
+        repair_source=payload.repair_provenance,
+        notes=payload.notes,
+        correlation_id=payload.correlation_id,
+        external_repair_job_id=payload.external_repair_job_id,
+    )
+    attempt = await service.ingest_repair_response(original_run_id=run_id, request=ingest_req)
+
+    return Component3RepairDeliveryResponse(
+        repair_id=attempt.repair_id or attempt.id,
+        original_run_id=attempt.original_run_id,
+        feedback_iteration_id=attempt.feedback_iteration_id,
+        external_repair_job_id=payload.external_repair_job_id,
+        correlation_id=attempt.correlation_id,
+        status=attempt.status,
+        corrected_submission_id=attempt.corrected_submission_id,
+        filename=attempt.corrected_filename or attempt.filename or "solution.py",
+        message="Component 3 repair successfully ingested. Ready for authorized re-verification.",
+        ingested_at=attempt.created_at,
+    )
+
+
+@router.post(
     "/{run_id}/repair-responses/{repair_id}/re-verify",
     response_model=RepairAttemptResponse,
     summary="Execute Re-Verification for Ingested Repair",
@@ -377,6 +434,84 @@ async def get_trusted_test_suite(
     service: VerificationService = Depends(get_verification_service),
 ) -> TrustedTestSuiteResponse:
     return await service.get_trusted_test_suite_metadata(run_id=run_id)
+
+
+@router.get(
+    "/status/ai-engine",
+    summary="Get Local AI / Ollama Engine Status",
+    description="Reports connectivity to local Ollama runtime, installed models, and active XAI provider.",
+)
+async def get_ai_engine_status(
+    service: VerificationService = Depends(get_verification_service),
+):
+    return await service.get_ai_engine_status()
+
+
+@router.get(
+    "/{run_id}/convergence-risk-report",
+    response_model=ModuleConvergenceRiskReport,
+    summary="Get Module Convergence Risk Report",
+    description=(
+        "Synthesizes proposal-required Module Convergence Risk Report (SO5, FR10). "
+        "Evaluates loop iteration count as an architectural-risk signal and flags superficial convergence."
+    ),
+)
+async def get_convergence_risk_report(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> ModuleConvergenceRiskReport:
+    return await service.get_convergence_risk_report(run_id=run_id)
+
+
+@router.get(
+    "/{run_id}/deployment-readiness-report",
+    response_model=DeploymentReadinessReport,
+    summary="Get Deployment Readiness Report",
+    description=(
+        "Synthesizes proposal-required Deployment Readiness Report (FR11, NFR01). "
+        "Evaluates mandatory release safety gates: all tests passed, 0 critical/security defects, "
+        "0 performance bottlenecks, and zero unresolved test semantic drift."
+    ),
+)
+async def get_deployment_readiness_report(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> DeploymentReadinessReport:
+    return await service.get_deployment_readiness_report(run_id=run_id)
+
+
+@router.post(
+    "/{run_id}/test-suite-drift-analysis",
+    response_model=SemanticDriftReport,
+    summary="Analyze Candidate Test Suite for Semantic Drift",
+    description=(
+        "Compares a candidate test suite against the authorized frozen suite using AST inspection (FR07, NFR01). "
+        "Detects assertion weakening, deleted test cases, or altered thresholds."
+    ),
+)
+async def analyze_test_suite_drift(
+    run_id: str,
+    payload: TestSuiteDriftAnalysisRequest,
+    service: VerificationService = Depends(get_verification_service),
+) -> SemanticDriftReport:
+    return await service.analyze_test_suite_drift(run_id=run_id, candidate_test_code=payload.candidate_test_code)
+
+
+@router.get(
+    "/{run_id}/xai/machine-scoped",
+    response_model=List[TraceabilityScopedXaiPayload],
+    summary="Get Machine-Readable Traceability-Scoped Defect Reports",
+    description=(
+        "Synthesizes machine-readable defect reports scoped to Component 3's traceability context (SO3, FR04). "
+        "Includes RTM requirement IDs, test seam references, defect classification, and regeneration guidance."
+    ),
+)
+async def get_machine_scoped_xai(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> List[TraceabilityScopedXaiPayload]:
+    return await service.get_traceability_scoped_explanations(run_id=run_id)
+
 
 
 

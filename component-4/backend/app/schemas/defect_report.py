@@ -77,6 +77,31 @@ class DefectReport(BaseModel):
         default_factory=dict,
         description="Deterministic references to test execution evidence (test ID, exit codes, metrics)",
     )
+    # Proposal SO2/FR03 research defect taxonomy
+    defect_category: Optional[str] = Field(
+        default="functional_bug",
+        description="Proposal defect taxonomy: functional_bug, security_vulnerability, performance_bottleneck, regression",
+    )
+    cwe_id: Optional[str] = Field(
+        default=None,
+        description="Common Weakness Enumeration identifier (e.g. CWE-78, CWE-798, CWE-22) for security defects",
+    )
+    owasp_category: Optional[str] = Field(
+        default=None,
+        description="OWASP Top Ten category (e.g. OWASP-A03:2021-Injection) for security defects",
+    )
+    performance_metrics: Optional[dict] = Field(
+        default=None,
+        description="Empirical performance metrics and threshold breach details if performance bottleneck",
+    )
+    confidence: Optional[str] = Field(
+        default="HIGH",
+        description="Confidence level of detection/localization: CONFIRMED, HIGH, MEDIUM, LOW, UNCERTAIN",
+    )
+    provenance: Optional[str] = Field(
+        default="TRACEBACK_INSPECTION",
+        description="Source of detection/localization: AST_STATIC_ANALYSIS, TRACEBACK_FRAME_ANALYSIS, AST_SOURCE_MAPPING, EXECUTION_TRACE, TEST_DIFF",
+    )
 
 
 class DefectReportListResponse(BaseModel):

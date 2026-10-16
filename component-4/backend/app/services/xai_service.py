@@ -3,15 +3,20 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from app.schemas.common import VerificationStatus
+from app.core.logging import logger
+from app.schemas.common import DefectCategory, VerificationStatus
 from app.schemas.defect_report import DefectReport
+from app.schemas.research_reports import TraceabilityScopedXaiPayload
 from app.schemas.submission import CodeSubmissionResponse
 from app.schemas.verification import VerificationRunResponse
 from app.schemas.xai import (
     CorrectionRecommendation,
     EvidenceItem,
+    InferenceProvenance,
     XaiExplanationResponse,
 )
+from app.services.ollama_client import OllamaClient, OllamaInferenceException
+
 
 
 class BaseExplanationProvider(ABC):
@@ -119,6 +124,14 @@ class DeterministicEvidenceExplanationProvider(BaseExplanationProvider):
             },
             explanation_method=self.PROVIDER_NAME,
             provider=self.PROVIDER_NAME,
+            inference_provenance=InferenceProvenance(
+                provider=self.PROVIDER_NAME,
+                model=None,
+                genuine_inference=False,
+                fallback_used=False,
+                fallback_reason="Execution in progress; LLM explanation pending completion",
+                duration_ms=None,
+            ),
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )
@@ -166,6 +179,14 @@ class DeterministicEvidenceExplanationProvider(BaseExplanationProvider):
             },
             explanation_method=self.PROVIDER_NAME,
             provider=self.PROVIDER_NAME,
+            inference_provenance=InferenceProvenance(
+                provider=self.PROVIDER_NAME,
+                model=None,
+                genuine_inference=False,
+                fallback_used=False,
+                fallback_reason="Infrastructure error; LLM explanation bypassed to avoid inaccurate code attribution",
+                duration_ms=None,
+            ),
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )
@@ -209,6 +230,14 @@ class DeterministicEvidenceExplanationProvider(BaseExplanationProvider):
             },
             explanation_method=self.PROVIDER_NAME,
             provider=self.PROVIDER_NAME,
+            inference_provenance=InferenceProvenance(
+                provider=self.PROVIDER_NAME,
+                model=None,
+                genuine_inference=False,
+                fallback_used=False,
+                fallback_reason="All tests passed; defect explanation not applicable",
+                duration_ms=None,
+            ),
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )
@@ -376,19 +405,226 @@ class DeterministicEvidenceExplanationProvider(BaseExplanationProvider):
             evidence_references=evidence_references,
             explanation_method=self.PROVIDER_NAME,
             provider=self.PROVIDER_NAME,
+            inference_provenance=InferenceProvenance(
+                provider=self.PROVIDER_NAME,
+                model=None,
+                genuine_inference=False,
+                fallback_used=False,
+                fallback_reason="Deterministic evidence provider executed directly",
+                duration_ms=None,
+            ),
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )
 
 
+class OllamaExplanationProvider(BaseExplanationProvider):
+    """
+    Evidence-grounded XAI explanation provider utilizing local Ollama LLM inference.
+    Conditions model generation strictly on verified test execution telemetry.
+    Fails closed to DeterministicEvidenceExplanationProvider if Ollama is unavailable or unconfigured.
+    """
+
+    PROVIDER_NAME = "ollama_inference_v1"
+    SCHEMA_VERSION = "1.0"
+
+    def __init__(
+        self,
+        client: Optional[OllamaClient] = None,
+        fallback_provider: Optional[BaseExplanationProvider] = None,
+    ):
+        self.client = client or OllamaClient()
+        self.fallback = fallback_provider or DeterministicEvidenceExplanationProvider()
+
+    def generate(
+        self,
+        run: VerificationRunResponse,
+        submission: Optional[CodeSubmissionResponse] = None,
+    ) -> XaiExplanationResponse:
+        # Non-FAILED or infrastructure failures delegate directly to deterministic handler
+        if run.status != VerificationStatus.FAILED or not run.defect_reports:
+            return self.fallback.generate(run, submission)
+
+        if not getattr(self.client, "enabled", False):
+            fallback_res = self.fallback.generate(run, submission)
+            fallback_res.inference_provenance = InferenceProvenance(
+                provider="deterministic",
+                model=getattr(self.client, "model_name", "qwen2.5-coder:3b"),
+                genuine_inference=False,
+                fallback_used=False,
+                fallback_reason="Ollama disabled by configuration (OLLAMA_ENABLED=False)",
+                duration_ms=None,
+            )
+            return fallback_res
+
+        telemetry = run.execution_telemetry or {}
+        if telemetry.get("sandbox_infrastructure_failure") is True:
+            return self.fallback.generate(run, submission)
+
+        source_code = submission.code if submission else ""
+        filename = submission.filename if submission else "solution.py"
+
+        telemetry_dict = {
+            "run_id": run.id,
+            "status": run.status.value,
+            "total_tests": len(run.test_results),
+            "passed_tests": [t.name for t in run.test_results if t.status.value == "PASSED"],
+            "failed_tests": [t.name for t in run.test_results if t.status.value in ("FAILED", "ERROR", "TIMEOUT")],
+            "exit_code": telemetry.get("exit_code", 1),
+            "duration_ms": telemetry.get("duration_ms"),
+        }
+        defects_dict = [
+            {
+                "defect_id": d.defect_id,
+                "title": d.title,
+                "failed_test": d.failed_test,
+                "file_path": d.file_path or filename,
+                "line_number": d.line_number,
+                "category": d.defect_category or d.failure_category,
+                "cwe_id": d.cwe_id,
+                "diagnostic": d.assertion_or_exception,
+                "expected_value": d.expected_value,
+                "observed_value": d.actual_value,
+                "traceback_excerpt": d.traceback_excerpt,
+            }
+            for d in run.defect_reports
+        ]
+
+        try:
+            res = self.client.generate_structured_explanation_sync(
+                telemetry=telemetry_dict,
+                defects=defects_dict,
+                source_code=source_code,
+                filename=filename,
+            )
+
+            # Validate generated model outputs against empirical evidence
+            summary = res.get("summary")
+            if not summary or not isinstance(summary, str) or not summary.strip():
+                raise OllamaInferenceException("Ollama returned empty or invalid summary")
+
+            evidence_interpretation = res.get("evidence_based_interpretation")
+            if not evidence_interpretation or not isinstance(evidence_interpretation, str):
+                raise OllamaInferenceException("Ollama returned empty evidence_based_interpretation")
+
+            provenance = res.get("_provenance", {})
+            model_used = provenance.get("model", self.client.model_name)
+            duration_ms = provenance.get("duration_ms")
+
+            # Clearly distinguish model reasoning from verified empirical facts
+            attribution_note = (
+                f"\n\n[Model Reasoning Attribution — {model_used}]: The above causal interpretation is synthesized "
+                "by local AI inference based on verified pytest telemetry and source code AST. "
+                "Empirical observations listed above are deterministic facts; causal explanation represents "
+                "the model's algorithmic reasoning."
+            )
+            distinguished_interpretation = f"{evidence_interpretation.strip()}{attribution_note}"
+
+            explanation_id = f"xai-{uuid.uuid5(uuid.NAMESPACE_DNS, f'{run.id}:ollama').hex[:12]}"
+
+            confirmed_observations: List[EvidenceItem] = []
+            for d in run.defect_reports:
+                confirmed_observations.append(
+                    EvidenceItem(
+                        test_name=d.failed_test or d.title or "unnamed_test",
+                        defect_id=d.defect_id,
+                        failure_category=d.failure_category or "ASSERTION_FAILURE",
+                        assertion_or_exception=d.assertion_or_exception,
+                        expected_value=d.expected_value,
+                        observed_value=d.actual_value,
+                        file_path=d.file_path,
+                        line_number=d.line_number,
+                        traceback_excerpt=d.traceback_excerpt,
+                    )
+                )
+
+            # Ensure what_failed is non-empty and grounded
+            what_failed = res.get("what_failed")
+            if not what_failed or not isinstance(what_failed, list):
+                what_failed = [d.failed_test for d in run.defect_reports if d.failed_test]
+
+            inference_prov = InferenceProvenance(
+                provider="ollama",
+                model=model_used,
+                genuine_inference=True,
+                fallback_used=False,
+                fallback_reason=None,
+                duration_ms=duration_ms,
+            )
+
+            rec_reason = res.get("recommendation_action", "Review model-generated fix suggestions.")
+            recommendation = CorrectionRecommendation(
+                action="HUMAN_REVIEW_RECOMMENDED",
+                recommended=True,
+                reason=rec_reason,
+                target_audience=res.get("target_audience", "Software Engineer"),
+            )
+
+            return XaiExplanationResponse(
+                explanation_id=explanation_id,
+                verification_run_id=run.id,
+                submission_id=run.submission_id,
+                verification_status="FAILED",
+                eligible=True,
+                eligibility_reason=f"Grounded Ollama model '{model_used}' inference completed successfully across {len(run.defect_reports)} defect(s).",
+                summary=summary.strip(),
+                what_failed=what_failed,
+                confirmed_observations=confirmed_observations,
+                evidence_based_interpretation=distinguished_interpretation,
+                recommendation=recommendation,
+                suggested_investigations=[
+                    f"Review lines around defect localization in {filename}",
+                    "Inspect failed assertion and model interpretation prior to approving repair dispatch",
+                ],
+                evidence_references={
+                    "defect_ids": [d.defect_id for d in run.defect_reports],
+                    "failed_tests": [d.failed_test for d in run.defect_reports if d.failed_test],
+                    "total_defects": len(run.defect_reports),
+                    "model_inference": {
+                        **provenance,
+                        "genuine_inference": True,
+                        "fallback_used": False,
+                    },
+                },
+                explanation_method=f"ollama_inference ({model_used})",
+                provider=f"ollama/{model_used}",
+                inference_provenance=inference_prov,
+                generated_at=datetime.now(timezone.utc),
+                schema_version=self.SCHEMA_VERSION,
+            )
+        except Exception as exc:
+            logger.info("Ollama inference unavailable or failed (%s). Falling back to deterministic evidence.", exc)
+            fallback_res = self.fallback.generate(run, submission)
+            fallback_reason = f"{type(exc).__name__}: {str(exc)}"
+            fallback_res.explanation_method = f"deterministic_evidence_v1 (ollama_fallback: {type(exc).__name__})"
+            fallback_res.provider = f"deterministic_evidence_v1 (fallback: {type(exc).__name__})"
+            fallback_res.inference_provenance = InferenceProvenance(
+                provider="deterministic",
+                model=getattr(self.client, "model_name", "qwen2.5-coder:3b"),
+                genuine_inference=False,
+                fallback_used=True,
+                fallback_reason=fallback_reason,
+                duration_ms=None,
+            )
+            fallback_res.evidence_references["model_inference"] = {
+                "provider": "deterministic",
+                "model": getattr(self.client, "model_name", "qwen2.5-coder:3b"),
+                "genuine_inference": False,
+                "fallback_used": True,
+                "fallback_reason": fallback_reason,
+            }
+            return fallback_res
+
+
 class XaiExplanationService:
     """
-    Dedicated explanation service orchestrating human-facing XAI generation.
-    Maintains a decoupled provider architecture for future LLM integration.
+    Dedicated explanation service orchestrating human-facing XAI generation
+    and proposal-required machine-readable traceability-scoped defect reports.
     """
 
     def __init__(self, provider: Optional[BaseExplanationProvider] = None):
-        self.provider = provider or DeterministicEvidenceExplanationProvider()
+        # Default to Ollama provider with transparent deterministic fallback
+        self.provider = provider or OllamaExplanationProvider()
 
     def generate_explanation(
         self,
@@ -400,3 +636,49 @@ class XaiExplanationService:
         Purely read-only and side-effect free; never executes code or mutates storage.
         """
         return self.provider.generate(run, submission)
+
+    def generate_traceability_scoped_explanation(
+        self,
+        run: VerificationRunResponse,
+        defect: DefectReport,
+        submission: Optional[CodeSubmissionResponse] = None,
+    ) -> TraceabilityScopedXaiPayload:
+        """
+        Synthesizes machine-readable, Component-3-scoped defect explanation (SO3, FR04).
+        Scoped to Component 3's traceability graph (requirement IDs, test seams, and target lines).
+        """
+        req_ids = submission.requirement_ids if submission and submission.requirement_ids else []
+        if defect.requirement_id and defect.requirement_id not in req_ids:
+            req_ids.append(defect.requirement_id)
+
+        filename = defect.file_path or (submission.filename if submission else "solution.py")
+        category_enum = DefectCategory.FUNCTIONAL_BUG
+        try:
+            if defect.defect_category:
+                category_enum = DefectCategory(defect.defect_category)
+        except ValueError:
+            pass
+
+        return TraceabilityScopedXaiPayload(
+            explanation_id=f"xai-scoped-{uuid.uuid5(uuid.NAMESPACE_DNS, f'{run.id}:{defect.defect_id}').hex[:12]}",
+            verification_run_id=run.id,
+            submission_id=run.submission_id,
+            requirement_ids=req_ids,
+            test_seams_implicated=[f"seam:{filename}:{defect.line_number or 0}"],
+            defect_id=defect.defect_id,
+            defect_category=category_enum,
+            cwe_id=defect.cwe_id,
+            affected_file=filename,
+            line_number=defect.line_number,
+            failed_test_name=defect.failed_test or "unknown_test",
+            root_cause_explanation=(
+                f"Observed {defect.failure_category or 'failure'} in test '{defect.failed_test}'. "
+                f"Diagnostic: {defect.assertion_or_exception}."
+            ),
+            regeneration_guidance=(
+                f"Component 3 should regenerate module '{filename}' around line {defect.line_number or 'unknown'} "
+                f"to satisfy requirement(s) {', '.join(req_ids) if req_ids else 'baseline specification'}."
+            ),
+            schema_version="1.0",
+        )
+
