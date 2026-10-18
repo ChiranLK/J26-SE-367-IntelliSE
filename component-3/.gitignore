@@ -32,3 +32,12 @@ temp/
 dashboard/node_modules/
 dashboard/dist/
 dashboard/.vite/
+
+# Preserved local PP1/runtime artifacts (not tracked source)
+frontend/node_modules/
+frontend/dist/
+runtime-preview/executions/
+runtime-preview/__pycache__/
+
+# Disposable Stage 2 Docker validation workspaces
+.stage2-validation/

@@ -19,6 +19,7 @@ from intelise_c3.contracts.generation import (
     ProvisionalApprovalStatus,
 )
 from intelise_c3.core.errors import ApplicationError, ErrorDetail
+from intelise_c3.domain.crud_spec import CrudApplicationSpec
 from intelise_c3.domain.generation import (
     ApiArtifactReference,
     ApiOperationIdentity,
@@ -46,6 +47,12 @@ from intelise_c3.domain.stack_selection import GeneratorAvailability
 from intelise_c3.generation.evidence import (
     build_input_hashes,
     compute_evidence_digest,
+)
+from intelise_c3.generation.crud_templates import (
+    DYNAMIC_GENERATOR_VERSION,
+    DYNAMIC_TEMPLATE_SET_VERSION,
+    DYNAMIC_TRACEABILITY_MAPPING_POLICY_VERSION,
+    render_crud_application,
 )
 from intelise_c3.generation.js_safety import (
     SAFETY_CHECKED_MODULES,
@@ -77,6 +84,7 @@ from intelise_c3.prompts.code_generation import (
     MODEL_GENERATED_PATH,
     build_task_service_prompt,
 )
+from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
 
 _REQUIRED_SERVICE_PATTERNS = {
     "export function createTaskService(repository)": re.compile(
@@ -160,29 +168,69 @@ class CodeGenerationService:
     async def generate(self, request: CodeGenerationRequest) -> GenerationRunResult:
         """Create one isolated workspace or fail without template fallback."""
         self._validate_authorization(request)
-        scaffold = list(task_management_templates())
+        legacy_task = self._is_legacy_task_design(request.design_context)
+        crud_spec = (
+            None
+            if legacy_task
+            else CrudApplicationSpecBuilder().build(request.design_context)
+        )
         llm_metadata: LLMInferenceMetadata | None = None
         prompt_request: LLMInferenceRequest | None = None
 
-        if request.mode is GenerationMode.LOCAL_LLM:
-            if self._llm_client is None:
-                self._fail(
-                    "LOCAL_LLM_CLIENT_REQUIRED",
-                    "mode",
-                    "LOCAL_LLM mode requires the configured local Ollama client.",
-                    status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            prompt_request = build_task_service_prompt(request.design_context)
-            llm_result = await self._llm_client.generate(prompt_request)
-            service_artifact = self._parse_model_artifact(llm_result.output_text)
-            llm_metadata = llm_result.metadata
-            service_origin = ArtifactOrigin.LOCAL_LLM
+        if legacy_task:
+            scaffold = list(task_management_templates())
+            if request.mode is GenerationMode.LOCAL_LLM:
+                if self._llm_client is None:
+                    self._fail(
+                        "LOCAL_LLM_CLIENT_REQUIRED",
+                        "mode",
+                        "LOCAL_LLM mode requires the configured local Ollama client.",
+                        status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                prompt_request = build_task_service_prompt(request.design_context)
+                llm_result = await self._llm_client.generate(prompt_request)
+                service_artifact = self._parse_model_artifact(llm_result.output_text)
+                llm_metadata = llm_result.metadata
+                service_origin = ArtifactOrigin.LOCAL_LLM
+            else:
+                service_artifact = template_task_service()
+                service_origin = ArtifactOrigin.TEMPLATE
+            artifacts = tuple(scaffold + [service_artifact])
+            api_references = self._api_references()
+            database_references = self._database_references()
+            test_seams = self._test_seams()
+            generator_version = GENERATOR_VERSION
+            template_set_version = TEMPLATE_SET_VERSION
+            mapping_policy_version = TRACEABILITY_MAPPING_POLICY_VERSION
+            manifest_spec: CrudApplicationSpec | None = None
         else:
-            service_artifact = template_task_service()
+            assert crud_spec is not None
+            if request.mode is GenerationMode.LOCAL_LLM:
+                self._fail(
+                    "DYNAMIC_LOCAL_LLM_NOT_IMPLEMENTED",
+                    "mode",
+                    (
+                        "Stage 1 dynamic CRUD generation is deterministic-only. "
+                        "Local Ollama remains available for the legacy Task profile; "
+                        "no template fallback was applied."
+                    ),
+                    status.HTTP_409_CONFLICT,
+                )
+            rendered = render_crud_application(crud_spec)
+            artifacts = rendered.artifacts
+            api_references = rendered.api_references
+            database_references = rendered.database_references
+            test_seams = rendered.test_seams
             service_origin = ArtifactOrigin.TEMPLATE
+            generator_version = DYNAMIC_GENERATOR_VERSION
+            template_set_version = DYNAMIC_TEMPLATE_SET_VERSION
+            mapping_policy_version = DYNAMIC_TRACEABILITY_MAPPING_POLICY_VERSION
+            manifest_spec = crud_spec
 
-        artifacts = tuple(scaffold + [service_artifact])
-        self._validate_artifact_set(artifacts)
+        self._validate_artifact_set(
+            artifacts,
+            allowed_paths={artifact.relative_path for artifact in artifacts},
+        )
         run_id = str(uuid4())
         generated_at = datetime.now(UTC).isoformat()
         manifest = self._build_manifest(
@@ -193,6 +241,13 @@ class CodeGenerationService:
             service_origin=service_origin,
             llm_metadata=llm_metadata,
             prompt_request=prompt_request,
+            api_references=api_references,
+            database_references=database_references,
+            test_seams=test_seams,
+            generator_version=generator_version,
+            template_set_version=template_set_version,
+            mapping_policy_version=mapping_policy_version,
+            crud_spec=manifest_spec,
         )
         relative_workspace = PurePosixPath(request.workspace_name) / run_id
         self._write_workspace(relative_workspace, artifacts, manifest)
@@ -202,6 +257,19 @@ class CodeGenerationService:
                 relative_workspace / "artifact-manifest.json"
             ).as_posix(),
             manifest=manifest,
+        )
+
+    @staticmethod
+    def _is_legacy_task_design(design: object) -> bool:
+        """Route the historical Task profile without changing its acceptance rules."""
+        classes = getattr(design, "classes", ())
+        by_name = {item.name: item for item in classes}
+        task = by_name.get("Task")
+        return (
+            set(by_name) == {"Task", "TaskService", "TaskRepository"}
+            and task is not None
+            and tuple(attribute.name for attribute in task.attributes)
+            == ("id", "title", "completed")
         )
 
     def _validate_authorization(self, request: CodeGenerationRequest) -> None:
@@ -309,25 +377,6 @@ class CodeGenerationService:
                     code="MISSING_GENERATION_DESIGN_REFERENCE",
                     field="design_context.ui_artifacts",
                     message="At least one structured C2 UI or wireframe reference is required.",
-                )
-            )
-
-        task_requirement = any(
-            "task" in requirement.title.lower()
-            for requirement in design.requirements
-        )
-        task_class = any(
-            parsed_class.name.lower() == "task" for parsed_class in design.classes
-        )
-        if not task_requirement or not task_class:
-            errors.append(
-                ErrorDetail(
-                    code="UNSUPPORTED_MVP_DOMAIN",
-                    field="design_context",
-                    message=(
-                        "The Task Management MVP requires an explicit task "
-                        "requirement and a released Task class."
-                    ),
                 )
             )
 
@@ -461,11 +510,15 @@ class CodeGenerationService:
         )
 
     def _validate_artifact_set(
-        self, artifacts: tuple[TemplateArtifact, ...]
+        self,
+        artifacts: tuple[TemplateArtifact, ...],
+        *,
+        allowed_paths: set[str] | None = None,
     ) -> None:
-        allowed_paths = {
-            artifact.relative_path for artifact in task_management_templates()
-        } | {MODEL_GENERATED_PATH}
+        if allowed_paths is None:
+            allowed_paths = {
+                artifact.relative_path for artifact in task_management_templates()
+            } | {MODEL_GENERATED_PATH}
         seen: set[str] = set()
         for artifact in artifacts:
             self._validate_relative_path(artifact.relative_path)
@@ -492,10 +545,13 @@ class CodeGenerationService:
                     f"Generated artifact '{artifact.relative_path}' is empty.",
                     status.HTTP_422_UNPROCESSABLE_CONTENT,
                 )
-            if artifact.relative_path in SAFETY_CHECKED_MODULES:
+            if artifact.relative_path in SAFETY_CHECKED_MODULES or artifact.safety_checked:
                 template_safety = inspect_javascript_safety(
                     artifact.content,
-                    allow_secure_uuid=allows_secure_uuid(artifact.relative_path),
+                    allow_secure_uuid=(
+                        allows_secure_uuid(artifact.relative_path)
+                        or artifact.allow_secure_uuid
+                    ),
                 )
                 if not template_safety.accepted:
                     self._fail(
@@ -535,6 +591,13 @@ class CodeGenerationService:
         service_origin: ArtifactOrigin,
         llm_metadata: LLMInferenceMetadata | None,
         prompt_request: LLMInferenceRequest | None,
+        api_references: tuple[ApiArtifactReference, ...],
+        database_references: tuple[DatabaseArtifactReference, ...],
+        test_seams: tuple[TestSeamReference, ...],
+        generator_version: str,
+        template_set_version: str,
+        mapping_policy_version: str,
+        crud_spec: CrudApplicationSpec | None,
     ) -> GenerationManifest:
         source = request.design_context
         requirement_ids = tuple(item.requirement_id for item in source.requirements)
@@ -553,28 +616,56 @@ class CodeGenerationService:
                 if artifact.relative_path == MODEL_GENERATED_PATH
                 else ArtifactOrigin.TEMPLATE
             )
-            file_requirement_ids = tuple(
-                requirement.requirement_id
-                for requirement in source.requirements
-                if requirement_capabilities.get(requirement.requirement_id)
-                in artifact.requirement_capabilities
-            )
-            file_anchors = tuple(
-                anchor
-                for anchor in source.requirement_uml_anchors
-                if anchor.requirement_id in file_requirement_ids
-            )
-            file_uml_candidates = {
-                *(anchor.uml_id for anchor in file_anchors),
-                *(
-                    uml_ids_by_class[name.casefold()]
-                    for name in artifact.uml_class_names
-                    if name.casefold() in uml_ids_by_class
-                ),
-            }
-            file_uml_ids = tuple(
-                uml_id for uml_id in uml_ids if uml_id in file_uml_candidates
-            )
+            if artifact.explicit_trace_bindings:
+                explicit_requirements = set(artifact.requirement_ids)
+                explicit_uml = set(artifact.uml_ids)
+                explicit_anchors = set(artifact.design_anchor_ids)
+                file_requirement_ids = tuple(
+                    requirement.requirement_id
+                    for requirement in source.requirements
+                    if requirement.requirement_id in explicit_requirements
+                )
+                file_anchors = tuple(
+                    anchor
+                    for anchor in source.requirement_uml_anchors
+                    if anchor.anchor_id in explicit_anchors
+                )
+                file_uml_ids = tuple(
+                    uml_id for uml_id in uml_ids if uml_id in explicit_uml
+                )
+                file_ui_ids = tuple(
+                    ui.ui_id
+                    for ui in source.ui_artifacts
+                    if ui.ui_id in set(artifact.ui_artifact_ids)
+                )
+            else:
+                file_requirement_ids = tuple(
+                    requirement.requirement_id
+                    for requirement in source.requirements
+                    if requirement_capabilities.get(requirement.requirement_id)
+                    in artifact.requirement_capabilities
+                )
+                file_anchors = tuple(
+                    anchor
+                    for anchor in source.requirement_uml_anchors
+                    if anchor.requirement_id in file_requirement_ids
+                )
+                file_uml_candidates = {
+                    *(anchor.uml_id for anchor in file_anchors),
+                    *(
+                        uml_ids_by_class[name.casefold()]
+                        for name in artifact.uml_class_names
+                        if name.casefold() in uml_ids_by_class
+                    ),
+                }
+                file_uml_ids = tuple(
+                    uml_id for uml_id in uml_ids if uml_id in file_uml_candidates
+                )
+                file_ui_ids = (
+                    tuple(item.ui_id for item in source.ui_artifacts)
+                    if artifact.ui_related
+                    else ()
+                )
             records.append(
                 GeneratedFileRecord(
                     file_id=(
@@ -594,11 +685,7 @@ class CodeGenerationService:
                     design_anchor_ids=tuple(
                         anchor.anchor_id for anchor in file_anchors
                     ),
-                    ui_artifact_ids=(
-                        tuple(item.ui_id for item in source.ui_artifacts)
-                        if artifact.ui_related
-                        else ()
-                    ),
+                    ui_artifact_ids=file_ui_ids,
                     api_operation_ids=artifact.api_operation_ids,
                     database_entity_ids=artifact.database_entity_ids,
                     test_seam_ids=artifact.test_seam_ids,
@@ -615,14 +702,15 @@ class CodeGenerationService:
         generation = request.generation_context
         approval = request.stack_approval
         selected = request.stack_selection_report.selected_stack.candidate
-        api_references = self._api_references()
-        database_references = self._database_references()
-        test_seams = self._test_seams()
         traceability = self._build_traceability(
             request=request,
             run_id=run_id,
             records=tuple(records),
             requirement_capabilities=requirement_capabilities,
+            api_references=api_references,
+            database_references=database_references,
+            mapping_policy_version=mapping_policy_version,
+            crud_spec=crud_spec,
         )
         input_hashes = build_input_hashes(
             generation_context=generation,
@@ -640,8 +728,8 @@ class CodeGenerationService:
             generation_run_id=run_id,
             input_hashes=input_hashes,
             prompt_template_version=prompt_template_version,
-            generator_version=GENERATOR_VERSION,
-            template_set_version=TEMPLATE_SET_VERSION,
+            generator_version=generator_version,
+            template_set_version=template_set_version,
             llm_inference=llm_metadata,
             artifact_digest_sha256=digest.hexdigest(),
         )
@@ -692,8 +780,8 @@ class CodeGenerationService:
             run_evidence=RunEvidence(
                 input_hashes=input_hashes,
                 prompt_template_version=prompt_template_version,
-                generator_version=GENERATOR_VERSION,
-                template_set_version=TEMPLATE_SET_VERSION,
+                generator_version=generator_version,
+                template_set_version=template_set_version,
                 evidence_digest_sha256=evidence_digest,
             ),
             trust_boundary=(
@@ -818,6 +906,10 @@ class CodeGenerationService:
         run_id: str,
         records: tuple[GeneratedFileRecord, ...],
         requirement_capabilities: dict[str, str | None],
+        api_references: tuple[ApiArtifactReference, ...],
+        database_references: tuple[DatabaseArtifactReference, ...],
+        mapping_policy_version: str,
+        crud_spec: CrudApplicationSpec | None,
     ) -> TraceabilityEvidence:
         source = request.design_context
         links: list[TraceabilityLink] = []
@@ -907,11 +999,12 @@ class CodeGenerationService:
                     TraceEntityType.REQUIREMENT,
                     requirement_id,
                     evidence_kind="DETERMINISTIC_MAPPING_RULE",
-                    rule=TRACEABILITY_MAPPING_POLICY_VERSION,
+                    rule=mapping_policy_version,
                     refs=related_anchors,
                     details=(
-                        "File capability metadata matched the requirement title "
-                        "using the documented narrow Task MVP rule."
+                        "The generated module binding matched the requirement, "
+                        "parsed entity, and retained anchors under the versioned "
+                        "generation policy."
                     ),
                 )
             for uml_id in record.uml_ids:
@@ -922,7 +1015,7 @@ class CodeGenerationService:
                     TraceEntityType.UML_ELEMENT,
                     uml_id,
                     evidence_kind="DETERMINISTIC_MAPPING_RULE",
-                    rule=TRACEABILITY_MAPPING_POLICY_VERSION,
+                    rule=mapping_policy_version,
                     refs=record.design_anchor_ids,
                     details="File metadata names a parsed class or anchored UML element.",
                 )
@@ -963,14 +1056,23 @@ class CodeGenerationService:
                     TraceEntityType.API_OPERATION,
                     operation_id,
                     evidence_kind="DETERMINISTIC_MAPPING_RULE",
-                    rule="TASK_API_OPERATION_MAPPING_V1",
+                    rule=(
+                        "TASK_API_OPERATION_MAPPING_V1"
+                        if crud_spec is None
+                        else "CRUD_SPEC_API_OPERATION_MAPPING_V1"
+                    ),
                     refs=(record.relative_path,),
                     details="Static template metadata identifies the exact API operation.",
                 )
             for entity_id in record.database_entity_ids:
+                table_ids = {
+                    table.table_id
+                    for reference in database_references
+                    for table in reference.tables
+                }
                 entity_type = (
                     TraceEntityType.DATABASE_TABLE
-                    if entity_id == DB_TASKS_TABLE
+                    if entity_id in table_ids
                     else TraceEntityType.DATABASE_COLUMN
                 )
                 add_link(
@@ -980,7 +1082,11 @@ class CodeGenerationService:
                     entity_type,
                     entity_id,
                     evidence_kind="DETERMINISTIC_MAPPING_RULE",
-                    rule="TASK_SQL_SCHEMA_MAPPING_V1",
+                    rule=(
+                        "TASK_SQL_SCHEMA_MAPPING_V1"
+                        if crud_spec is None
+                        else "CRUD_SPEC_SQL_SCHEMA_MAPPING_V1"
+                    ),
                     refs=(record.relative_path,),
                     details="The reviewed SQL template defines this exact schema identity.",
                 )
@@ -1002,48 +1108,94 @@ class CodeGenerationService:
                     details="The module implements or tests the injected repository seam.",
                 )
 
-        repository_record = next(
-            record
-            for record in records
-            if record.relative_path == "backend/src/repositories/taskRepository.js"
-        )
-        add_link(
-            TraceEntityType.FILE,
-            repository_record.file_id,
-            TraceRelationType.PERSISTS_TO,
-            TraceEntityType.DATABASE_TABLE,
-            DB_TASKS_TABLE,
-            evidence_kind="UNRESOLVED_SOURCE_REFERENCE",
-            rule="RUNTIME_SQL_PERSISTENCE_REVIEW_V1",
-            refs=(repository_record.relative_path, "backend/src/db/schema.sql"),
-            details=(
-                "Runtime persistence is IN_MEMORY; the SQL script is design-only "
-                "and is not wired to this repository."
-            ),
-            resolved=False,
-        )
+        if crud_spec is None:
+            repository_record = next(
+                record
+                for record in records
+                if record.relative_path == "backend/src/repositories/taskRepository.js"
+            )
+            add_link(
+                TraceEntityType.FILE,
+                repository_record.file_id,
+                TraceRelationType.PERSISTS_TO,
+                TraceEntityType.DATABASE_TABLE,
+                DB_TASKS_TABLE,
+                evidence_kind="UNRESOLVED_SOURCE_REFERENCE",
+                rule="RUNTIME_SQL_PERSISTENCE_REVIEW_V1",
+                refs=(repository_record.relative_path, "backend/src/db/schema.sql"),
+                details=(
+                    "Runtime persistence is IN_MEMORY; the SQL script is design-only "
+                    "and is not wired to this repository."
+                ),
+                resolved=False,
+            )
 
-        service_record = next(
-            record
-            for record in records
-            if record.relative_path == MODEL_GENERATED_PATH
-        )
-        test_record = next(
-            record
-            for record in records
-            if record.relative_path == "backend/tests/taskService.test.js"
-        )
-        add_link(
-            TraceEntityType.FILE,
-            service_record.file_id,
-            TraceRelationType.VERIFIED_BY,
-            TraceEntityType.FILE,
-            test_record.file_id,
-            evidence_kind="DETERMINISTIC_MAPPING_RULE",
-            rule="TASK_SERVICE_TEST_FILE_V1",
-            refs=(test_record.relative_path,),
-            details="The generated test targets createTaskService through its seam.",
-        )
+            service_record = next(
+                record
+                for record in records
+                if record.relative_path == MODEL_GENERATED_PATH
+            )
+            test_record = next(
+                record
+                for record in records
+                if record.relative_path == "backend/tests/taskService.test.js"
+            )
+            add_link(
+                TraceEntityType.FILE,
+                service_record.file_id,
+                TraceRelationType.VERIFIED_BY,
+                TraceEntityType.FILE,
+                test_record.file_id,
+                evidence_kind="DETERMINISTIC_MAPPING_RULE",
+                rule="TASK_SERVICE_TEST_FILE_V1",
+                refs=(test_record.relative_path,),
+                details="The generated test targets createTaskService through its seam.",
+            )
+        else:
+            database_tables = {
+                table.name: table.table_id
+                for reference in database_references
+                for table in reference.tables
+            }
+            records_by_path = {record.relative_path: record for record in records}
+            for entity in crud_spec.entities:
+                repository_path = (
+                    f"backend/src/repositories/{entity.variable_name}Repository.js"
+                )
+                service_path = f"backend/src/services/{entity.variable_name}Service.js"
+                test_path = f"backend/tests/{entity.variable_name}Service.test.js"
+                repository_record = records_by_path[repository_path]
+                service_record = records_by_path[service_path]
+                test_record = records_by_path[test_path]
+                add_link(
+                    TraceEntityType.FILE,
+                    repository_record.file_id,
+                    TraceRelationType.PERSISTS_TO,
+                    TraceEntityType.DATABASE_TABLE,
+                    database_tables[entity.table_name],
+                    evidence_kind="UNRESOLVED_SOURCE_REFERENCE",
+                    rule="CRUD_SPEC_RUNTIME_SQL_REVIEW_V1",
+                    refs=(repository_path, "backend/src/db/schema.sql"),
+                    details=(
+                        "Runtime persistence is IN_MEMORY; the generated SQL schema "
+                        "is design-only and requires review before database integration."
+                    ),
+                    resolved=False,
+                )
+                add_link(
+                    TraceEntityType.FILE,
+                    service_record.file_id,
+                    TraceRelationType.VERIFIED_BY,
+                    TraceEntityType.FILE,
+                    test_record.file_id,
+                    evidence_kind="DETERMINISTIC_MAPPING_RULE",
+                    rule="CRUD_SPEC_SERVICE_TEST_FILE_V1",
+                    refs=(test_path,),
+                    details=(
+                        f"The generated test targets create{entity.class_name}Service "
+                        "through its injected repository seam."
+                    ),
+                )
 
         for requirement_id, capability in requirement_capabilities.items():
             if capability is None:
@@ -1054,7 +1206,7 @@ class CodeGenerationService:
                     TraceEntityType.GENERATION_RUN,
                     run_id,
                     evidence_kind="UNRESOLVED_SOURCE_REFERENCE",
-                    rule=TRACEABILITY_MAPPING_POLICY_VERSION,
+                    rule=mapping_policy_version,
                     refs=(requirement_id,),
                     details=(
                         "No narrow Task MVP capability mapping was justified from "
@@ -1064,7 +1216,7 @@ class CodeGenerationService:
                 )
 
         return TraceabilityEvidence(
-            mapping_policy_version=TRACEABILITY_MAPPING_POLICY_VERSION,
+            mapping_policy_version=mapping_policy_version,
             requirement_uml_anchors=source.requirement_uml_anchors,
             ui_artifacts=source.ui_artifacts,
             links=tuple(links),

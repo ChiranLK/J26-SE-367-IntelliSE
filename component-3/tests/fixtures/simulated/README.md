@@ -13,6 +13,11 @@ approval or validation evidence.
 - `task_management_input_package.json` is the explicitly simulated Task 6
   input for the narrow Task Management MVP. Its approval and validation
   references remain unauthenticated labels rather than upstream proof.
+- `student_management_input_package.json`,
+  `library_management_input_package.json`, and
+  `inventory_management_input_package.json` are explicitly simulated Stage 1
+  dynamic-CRUD inputs. They exercise one shared generator; they are not actual
+  C1/C2 packages or evidence of completed upstream integration.
 - `researcher_curated_traceability_ground_truth.json` contains manually
   authored, simulated Task 7 link labels for evaluation-method tests. It is
   a unit-test oracle whose independent human-review status is `NOT_VERIFIED`;

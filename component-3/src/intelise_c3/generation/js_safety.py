@@ -229,5 +229,6 @@ def inspect_javascript_safety(
 
 
 def allows_secure_uuid(relative_path: str) -> bool:
-    """Only the service module's fixed interface requires ``crypto.randomUUID``."""
-    return relative_path == SERVICE_MODULE_PATH
+    """Service modules may call ``crypto.randomUUID`` for generated identifiers."""
+    normalized = relative_path.replace("\\", "/")
+    return normalized.endswith("Service.js") and "/services/" in normalized

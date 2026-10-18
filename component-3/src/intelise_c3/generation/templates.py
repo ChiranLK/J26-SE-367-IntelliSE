@@ -49,6 +49,13 @@ class TemplateArtifact:
     api_operation_ids: tuple[str, ...] = ()
     database_entity_ids: tuple[str, ...] = ()
     test_seam_ids: tuple[str, ...] = ()
+    explicit_trace_bindings: bool = False
+    requirement_ids: tuple[str, ...] = ()
+    uml_ids: tuple[str, ...] = ()
+    design_anchor_ids: tuple[str, ...] = ()
+    ui_artifact_ids: tuple[str, ...] = ()
+    safety_checked: bool = False
+    allow_secure_uuid: bool = False
 
 
 def task_management_templates() -> tuple[TemplateArtifact, ...]:

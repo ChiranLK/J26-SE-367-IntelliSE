@@ -107,9 +107,11 @@ def validate_repair_output(
     *,
     authorized_path: str,
     current_source: str,
+    patchable_modules: dict[str, PatchableModule] | None = None,
 ) -> str:
     """Return the normalized replacement module or raise ``PatchRejection``."""
-    module = PATCHABLE_MODULES.get(authorized_path)
+    catalog = patchable_modules if patchable_modules is not None else PATCHABLE_MODULES
+    module = catalog.get(authorized_path)
     if module is None:
         raise PatchRejection(
             PatchRejectionCode.PATCH_PATH_NOT_AUTHORIZED,
