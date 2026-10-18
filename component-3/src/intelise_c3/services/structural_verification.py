@@ -23,12 +23,14 @@ from intelise_c3.domain.structural_verification import (
     StructuralVerificationSummary,
 )
 from intelise_c3.generation.evidence import canonical_sha256
+from intelise_c3.generation.crud_templates import is_dynamic_crud_manifest
 from intelise_c3.generation.templates import (
     API_TASK_CREATE,
     API_TASK_DELETE,
     API_TASK_LIST,
     API_TASK_UPDATE,
 )
+from intelise_c3.services.structural_finding import make_structural_finding
 from intelise_c3.traceability.verification import ManifestVerificationService
 
 
@@ -120,6 +122,9 @@ class StructuralVerificationService:
         design_hash = canonical_sha256(request.design_context)
         self._validate_design_binding(request.manifest, request.design_context, design_hash)
         self._validate_supported_stack(request.manifest)
+
+        if self._uses_dynamic_crud_rules(request.manifest):
+            return self._verify_dynamic(request, workspace, design_hash)
 
         records = {record.relative_path: record for record in request.manifest.files}
         contents = self._read_relevant_sources(workspace, records)
@@ -214,6 +219,66 @@ class StructuralVerificationService:
                 "design_context",
                 "DesignContext identities or provenance differ from the verified manifest.",
             )
+
+    @staticmethod
+    def _uses_dynamic_crud_rules(manifest: GenerationManifest) -> bool:
+        return is_dynamic_crud_manifest(manifest)
+
+    def _verify_dynamic(
+        self,
+        request: StructuralVerificationRequest,
+        workspace: Path,
+        design_hash: str,
+    ) -> StructuralVerificationReport:
+        from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
+        from intelise_c3.services.dynamic_structural_verification import (
+            DYNAMIC_RULE_SET_VERSION,
+            DynamicStructuralVerificationService,
+        )
+
+        spec = CrudApplicationSpecBuilder().build(request.design_context)
+        records = {record.relative_path: record for record in request.manifest.files}
+        findings = DynamicStructuralVerificationService().verify(
+            manifest=request.manifest,
+            design=request.design_context,
+            spec=spec,
+            workspace=workspace,
+            records=records,
+        )
+        fail_count = sum(item.status is StructuralFindingStatus.FAIL for item in findings)
+        review_count = sum(
+            item.status is StructuralFindingStatus.REVIEW_REQUIRED for item in findings
+        )
+        pass_count = sum(item.status is StructuralFindingStatus.PASS for item in findings)
+        overall = (
+            StructuralFindingStatus.FAIL
+            if fail_count
+            else StructuralFindingStatus.REVIEW_REQUIRED
+            if review_count
+            else StructuralFindingStatus.PASS
+        )
+        source = request.manifest.source
+        return StructuralVerificationReport(
+            rule_set_version=DYNAMIC_RULE_SET_VERSION,
+            generation_run_id=request.manifest.generation_run_id,
+            project_id=source.project_id,
+            srs_version=source.srs_version,
+            uml_version=source.uml_version,
+            source_contract_versions=source.source_contract_versions,
+            requirement_ids=source.requirement_ids,
+            uml_ids=source.uml_ids,
+            artifact_digest_sha256=request.manifest.artifact_digest_sha256,
+            evidence_digest_sha256=request.manifest.run_evidence.evidence_digest_sha256,
+            design_context_sha256=design_hash,
+            verified_at_utc=self._clock().astimezone(UTC).isoformat(),
+            overall_status=overall,
+            summary=StructuralVerificationSummary(
+                pass_count=pass_count,
+                fail_count=fail_count,
+                review_required_count=review_count,
+            ),
+            findings=findings,
+        )
 
     @staticmethod
     def _validate_supported_stack(manifest: GenerationManifest) -> None:
@@ -912,35 +977,15 @@ class StructuralVerificationService:
         observed: tuple[str, ...],
         remediation: str | None,
     ) -> StructuralVerificationFinding:
-        relevant = tuple(records[path] for path in paths if path in records)
-        requirement_ids = set(manifest.source.requirement_ids)
-        uml_ids = set(manifest.source.uml_ids)
-        referenced_requirements = tuple(
-            sorted(
-                requirement_id
-                for record in relevant
-                for requirement_id in record.requirement_ids
-                if requirement_id in requirement_ids
-            )
-        )
-        referenced_uml = tuple(
-            sorted(
-                uml_id
-                for record in relevant
-                for uml_id in record.uml_ids
-                if uml_id in uml_ids
-            )
-        )
-        return StructuralVerificationFinding(
+        return make_structural_finding(
+            manifest,
+            records,
             finding_id=finding_id,
             rule_id=rule_id,
             category=category,
-            status=finding_status,
+            finding_status=finding_status,
             message=message,
-            affected_module_ids=tuple(sorted({record.file_id for record in relevant})),
-            requirement_ids=tuple(dict.fromkeys(referenced_requirements)),
-            uml_ids=tuple(dict.fromkeys(referenced_uml)),
-            evidence_paths=tuple(path for path in paths if path in records),
+            paths=paths,
             expected=expected,
             observed=observed,
             remediation=remediation,

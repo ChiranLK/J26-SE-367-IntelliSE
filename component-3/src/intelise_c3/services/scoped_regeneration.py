@@ -64,14 +64,18 @@ from intelise_c3.domain.traceability import (
     TraceGraphSnapshot,
 )
 from intelise_c3.generation.evidence import canonical_sha256, compute_evidence_digest
+from intelise_c3.generation.crud_templates import DYNAMIC_GENERATOR_VERSION
 from intelise_c3.llm.client import LLMClient
 from intelise_c3.prompts.scoped_repair import REPAIR_PROMPT_VERSION, build_repair_prompt
+from intelise_c3.regeneration.dynamic_patch_policy import build_patchable_modules
 from intelise_c3.regeneration.patch_policy import (
     PATCHABLE_MODULES,
     PATCHABLE_PATHS,
+    PatchableModule,
     PatchRejection,
     validate_repair_output,
 )
+from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
 from intelise_c3.services.structural_verification import StructuralVerificationService
 from intelise_c3.services.traceability import TraceabilityService
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
@@ -93,11 +97,13 @@ class _Prepared:
         snapshot: TraceGraphSnapshot,
         impact: ImpactSelectionReport,
         report_sha256: str,
+        patchable_modules: dict[str, PatchableModule],
     ) -> None:
         self.workspace = workspace
         self.snapshot = snapshot
         self.impact = impact
         self.report_sha256 = report_sha256
+        self.patchable_modules = patchable_modules
 
 
 class ScopedRegenerationService:
@@ -227,6 +233,13 @@ class ScopedRegenerationService:
         manifest = request.manifest
         report = request.defect_report
         workspace = self._verifier.verify(manifest, request.workspace_relative_path)
+        if manifest.run_evidence.generator_version == DYNAMIC_GENERATOR_VERSION:
+            spec = CrudApplicationSpecBuilder().build(request.design_context)
+            patchable_modules = build_patchable_modules(spec)
+            selector = ImpactSelector(frozenset(patchable_modules.keys()))
+        else:
+            patchable_modules = dict(PATCHABLE_MODULES)
+            selector = self._selector
         if report.source_generation_run_id != manifest.generation_run_id:
             self._fail(
                 "DEFECT_REPORT_RUN_MISMATCH",
@@ -258,13 +271,13 @@ class ScopedRegenerationService:
             )
         self._verify_graph(snapshot, manifest, build)
         report_sha = canonical_sha256(report)
-        impact = self._selector.select(
+        impact = selector.select(
             snapshot=snapshot,
             manifest=manifest,
             report=report,
             report_sha256=report_sha,
         )
-        return _Prepared(workspace, snapshot, impact, report_sha)
+        return _Prepared(workspace, snapshot, impact, report_sha, patchable_modules)
 
     def _verify_graph(
         self,
@@ -328,7 +341,7 @@ class ScopedRegenerationService:
         prompts: list[LLMInferenceRequest] = []
         defects_by_id = {item.defect_id: item for item in request.defect_report.defects}
         for module in prepared.impact.selected_modules:
-            policy = PATCHABLE_MODULES[module.relative_path]
+            policy = prepared.patchable_modules[module.relative_path]
             current = self._read_source(prepared.workspace, module.relative_path)
             module_defects: tuple[DefectItem, ...] = tuple(
                 defects_by_id[defect_id] for defect_id in module.defect_ids
@@ -348,6 +361,7 @@ class ScopedRegenerationService:
                         response.output_text,
                         authorized_path=module.relative_path,
                         current_source=current,
+                        patchable_modules=prepared.patchable_modules,
                     )
                 except PatchRejection as exception:
                     attempts.append(

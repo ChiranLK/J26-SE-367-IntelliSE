@@ -47,9 +47,10 @@ class StructuralVerificationSummary(DomainModel):
 
 class StructuralVerificationReport(DomainModel):
     report_version: Literal["1.0"] = "1.0"
-    rule_set_version: Literal["C3_TASK_MVP_STRUCTURAL_RULES_V1"] = (
-        "C3_TASK_MVP_STRUCTURAL_RULES_V1"
-    )
+    rule_set_version: Literal[
+        "C3_TASK_MVP_STRUCTURAL_RULES_V1",
+        "C3_DYNAMIC_CRUD_STRUCTURAL_RULES_V1",
+    ] = "C3_TASK_MVP_STRUCTURAL_RULES_V1"
     generation_run_id: str
     project_id: str
     srs_version: str

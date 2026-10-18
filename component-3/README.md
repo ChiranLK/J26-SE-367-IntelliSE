@@ -4,13 +4,14 @@ Component 3 is the Intelligent Development and Deployment Assistant for
 traceable software generation. The service currently provides its FastAPI
 foundation, deterministic validation of provisional C1/C2 input packages,
 limited-subset design understanding, evidence-based stack selection, and a
-reusable local-only Ollama inference client. Task 6 adds a narrow React +
-Node.js Task Management generation MVP using deterministic scaffolding and one
-locally model-generated business-logic module. Task 7 adds persistent,
-versioned living requirement traceability over verified generation manifests.
+reusable local-only Ollama inference client. Task 6 adds a React + Node.js Task
+Management generation MVP using deterministic scaffolding and one locally
+model-generated business-logic module. Dynamic CRUD Stage 1 adds a deterministic
+multi-entity generator while preserving that legacy Task path. Task 7 adds
+persistent, versioned living requirement traceability over verified manifests.
 
-General-purpose application generation, scoped regeneration, deployment, and
-real integrations with Components 1, 2, and 4 remain future work.
+General-purpose/non-CRUD generation, dynamic scoped regeneration, deployment,
+and real integrations with Components 1, 2, and 4 remain future work.
 
 ## Requirements
 
@@ -148,6 +149,21 @@ Its body requires a `GenerationContext`, `DesignContext`,
 `StackSelectionReport`, provisional approval, mode, and safe workspace name.
 See `docs/local-llm-code-generation-mvp.md` for the trust boundary, manifest,
 template/model split, output controls, inspection commands, and limitations.
+
+## Generate supported dynamic CRUD applications
+
+The same `POST /api/v1/generation-runs` pipeline can deterministically render
+one or more independent CRUD entities from an accepted `DesignContext` in
+`TEMPLATE_ONLY` mode. Student, Library, and Inventory simulated fixtures test
+one shared rules-based renderer; they are not separate hardcoded applications.
+Unsupported relationships, types, incomplete CRUD evidence, and ambiguous
+requirement mappings fail explicitly.
+
+Dynamic `LOCAL_LLM` generation is not implemented in Stage 1 and is rejected
+without fallback. The historical Task flow retains its existing local-Ollama
+behavior. See `docs/dynamic-crud-generation-stage1.md` for the supported
+intermediate specification, upstream contract gaps, traceability policy, and
+runtime limitations.
 
 ## Build and inspect living traceability
 
@@ -319,17 +335,20 @@ or model to be running.
 
 ## Current generation and local-inference limitations
 
-- Only the narrow simulated Task Management React + Node.js generator is
-  implemented. Angular and Spring Boot generators are not implemented.
+- React + Node.js generation supports the historical Task MVP and a narrow,
+  deterministic, independent-entity CRUD profile. Angular, Spring Boot,
+  relational/nested domains, and non-CRUD workflows are not implemented.
 - Deterministic templates create the scaffold; only
   `backend/src/services/taskService.js` is produced by Ollama in `LOCAL_LLM`
   mode.
 - Model output is treated as untrusted, structurally constrained source and is
   never executed automatically.
-- Generated dependencies are not installed, and the application is not built
-  or tested automatically. Direct dependency versions are pinned, but no
-  dependency audit result is claimed. Follow the restricted-environment audit
-  procedure in `docs/local-llm-code-generation-mvp.md` if separately approved.
+- Dynamic CRUD outputs can be built, dependency-audited, backend-tested, and
+  HTTP-smoke-tested with the tracked restricted Docker harness. Ordinary
+  Python tests do not require Docker. See
+  `docs/dynamic-crud-docker-validation.md` for commands, controls, and the
+  precise claim boundary. Historical local-LLM Task output is outside this
+  dynamic harness and is not automatically executed.
 - Local endpoint validation, cloud-tag rejection, and remote-model metadata
   checks are MVP controls, not a complete host-level network sandbox. Ollama
   should also be configured in local-only mode by the operator.
@@ -338,7 +357,8 @@ or model to be running.
 - The LLM cannot validate C1/C2 approval authenticity, authorize deployment, or
   provide Component 4's XAI defect explanations.
 - Living traceability is implemented for verified Task 6 manifests using a
-  local SQLite MVP store.
+  local SQLite MVP store; dynamic manifests can be converted to graphs, but
+  Stage 1 does not run or persist a new research snapshot automatically.
 - Defect-feedback-driven scoped regeneration is implemented for simulated
   defect reports, the service/controller/repository allowlist, and at most two
   modules. Repair success, XAI, and semantic preservation are not evaluated by
@@ -349,3 +369,6 @@ or model to be running.
   supported React/Node Task module, API, layering, repository, UI-client, and
   SQL structures without executing generated code. See
   `docs/design-to-code-structural-verification.md` for rules and limitations.
+  Its current rule set and the scoped-regeneration patch policy remain
+  Task-specific and explicitly reject dynamic generator manifests rather than
+  applying unsafe Task assumptions.
