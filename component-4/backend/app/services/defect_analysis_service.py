@@ -455,6 +455,90 @@ class DefectAnalysisService:
                                     })
         return findings
 
+    def inspect_workload_complexity_patterns(self, source_code: str) -> List[Dict[str, Any]]:
+        """
+        Static AST workload complexity analyzer detecting algorithmic performance bottlenecks (SO1, FR03).
+        Identifies:
+        - Nested loops: O(N^2) quadratic iteration without early termination.
+        - Exponential recursion: O(2^N) binary recursion without memoization/caching.
+        - Repeated buffer reallocation: String concatenation inside loops (e.g., s = s + ...).
+        - Unindexed linear scanning: Repeated linear scans inside an outer iteration.
+        """
+        findings = []
+        if not source_code:
+            return findings
+        try:
+            tree = ast.parse(source_code)
+        except Exception:
+            return findings
+
+        # Check for memoization decorators (e.g. @lru_cache, @cache)
+        memoized_functions = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                for dec in node.decorator_list:
+                    dec_name = ""
+                    if isinstance(dec, ast.Name):
+                        dec_name = dec.id
+                    elif isinstance(dec, ast.Attribute):
+                        dec_name = dec.attr
+                    elif isinstance(dec, ast.Call):
+                        if isinstance(dec.func, ast.Name):
+                            dec_name = dec.func.id
+                        elif isinstance(dec.func, ast.Attribute):
+                            dec_name = dec.func.attr
+                    if "cache" in dec_name.lower():
+                        memoized_functions.add(node.name)
+
+        for node in ast.walk(tree):
+            # 1. Exponential recursion: unmemoized function calling itself >= 2 times
+            if isinstance(node, ast.FunctionDef):
+                fn_name = node.name
+                if fn_name not in memoized_functions:
+                    calls = [
+                        c for c in ast.walk(node)
+                        if isinstance(c, ast.Call)
+                        and isinstance(c.func, ast.Name)
+                        and c.func.id == fn_name
+                    ]
+                    if len(calls) >= 2:
+                        findings.append({
+                            "pattern": "exponential_recursion",
+                            "complexity": "O(2^N)",
+                            "function_name": fn_name,
+                            "line_number": getattr(node, "lineno", None),
+                            "description": f"Unmemoized exponential recursive calls in function '{fn_name}'.",
+                        })
+
+            # 2. Nested loops (O(N^2) quadratic iteration)
+            if isinstance(node, (ast.For, ast.While)):
+                for child in ast.walk(node):
+                    if child is not node and isinstance(child, (ast.For, ast.While)):
+                        findings.append({
+                            "pattern": "nested_loop_quadratic",
+                            "complexity": "O(N^2)",
+                            "line_number": getattr(child, "lineno", getattr(node, "lineno", None)),
+                            "description": "Nested loop execution yielding potential O(N^2) quadratic algorithmic latency.",
+                        })
+                        break
+
+            # 3. Repeated buffer allocation / string concatenation in loop
+            if isinstance(node, (ast.For, ast.While)):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Assign):
+                        if isinstance(child.value, ast.BinOp) and isinstance(child.value.op, ast.Add):
+                            target_id = child.targets[0].id if child.targets and isinstance(child.targets[0], ast.Name) else None
+                            if target_id and any(isinstance(n, ast.Name) and n.id == target_id for n in ast.walk(child.value)):
+                                findings.append({
+                                    "pattern": "repeated_string_concat_in_loop",
+                                    "complexity": "O(N^2) buffer reallocation",
+                                    "line_number": getattr(child, "lineno", None),
+                                    "description": f"Repeated accumulator concatenation on variable '{target_id}' inside loop.",
+                                    })
+                                break
+
+        return findings
+
     def _classify_defect_taxonomy(
         self,
         test: TestResult,
@@ -477,17 +561,46 @@ class DefectAnalysisService:
         """
         diag_combined = f"{error_msg} {stack_trace}".lower()
 
-        # 1. Performance Bottleneck Checks: Measured execution latency exceeding 200ms or timeout
+        # 1. Performance Bottleneck Checks: Measured execution latency exceeding SLA or performance test failure
         duration = execution_duration_ms or test.duration_ms or 0.0
-        is_perf_test = getattr(test, "test_type", None) == TestType.PERFORMANCE
-        if category == "TIMEOUT_ERROR" or test.status == TestResultStatus.TIMEOUT or duration > 200.0 or is_perf_test:
+        is_perf_test = (
+            getattr(test, "test_type", None) == TestType.PERFORMANCE
+            or "performance" in getattr(test, "name", "").lower()
+            or "latency" in getattr(test, "name", "").lower()
+            or "sla" in getattr(test, "name", "").lower()
+        )
+        has_perf_diagnostic = any(
+            term in diag_combined
+            for term in ("latency sla breach", "threshold breach", "performance bottleneck", "timed out under load")
+        )
+
+        complexity_patterns = self.inspect_workload_complexity_patterns(source_code) if source_code else []
+
+        is_perf_bottleneck = False
+        is_timeout_failure = (category == "TIMEOUT_ERROR" or test.status == TestResultStatus.TIMEOUT)
+
+        if is_perf_test or has_perf_diagnostic:
+            # Under performance testing, failure, timeout, or SLA breach is a performance defect
+            if duration > 200.0 or is_timeout_failure or bool(complexity_patterns) or test.status == TestResultStatus.FAILED:
+                is_perf_bottleneck = True
+        elif is_timeout_failure:
+            # A timeout in a non-performance test is a functional hang / infinite loop, NOT a performance defect
+            is_perf_bottleneck = False
+        elif duration > 200.0:
+            # A completed non-perf test that genuinely exceeded 200ms latency threshold
+            is_perf_bottleneck = True
+        elif complexity_patterns and duration >= 10.0 and test.status == TestResultStatus.FAILED:
+            # Algorithmic complexity pattern confirmed with measurable execution latency
+            is_perf_bottleneck = True
+
+        if is_perf_bottleneck:
             metrics = {
                 "duration_ms": duration,
-                "threshold_breached": duration > 200.0 or category == "TIMEOUT_ERROR",
+                "threshold_breached": duration > 200.0 or is_perf_test or bool(complexity_patterns),
                 "threshold_latency_ms": 200.0,
+                "complexity_patterns": [p["pattern"] for p in complexity_patterns],
             }
-            if duration > 200.0 or category == "TIMEOUT_ERROR" or test.status == TestResultStatus.TIMEOUT:
-                return "performance_bottleneck", None, None, metrics
+            return "performance_bottleneck", None, None, metrics
 
         # 2. Security Vulnerability Checks: Derived from source code AST security findings or explicit security exceptions
         if source_code:

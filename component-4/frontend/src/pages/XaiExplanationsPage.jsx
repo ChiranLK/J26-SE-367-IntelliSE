@@ -16,6 +16,12 @@ import {
   HelpCircle,
   FileCode2,
   Cpu,
+  BookOpen,
+  Layers,
+  Sparkles,
+  Send,
+  User,
+  Settings,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -23,7 +29,7 @@ import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
-import { getVerificationRuns, getXaiExplanation } from '../api/verificationApi';
+import { getVerificationRuns, getXaiExplanation, confirmDelivery } from '../api/verificationApi';
 import { formatDate, formatRelativeTime } from '../utils/formatters';
 
 export default function XaiExplanationsPage() {
@@ -37,6 +43,8 @@ export default function XaiExplanationsPage() {
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const [error, setError] = useState(null);
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [explanationLevel, setExplanationLevel] = useState('technical');
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   // Load all verification runs for the selector
   const fetchRuns = async () => {
@@ -116,6 +124,23 @@ Recommendation:
       setTimeout(() => setCopiedSummary(false), 2000);
     } catch {
       setCopiedSummary(false);
+    }
+  };
+
+  const handleSimulateDelivery = async () => {
+    if (!selectedRunId) return;
+    setConfirmingDelivery(true);
+    try {
+      await confirmDelivery(selectedRunId, {
+        is_simulation: true,
+        notes: 'Simulated downstream delivery confirmed via XAI Console',
+      });
+      const data = await getXaiExplanation(selectedRunId);
+      setExplanation(data);
+    } catch (err) {
+      setError(`Delivery confirmation failed: ${err.message}`);
+    } finally {
+      setConfirmingDelivery(false);
     }
   };
 
@@ -312,6 +337,24 @@ Recommendation:
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {explanation.delivery_status && (
+                  <Badge
+                    variant={
+                      explanation.delivery_status === 'CONFIRMED_PRODUCTION_DELIVERY'
+                        ? 'success'
+                        : explanation.delivery_status === 'SIMULATED_DELIVERY'
+                        ? 'warning'
+                        : explanation.delivery_status.startsWith('BLOCKED_')
+                        ? 'danger'
+                        : 'secondary'
+                    }
+                    style={{ fontSize: '0.6875rem' }}
+                  >
+                    {explanation.delivery_status === 'SIMULATED_DELIVERY'
+                      ? 'SIMULATED DELIVERY (DEV MODE)'
+                      : explanation.delivery_status.replace(/_/g, ' ')}
+                  </Badge>
+                )}
                 {explanation.eligible ? (
                   <Badge variant="danger" dot style={{ fontSize: '0.6875rem' }}>
                     Eligible for Corrective Explanation
@@ -326,6 +369,53 @@ Recommendation:
                 </Badge>
               </div>
             </div>
+
+            {/* Delivery Gate Status Banners */}
+            {explanation.delivery_status === 'SIMULATED_DELIVERY' && (
+              <div
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <strong style={{ color: '#f59e0b' }}>Simulated Delivery (Development Mode):</strong>{' '}
+                Downstream delivery was confirmed via test harness simulation. This enables development preview of verification telemetry, but simulated delivery does not satisfy the production delivery gate or unlock production-gated code understanding explanations.
+              </div>
+            )}
+            {explanation.delivery_status === 'CONFIRMED_PRODUCTION_DELIVERY' && (
+              <div
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <strong style={{ color: '#10b981' }}>Authenticated Production Delivery:</strong>{' '}
+                Downstream delivery confirmed by authenticated delivery service with verified SHA-256 integrity and deployment governance sign-off.
+              </div>
+            )}
+            {explanation.delivery_status && explanation.delivery_status.startsWith('BLOCKED_') && explanation.delivery_status !== 'BLOCKED_VERIFICATION_FAILED' && (
+              <div
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: 'var(--radius-xs)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <strong style={{ color: '#ef4444' }}>Delivery Gate Blocked ({explanation.delivery_status}):</strong>{' '}
+                {explanation.eligibility_reason}
+              </div>
+            )}
 
             {/* Eligibility Evaluation Note */}
             <div
@@ -396,6 +486,174 @@ Recommendation:
               </div>
             )}
           </div>
+
+          {/* Pending Delivery Confirmation Gate Card */}
+          {explanation.delivery_status === 'PENDING_DELIVERY_CONFIRMATION' && (
+            <Card
+              title="Awaiting Downstream Delivery Confirmation"
+              subtitle="Verification tests and deployment governance have cleared; delivery confirmation is required to unlock post-delivery code understanding"
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={CheckCircle2}
+                  onClick={handleSimulateDelivery}
+                  loading={confirmingDelivery}
+                >
+                  Confirm Delivery (Simulated)
+                </Button>
+              }
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                <p style={{ margin: 0 }}>
+                  This artifact has <strong>passed all authorized test specifications</strong> and satisfied release governance policies.
+                  In accordance with the post-delivery XAI architecture, human-facing code understanding explanations are published exclusively
+                  after confirmed deployment to prevent generating premature explanations for unreleased artifacts.
+                </p>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Click <em>"Confirm Delivery (Simulated)"</em> to record downstream deployment and synthesize the complete 8-dimension code understanding package.
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Blocked Verification Warning */}
+          {explanation.delivery_status === 'BLOCKED_VERIFICATION_FAILED' && (
+            <div
+              style={{
+                padding: '0.85rem 1rem',
+                backgroundColor: 'rgba(239, 68, 68, 0.06)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.82rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+              }}
+            >
+              <strong style={{ color: 'var(--status-failed)' }}>Internal Repair Mode Active:</strong>{' '}
+              User-facing code explanations are withheld during intermediate repair cycles.
+              Structured technical feedback has been routed to Component 3 for automated correction.
+              Audit defect records remain accessible in the <strong>Defects</strong> tab.
+            </div>
+          )}
+
+          {/* Post-Delivery Software Understanding Package (Unlocked upon Confirmed Delivery) */}
+          {explanation.post_delivery_explanation && (
+            <Card
+              title="Post-Delivery Code Understanding Console"
+              subtitle={`Verified Software: ${explanation.post_delivery_explanation.software_name} — All ${explanation.post_delivery_explanation.verified_test_count} tests passed`}
+              action={
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <Button
+                    variant={explanationLevel === 'beginner' ? 'primary' : 'outline'}
+                    size="sm"
+                    icon={User}
+                    onClick={() => setExplanationLevel('beginner')}
+                    style={{ fontSize: '0.75rem', height: '28px' }}
+                  >
+                    Beginner View
+                  </Button>
+                  <Button
+                    variant={explanationLevel === 'technical' ? 'primary' : 'outline'}
+                    size="sm"
+                    icon={FileCode2}
+                    onClick={() => setExplanationLevel('technical')}
+                    style={{ fontSize: '0.75rem', height: '28px' }}
+                  >
+                    Technical View
+                  </Button>
+                </div>
+              }
+            >
+              {explanationLevel === 'beginner' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>Software Purpose</h4>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {explanation.post_delivery_explanation.beginner_level.overview}
+                    </p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>What It Does</h4>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {explanation.post_delivery_explanation.beginner_level.what_it_does}
+                    </p>
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>How to Use</h4>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {explanation.post_delivery_explanation.beginner_level.how_to_use}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Key Verified Capabilities</h4>
+                    <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                      {explanation.post_delivery_explanation.beginner_level.key_capabilities.map((cap, i) => (
+                        <li key={i}>{cap}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>1. Software Overview</h4>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                      {explanation.post_delivery_explanation.software_overview}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>2. Architecture & Modules</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {explanation.post_delivery_explanation.module_responsibilities.map((m, idx) => (
+                        <div key={idx} style={{ padding: '0.6rem 0.8rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600 }}>
+                            <code style={{ color: 'var(--primary-300)' }}>{m.file_path}</code>
+                            <span style={{ color: 'var(--text-muted)' }}>{m.line_count} LOC</span>
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                            {m.primary_responsibility}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>3. Important Functions & Behavioral Contracts</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {explanation.post_delivery_explanation.important_functions.map((fn, idx) => (
+                        <div key={idx} style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            <code style={{ fontSize: '0.84rem', color: '#818cf8', fontWeight: 600 }}>{fn.signature}</code>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Line {fn.line_number}–{fn.end_line_number || fn.line_number}</span>
+                          </div>
+                          <p style={{ margin: '0.4rem 0 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                            {fn.technical_behavior}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>4. Setup & Usage Instructions</h4>
+                    <pre style={{ margin: 0, padding: '0.75rem', background: '#050608', borderRadius: 'var(--radius-xs)', fontSize: '0.75rem', color: 'var(--text-secondary)', overflowX: 'auto' }}>
+                      {explanation.post_delivery_explanation.setup_and_usage}
+                    </pre>
+                  </div>
+
+                  <div>
+                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>5. Known Limitations & Scope</h4>
+                    <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)', whiteSpace: 'pre-line' }}>
+                      {explanation.post_delivery_explanation.limitations_and_verification_scope}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Section 1: Executive Findings Summary */}
           <Card

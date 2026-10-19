@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 from app.schemas.common import TestType, VerificationStatus
 from app.schemas.defect_report import DefectReport
+from app.schemas.delivery import DeliveryConfirmation
 from app.schemas.feedback import FeedbackIteration
 from app.schemas.test_result import TestResult
 
@@ -88,6 +89,10 @@ class VerificationRunResponse(BaseModel):
     error_message: Optional[str] = Field(
         default=None,
         description="Diagnostic details if status is ERROR",
+    )
+    delivery_confirmation: Optional[DeliveryConfirmation] = Field(
+        default=None,
+        description="Confirmed downstream delivery record for the verified artifact (prerequisite gate for post-delivery XAI)",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

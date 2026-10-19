@@ -1,10 +1,20 @@
 """
 Executable Baseline Evaluators for INTELISE Component 4 Benchmark (Proposal Section 3.8).
-Provides empirical, executable baselines evaluated against the exact same frozen 18 scenarios:
-1. ConventionalCiBaselineEvaluator: Standard un-specialized CI runner (e.g. raw pytest in container).
+Provides empirical, executable baselines evaluated against frozen benchmark scenarios:
+1. ConventionalCiBaselineEvaluator: Standard un-specialized CI runner (raw pytest in Docker or isolated execution).
 2. StaticAnalysisBaselineEvaluator: Pure AST static security analysis without dynamic execution.
+
+Enhancements (Phase 3B.3):
+- Records granular scenario-level observations (status, exit code, timeout, duration, sanitized evidence, provenance).
+- Separates test execution from ground-truth scoring: baseline execution NEVER accesses scenario_group or has_defect.
+- Grounds observations in genuine runner output or dynamic test execution.
 """
-from typing import Any, Dict, List, Optional
+import importlib.util
+import re
+import sys
+import time
+import traceback
+from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 from app.benchmark.dataset import PILOT_BENCHMARK_SCENARIOS
@@ -12,6 +22,22 @@ from app.benchmark.models import BenchmarkScenario, BenchmarkScenarioGroup
 from app.schemas.common import DefectCategory, TestResultStatus
 from app.services.defect_analysis_service import DefectAnalysisService
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
+
+
+class ScenarioBaselineRecord(BaseModel):
+    """Detailed observation recorded for a single scenario under a baseline evaluator."""
+    scenario_id: str
+    detected_has_defect: bool
+    execution_status: str
+    container_exit_code: int = 0
+    timeout: bool = False
+    duration_ms: float = 0.0
+    sanitized_evidence: str = ""
+    findings_count: int = 0
+    provenance: str = "EMPIRICAL_EXECUTION"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self.model_dump()
 
 
 class BaselineExecutionResult(BaseModel):
@@ -27,6 +53,20 @@ class BaselineExecutionResult(BaseModel):
     f1_score: float
     detection_breakdown: Dict[str, Dict[str, int]] = Field(default_factory=dict)
     limitations: List[str] = Field(default_factory=list)
+    scenario_records: List[ScenarioBaselineRecord] = Field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self.model_dump()
+
+
+def _sanitize_evidence(text: str, max_length: int = 500) -> str:
+    """Sanitizes sensitive patterns and bounds evidence snippet length."""
+    if not text:
+        return ""
+    # Redact common credentials/paths
+    redacted = re.sub(r"(token|secret|password|key)[\s:=]+([^\s,;]+)", r"\1=[REDACTED]", text, flags=re.IGNORECASE)
+    cleaned = redacted.replace("\r", " ").strip()
+    return cleaned[:max_length]
 
 
 class ConventionalCiBaselineEvaluator:
@@ -34,15 +74,94 @@ class ConventionalCiBaselineEvaluator:
     Baseline 1: Conventional CI/CD Pipeline (Raw Pytest Runner).
     Simulates standard CI pipeline execution (e.g., GitHub Actions / Jenkins running pytest).
     Characteristics:
-    - Runs pytest inside the Docker container without specialized testing agents.
+    - Runs pytest inside the Docker container or local dynamic sandbox without specialized testing agents.
     - Has no latency SLA threshold profiling (misses performance bottlenecks).
     - Has no AST semantic drift detector (misses weakened assertions).
     - Has no multi-agent taxonomy classification.
+    - Captures per-scenario observations directly from execution without ground-truth access.
     """
 
     def __init__(self, use_real_docker: bool = False, runner: Optional[DockerTestRunner] = None):
         self.use_real_docker = use_real_docker
         self.runner = runner or (DockerTestRunner() if use_real_docker else None)
+
+    def _execute_in_process_sandbox(self, source_code: str, test_code: str, filename: str) -> Tuple[bool, int, bool, float, str]:
+        """
+        Executes test code against source code dynamically in a temporary namespace.
+        NEVER inspects any scenario labels or expected outcomes.
+        Returns: (pytest_failed, exit_code, is_timeout, duration_ms, sanitized_evidence)
+        """
+        t0 = time.perf_counter()
+        mod_name = f"sandbox_baseline_{abs(hash(source_code)) % 10000000}"
+
+        spec = importlib.util.spec_from_loader(mod_name, loader=None)
+        if spec is None:
+            return True, 1, False, 1.0, "Could not initialize module spec"
+        mod = importlib.util.module_from_spec(spec)
+
+        prev_mod = sys.modules.get(mod_name)
+        prev_solution = sys.modules.get("solution")
+        sys.modules[mod_name] = mod
+        sys.modules["solution"] = mod
+
+        try:
+            exec(source_code, mod.__dict__)
+        except Exception as exc:
+            dur = (time.perf_counter() - t0) * 1000.0
+            return True, 1, False, dur, _sanitize_evidence(f"CompilationError: {exc}")
+        finally:
+            pass
+
+        test_globals: Dict[str, Any] = {
+            "solution": mod,
+            **mod.__dict__,
+        }
+
+        try:
+            exec(test_code, test_globals)
+        except Exception as exc:
+            dur = (time.perf_counter() - t0) * 1000.0
+            if prev_mod is not None:
+                sys.modules[mod_name] = prev_mod
+            else:
+                sys.modules.pop(mod_name, None)
+            if prev_solution is not None:
+                sys.modules["solution"] = prev_solution
+            else:
+                sys.modules.pop("solution", None)
+            return True, 1, False, dur, _sanitize_evidence(f"CollectionError: {exc}")
+
+        test_funcs = [v for k, v in test_globals.items() if k.startswith("test_") and callable(v)]
+        pytest_failed = False
+        evidence = "All tests passed"
+        exit_code = 0
+
+        for tf in test_funcs:
+            try:
+                tf()
+            except AssertionError as exc:
+                pytest_failed = True
+                exit_code = 1
+                evidence = _sanitize_evidence(f"AssertionError in {tf.__name__}: {exc}")
+                break
+            except Exception as exc:
+                pytest_failed = True
+                exit_code = 1
+                evidence = _sanitize_evidence(f"{type(exc).__name__} in {tf.__name__}: {exc}")
+                break
+
+        dur = (time.perf_counter() - t0) * 1000.0
+
+        if prev_mod is not None:
+            sys.modules[mod_name] = prev_mod
+        else:
+            sys.modules.pop(mod_name, None)
+        if prev_solution is not None:
+            sys.modules["solution"] = prev_solution
+        else:
+            sys.modules.pop("solution", None)
+
+        return pytest_failed, exit_code, False, dur, evidence
 
     async def evaluate(self, scenarios: Optional[List[BenchmarkScenario]] = None) -> BaselineExecutionResult:
         dataset = scenarios or PILOT_BENCHMARK_SCENARIOS
@@ -52,20 +171,23 @@ class ConventionalCiBaselineEvaluator:
         tn = 0
         fn = 0
         breakdown: Dict[str, Dict[str, int]] = {
-            "clean_control": {"correct": 0, "incorrect": 0},
-            "functional_bug": {"detected": 0, "missed": 0},
-            "security_vulnerability": {"detected": 0, "missed": 0},
-            "performance_bottleneck": {"detected": 0, "missed": 0},
-            "regression": {"detected": 0, "missed": 0},
-            "non_convergent_by_design": {"detected": 0, "missed": 0},
-            "semantic_drift": {"detected": 0, "missed": 0},
+            "clean_control": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "functional_bug": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "security_vulnerability": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "performance_bottleneck": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "regression": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "non_convergent_by_design": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "semantic_drift": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "integration_defect": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
         }
 
-        for sc in dataset:
-            group_key = sc.scenario_group.value
+        scenario_records: List[ScenarioBaselineRecord] = []
 
-            # Execute raw pytest in Docker or fast runner
-            pytest_failed = False
+        # =====================================================================
+        # PHASE 1: EXECUTION (Zero Ground-Truth Access)
+        # =====================================================================
+        raw_observations = []
+        for sc in dataset:
             if self.use_real_docker and self.runner:
                 exec_res: SandboxExecutionResult = await self.runner.execute_verification(
                     source_code=sc.module_code,
@@ -73,28 +195,46 @@ class ConventionalCiBaselineEvaluator:
                     filename=sc.filename,
                     timeout_seconds=15,
                 )
-                pytest_failed = exec_res.status == TestResultStatus.FAILED.value or any(
+                failed = exec_res.status == TestResultStatus.FAILED.value or any(
                     t.status in (TestResultStatus.FAILED, TestResultStatus.ERROR, TestResultStatus.TIMEOUT)
                     for t in exec_res.test_results
                 )
+                is_timeout = exec_res.status == TestResultStatus.TIMEOUT.value
+                dur = exec_res.duration_ms
+                first_err = next((t.error_message for t in exec_res.test_results if t.error_message), "")
+                evidence = _sanitize_evidence(first_err or ("Tests failed" if failed else "All tests passed"))
+                exit_code = 1 if failed else 0
+                status_str = "FAILED" if failed else "PASSED"
             else:
-                # Deterministic simulation of raw pytest behavior:
-                # - Clean controls: pass
-                # - Semantic drift (assert True): passes in pytest!
-                # - Performance bottlenecks (assert len > 0): passes in pytest!
-                # - Functional, Security, Regression, Non-convergent: fail assertions in pytest
-                if sc.scenario_group in (
-                    BenchmarkScenarioGroup.CLEAN_CONTROL,
-                    BenchmarkScenarioGroup.SEMANTIC_DRIFT,
-                    BenchmarkScenarioGroup.PERFORMANCE_BOTTLENECK,
-                ):
-                    pytest_failed = False
-                else:
-                    pytest_failed = True
+                failed, exit_code, is_timeout, dur, evidence = self._execute_in_process_sandbox(
+                    source_code=sc.module_code,
+                    test_code=sc.test_code,
+                    filename=sc.filename,
+                )
+                status_str = "FAILED" if failed else "PASSED"
 
-            # Evaluate against ground truth
+            raw_observations.append({
+                "scenario_id": sc.scenario_id,
+                "detected_has_defect": failed,
+                "execution_status": status_str,
+                "container_exit_code": exit_code,
+                "timeout": is_timeout,
+                "duration_ms": round(dur, 2),
+                "sanitized_evidence": evidence,
+                "provenance": "EMPIRICAL_EXECUTION",
+            })
+
+        # =====================================================================
+        # PHASE 2: METRIC SCORING AGAINST FROZEN GROUND TRUTH
+        # =====================================================================
+        for sc, obs in zip(dataset, raw_observations):
+            group_key = sc.scenario_group.value
+            pytest_failed = obs["detected_has_defect"]
+
+            rec = ScenarioBaselineRecord(**obs)
+            scenario_records.append(rec)
+
             if not sc.has_defect:
-                # Clean control or drift scenario where test passes
                 if not pytest_failed:
                     tn += 1
                     breakdown[group_key]["correct"] += 1
@@ -102,7 +242,6 @@ class ConventionalCiBaselineEvaluator:
                     fp += 1
                     breakdown[group_key]["incorrect"] += 1
             else:
-                # Defective scenario: conventional CI detects if pytest fails
                 if pytest_failed:
                     tp += 1
                     breakdown[group_key]["detected"] += 1
@@ -130,6 +269,7 @@ class ConventionalCiBaselineEvaluator:
                 "Cannot detect test suite semantic drift or superficial convergence.",
                 "Binary pass/fail exit code without defect localization or taxonomy categorization.",
             ],
+            scenario_records=scenario_records,
         )
 
 
@@ -141,6 +281,7 @@ class StaticAnalysisBaselineEvaluator:
     - Analyzes AST syntax of module_code for known defect patterns (CWE-78, CWE-95, CWE-22, CWE-798).
     - Has no runtime execution: cannot detect dynamic functional bugs or off-by-one errors.
     - Has no performance profiling capability.
+    - Captures per-scenario observations directly from AST inspection without ground-truth access.
     """
 
     def __init__(self):
@@ -154,19 +295,53 @@ class StaticAnalysisBaselineEvaluator:
         tn = 0
         fn = 0
         breakdown: Dict[str, Dict[str, int]] = {
-            "clean_control": {"correct": 0, "incorrect": 0},
-            "functional_bug": {"detected": 0, "missed": 0},
-            "security_vulnerability": {"detected": 0, "missed": 0},
-            "performance_bottleneck": {"detected": 0, "missed": 0},
-            "regression": {"detected": 0, "missed": 0},
-            "non_convergent_by_design": {"detected": 0, "missed": 0},
-            "semantic_drift": {"detected": 0, "missed": 0},
+            "clean_control": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "functional_bug": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "security_vulnerability": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "performance_bottleneck": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "regression": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "non_convergent_by_design": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "semantic_drift": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
+            "integration_defect": {"correct": 0, "incorrect": 0, "detected": 0, "missed": 0},
         }
 
+        scenario_records: List[ScenarioBaselineRecord] = []
+
+        # =====================================================================
+        # PHASE 1: EXECUTION (Zero Ground-Truth Access)
+        # =====================================================================
+        raw_observations = []
         for sc in dataset:
-            group_key = sc.scenario_group.value
+            t0 = time.perf_counter()
             findings = self.defect_service.inspect_static_security_vulnerabilities(sc.module_code)
+            dur = (time.perf_counter() - t0) * 1000.0
             static_flagged = len(findings) > 0
+            evidence = _sanitize_evidence(
+                f"Flagged {len(findings)} vulnerability pattern(s): {[f.cwe_id for f in findings if f.cwe_id]}"
+                if static_flagged else "No AST security patterns detected"
+            )
+
+            raw_observations.append({
+                "scenario_id": sc.scenario_id,
+                "detected_has_defect": static_flagged,
+                "execution_status": "DEFECT_DETECTED" if static_flagged else "CLEAN",
+                "container_exit_code": 1 if static_flagged else 0,
+                "timeout": False,
+                "duration_ms": round(dur, 2),
+                "sanitized_evidence": evidence,
+                "findings_count": len(findings),
+                "provenance": "EMPIRICAL_EXECUTION",
+            })
+
+        # =====================================================================
+        # PHASE 2: METRIC SCORING AGAINST FROZEN GROUND TRUTH
+        # =====================================================================
+        for sc, obs in zip(dataset, raw_observations):
+            group_key = sc.scenario_group.value
+            static_flagged = obs["detected_has_defect"]
+
+            rec = ScenarioBaselineRecord(**obs)
+            scenario_records.append(rec)
 
             if not sc.has_defect:
                 if not static_flagged:
@@ -203,4 +378,5 @@ class StaticAnalysisBaselineEvaluator:
                 "Cannot detect dynamic off-by-one errors, infinite loops, or computational regressions.",
                 "Cannot measure dynamic runtime latency or workload throughput.",
             ],
+            scenario_records=scenario_records,
         )

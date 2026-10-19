@@ -88,7 +88,7 @@ def test_total_without_tax():
     assert run_data["status"] == "FAILED"
     run_id = run_data["id"]
 
-    # 3. Retrieve human-facing XAI explanation
+    # 3. Retrieve explanation - withheld during intermediate repair attempts
     expl_res = client.get(f"/api/v1/verifications/{run_id}/explanation")
     assert expl_res.status_code == 200
     data = expl_res.json()
@@ -97,64 +97,26 @@ def test_total_without_tax():
     assert data["verification_run_id"] == run_id
     assert data["submission_id"] == sub_id
     assert data["verification_status"] == "FAILED"
-    assert data["eligible"] is True
-    assert "2 confirmed application-code defect report(s)" in data["eligibility_reason"]
-    assert data["explanation_method"] == "deterministic_evidence_v1"
-    assert data["provider"] == "deterministic_evidence_v1"
-    assert data["schema_version"] == "1.0"
+    assert data["eligible"] is False
+    assert data["delivery_status"] == "BLOCKED_VERIFICATION_FAILED"
+    assert data["post_delivery_explanation"] is None
+    assert "User-facing XAI is withheld during intermediate repair attempts" in data["eligibility_reason"]
+    assert data["recommendation"]["action"] == "RETURN_TO_COMPONENT_3"
+    assert data["recommendation"]["recommended"] is True
 
-    # 1. What failed?
-    assert len(data["what_failed"]) == 2
-    assert any("test_total_with_tax" in item for item in data["what_failed"])
-    assert any("test_total_without_tax" in item for item in data["what_failed"])
-
-    # 2. Confirmed observations
-    observations = data["confirmed_observations"]
-    assert len(observations) == 2
-
-    tax_obs = next((o for o in observations if o["test_name"] == "test_total_with_tax"), None)
-    no_tax_obs = next((o for o in observations if o["test_name"] == "test_total_without_tax"), None)
-
-    assert tax_obs is not None
-    assert tax_obs["expected_value"] == "108.0"
-    assert tax_obs["observed_value"] == "8.0"
-    assert tax_obs["file_path"] == "defective_calculator.py"
-
-    assert no_tax_obs is not None
-    assert no_tax_obs["expected_value"] == "100.0"
-    assert no_tax_obs["observed_value"] == "0.0"
-    assert no_tax_obs["file_path"] == "defective_calculator.py"
-
-    # 3. Evidence-based interpretation
-    interpretation = data["evidence_based_interpretation"]
-    assert "8.0" in interpretation
-    assert "108.0" in interpretation
-    assert "0.0" in interpretation
-    assert "100.0" in interpretation
-    assert "Causal attribution caveat" in interpretation
-
-    # 4. Recommendation for Component 3 return
-    rec = data["recommendation"]
-    assert rec["action"] == "RETURN_TO_COMPONENT_3"
-    assert rec["recommended"] is True
-    assert "recommends human approval" in rec["reason"]
-    assert rec["target_audience"] == "Human Engineer / Reviewer"
-
-    # 5. Suggested investigations
-    investigations = data["suggested_investigations"]
-    assert len(investigations) >= 2
-    assert any("defective_calculator.py" in inv for inv in investigations)
-    assert any("test_total_with_tax" in inv for inv in investigations)
+    # 4. Verify that internal defect reports are preserved for C3 and auditing
+    defects_res = client.get(f"/api/v1/verifications/{run_id}/defects")
+    assert defects_res.status_code == 200
+    defects_data = defects_res.json()["items"]
+    assert len(defects_data) == 2
 
 
 def test_corrected_calculator_produces_passing_xai_explanation(client: TestClient):
     """
     Scenario 2: Corrected calculator where all assertions pass.
     Verifies that:
-    - Status is PASSED, eligible=False for corrective explanation.
-    - Summary notes that all executed tests passed.
-    - Cautions that passing tests does not prove absence of all conceivable defects.
-    - Recommendation action is ACCEPT_VERIFICATION with recommended=False.
+    - Prior to delivery confirmation, XAI remains in PENDING_DELIVERY_CONFIRMATION state.
+    - Upon confirming delivery, full post-delivery code explanation is unlocked.
     """
     valid_code = """
 def calculate_tax(amount):
@@ -188,22 +150,35 @@ def test_total_without_tax():
     run_id = run_res.json()["id"]
     assert run_res.json()["status"] == "PASSED"
 
+    # Step 1: Prior to delivery confirmation, explanation is in pending state
     expl_res = client.get(f"/api/v1/verifications/{run_id}/explanation")
     assert expl_res.status_code == 200
     data = expl_res.json()
 
     assert data["verification_status"] == "PASSED"
     assert data["eligible"] is False
-    assert "passed successfully" in data["eligibility_reason"]
-    assert "All 2 executed test case(s)" in data["summary"]
-    assert data["what_failed"] == []
-    assert data["confirmed_observations"] == []
-    assert "mathematical proof" in data["evidence_based_interpretation"]
+    assert data["delivery_status"] == "PENDING_DELIVERY_CONFIRMATION"
+    assert data["post_delivery_explanation"] is None
+    assert data["recommendation"]["action"] == "AWAIT_DELIVERY_CONFIRMATION"
+    assert data["recommendation"]["recommended"] is False
 
-    rec = data["recommendation"]
-    assert rec["action"] == "ACCEPT_VERIFICATION"
-    assert rec["recommended"] is False
-    assert "No corrective cycle with Component 3 is required" in rec["reason"]
+    # Step 2: Confirm production delivery with authenticated credentials
+    deliv_res = client.post(
+        f"/api/v1/verifications/{run_id}/delivery-confirmation",
+        headers={"X-Delivery-Token": "intelise_dev_delivery_token_secret"},
+        json={"is_simulation": False, "artifact_version": sub_id, "notes": "Production delivery release signoff"},
+    )
+    assert deliv_res.status_code == 201
+
+    # Step 3: Post-delivery explanation is now fully unlocked
+    expl_res_after = client.get(f"/api/v1/verifications/{run_id}/explanation")
+    assert expl_res_after.status_code == 200
+    data_after = expl_res_after.json()
+
+    assert data_after["eligible"] is True
+    assert data_after["delivery_status"] == "CONFIRMED_PRODUCTION_DELIVERY"
+    assert data_after["post_delivery_explanation"] is not None
+    assert data_after["recommendation"]["action"] == "DELIVERED_AND_READY"
 
 
 def test_pending_verification_is_ineligible_for_explanation():
@@ -227,11 +202,9 @@ def test_pending_verification_is_ineligible_for_explanation():
 
     assert explanation.eligible is False
     assert explanation.verification_status == "PENDING"
-    assert "execution evidence is not yet available" in explanation.eligibility_reason
-    assert "currently in state 'PENDING'" in explanation.summary
+    assert explanation.delivery_status == "PENDING_VERIFICATION"
     assert explanation.recommendation.action == "AWAIT_EXECUTION"
     assert explanation.recommendation.recommended is False
-    assert explanation.confirmed_observations == []
 
 
 def test_infrastructure_failure_explanation_does_not_blame_code():
@@ -257,12 +230,9 @@ def test_infrastructure_failure_explanation_does_not_blame_code():
     explanation = service.generate_explanation(infra_run)
 
     assert explanation.eligible is False
-    assert "infrastructure isolation error" in explanation.eligibility_reason
-    assert "does NOT indicate defective application source code" in explanation.summary
-    assert "Docker sandbox container isolation failure" in explanation.what_failed[0] or "Sandbox Environment Error" in explanation.what_failed[0]
+    assert explanation.delivery_status == "BLOCKED_INFRASTRUCTURE_ERROR"
     assert explanation.recommendation.action == "RETRY_INFRASTRUCTURE"
     assert explanation.recommendation.recommended is False
-    assert "Do not request code modifications from Component 3" in explanation.recommendation.reason
 
 
 def test_missing_diagnostic_information_handled_safely():
@@ -306,18 +276,24 @@ def test_missing_diagnostic_information_handled_safely():
     )
 
     service = XaiExplanationService()
-    explanation = service.generate_explanation(run)
 
-    assert explanation.eligible is True
-    assert len(explanation.confirmed_observations) == 1
-    obs = explanation.confirmed_observations[0]
+    # User-facing explanation: withheld for failed runs
+    explanation = service.generate_explanation(run)
+    assert explanation.eligible is False
+    assert explanation.delivery_status == "BLOCKED_VERIFICATION_FAILED"
+
+    # Internal research diagnostic generator: handles missing diagnostics safely without hallucination
+    internal_expl = service.generate_internal_defect_explanation(run)
+    assert internal_expl.eligible is True
+    assert len(internal_expl.confirmed_observations) == 1
+    obs = internal_expl.confirmed_observations[0]
     assert obs.expected_value is None
     assert obs.observed_value is None
     assert obs.line_number is None
 
     # Verifies explicit disclosure of partial diagnostic availability
-    assert "Diagnostic limitation note" in explanation.evidence_based_interpretation
-    assert "strictly bounded to confirmed traceback excerpts" in explanation.evidence_based_interpretation
+    assert "Diagnostic limitation note" in internal_expl.evidence_based_interpretation
+    assert "strictly bounded to confirmed traceback excerpts" in internal_expl.evidence_based_interpretation
 
 
 def test_unknown_verification_run_returns_404(client: TestClient):
@@ -452,5 +428,4 @@ def test_strict_separation_between_xai_and_c3_technical_feedback():
     # Verify XAI response contains human-facing reasoning
     assert hasattr(xai_resp, "evidence_based_interpretation")
     assert hasattr(xai_resp, "recommendation")
-    assert xai_resp.recommendation.target_audience == "Human Engineer / Reviewer"
     assert xai_resp.recommendation.action == "RETURN_TO_COMPONENT_3"

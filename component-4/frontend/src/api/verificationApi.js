@@ -111,6 +111,44 @@ export async function getXaiExplanation(runId) {
 }
 
 /**
+ * Confirms downstream delivery for a verified, governance-approved artifact version.
+ * Unlocks post-delivery software understanding explanations.
+ * @param {string} runId
+ * @param {Object} [payload]
+ */
+export async function confirmDelivery(runId, payload = {}) {
+  const response = await apiClient.post(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/delivery-confirmation`,
+    payload
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves delivery confirmation status for a verification run.
+ * @param {string} runId
+ */
+export async function getDeliveryConfirmation(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/delivery-confirmation`
+  );
+  return response.data;
+}
+
+/**
+ * Retrieves the dedicated 8-dimension post-delivery software understanding package.
+ * Available exclusively upon confirmed delivery of verified software.
+ * @param {string} runId
+ */
+export async function getPostDeliveryExplanation(runId) {
+  const response = await apiClient.get(
+    `/api/v1/verifications/${encodeURIComponent(runId)}/post-delivery-explanation`,
+    { timeout: 90000 }
+  );
+  return response.data;
+}
+
+/**
  * Retrieves Component 3 connectivity, configuration, and contract readiness status.
  */
 export async function getComponent3Status() {

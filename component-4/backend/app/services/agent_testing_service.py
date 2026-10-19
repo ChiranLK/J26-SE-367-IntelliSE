@@ -515,7 +515,16 @@ print("---BENCHMARK_OUTPUT_END---")
             filename=filename,
             timeout_seconds=25,
         )
-        total_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        measured_wall_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        total_time_ms = round(exec_result.duration_ms if (exec_result.duration_ms and exec_result.duration_ms > 0) else measured_wall_ms, 2)
+
+        # Inspect AST workload complexity patterns for evidence-grounded performance diagnosis
+        complexity_patterns = []
+        try:
+            from app.services.defect_analysis_service import DefectAnalysisService
+            complexity_patterns = DefectAnalysisService().inspect_workload_complexity_patterns(source_code)
+        except Exception as exc:
+            logger.debug("Workload complexity inspection failed: %s", exc)
 
         # Parse test durations to compute latency statistics
         durations = [t.duration_ms for t in exec_result.test_results if t.duration_ms is not None]
@@ -531,18 +540,38 @@ print("---BENCHMARK_OUTPUT_END---")
         p99 = durations[-1]
         throughput_rps = round((count / (sum(durations) / 1000.0)), 2) if sum(durations) > 0 else 0.0
 
-        is_breached = p95 > latency_threshold_ms or exec_result.is_timeout
+        # Separate container startup overhead from raw code duration using independently measured execution intervals
+        workload_duration_ms = round(sum(durations), 2)
+        container_overhead_ms = round(max(0.0, total_time_ms - workload_duration_ms), 2)
+
+        # Breach condition: empirical SLA threshold breach, timeout under performance load,
+        # or confirmed algorithmic complexity pattern with elevated workload execution duration (>= 50.0ms or scale test failure).
+        # Container startup overhead is explicitly excluded from triggering breaches.
+        is_breached = (
+            p95 > latency_threshold_ms
+            or exec_result.is_timeout
+            or (len(complexity_patterns) > 0 and (p95 >= 50.0 or exec_result.status == TestResultStatus.FAILED.value))
+        )
+
         bottlenecks = []
         if is_breached:
-            bottlenecks.append(
-                f"Latency threshold breach: 95th percentile latency ({p95:.1f}ms) exceeded maximum allowable threshold ({latency_threshold_ms:.1f}ms)."
-            )
-        if exec_result.is_timeout:
-            bottlenecks.append("Execution timed out under load: potential infinite loop or blocking I/O bottleneck.")
+            if p95 > latency_threshold_ms:
+                bottlenecks.append(
+                    f"Latency SLA threshold breach: 95th percentile latency ({p95:.1f}ms) exceeded maximum allowable threshold ({latency_threshold_ms:.1f}ms)."
+                )
+            if complexity_patterns:
+                pat_descs = [f"{p['pattern']} ({p['complexity']})" for p in complexity_patterns]
+                bottlenecks.append(
+                    f"Algorithmic bottleneck identified: {', '.join(pat_descs)} resulting in elevated execution latency ({p95:.1f}ms)."
+                )
+            if exec_result.is_timeout:
+                bottlenecks.append("Execution timed out under performance workload: potential non-terminating loop or catastrophic algorithmic scaling.")
 
         metrics = PerformanceMetrics(
             sample_size=count,
-            duration_ms=total_time_ms,
+            duration_ms=workload_duration_ms,
+            workload_duration_ms=workload_duration_ms,
+            container_startup_overhead_ms=container_overhead_ms,
             mean_latency_ms=round(mean_l, 2),
             latency_p50_ms=round(p50, 2),
             latency_p95_ms=round(p95, 2),
@@ -554,7 +583,10 @@ print("---BENCHMARK_OUTPUT_END---")
         )
 
         status = "FAILED" if is_breached else "PASSED"
-        if exec_result.is_timeout or exec_result.status == TestResultStatus.ERROR.value:
+        if exec_result.is_timeout:
+            # Under performance testing, a timeout is an empirical failure (catastrophic scaling or hang under load)
+            status = "FAILED"
+        elif exec_result.status == TestResultStatus.ERROR.value and not exec_result.test_results:
             status = "ERROR"
 
         perf_test_results = []
@@ -563,8 +595,8 @@ print("---BENCHMARK_OUTPUT_END---")
                 TestResult(
                     test_id=f"perf-sla-{uuid.uuid4().hex[:8]}",
                     name="test_performance_sla_compliance",
-                    status=TestResultStatus.TIMEOUT if exec_result.is_timeout else TestResultStatus.ERROR,
-                    error_message=exec_result.error_message or "Execution timed out under load or failed with infrastructure error.",
+                    status=TestResultStatus.ERROR,
+                    error_message=exec_result.error_message or "Execution failed with container infrastructure error.",
                     duration_ms=total_time_ms,
                     test_type=TestType.PERFORMANCE,
                 )
@@ -574,7 +606,7 @@ print("---BENCHMARK_OUTPUT_END---")
                 TestResult(
                     test_id=f"perf-sla-{uuid.uuid4().hex[:8]}",
                     name="test_performance_sla_compliance",
-                    status=TestResultStatus.FAILED,
+                    status=TestResultStatus.TIMEOUT if exec_result.is_timeout else TestResultStatus.FAILED,
                     error_message="; ".join(bottlenecks),
                     duration_ms=p95,
                     test_type=TestType.PERFORMANCE,

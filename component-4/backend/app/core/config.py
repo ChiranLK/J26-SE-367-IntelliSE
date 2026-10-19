@@ -117,7 +117,18 @@ class Settings(BaseSettings):
     PERFORMANCE_TEST_ITERATIONS: int = 10
     PERFORMANCE_LATENCY_THRESHOLD_MS: float = 200.0
 
+    # Production Delivery Authentication & XAI Gate Security (Phase 3B.2)
+    DELIVERY_AUTH_TOKEN: str = "intelise_dev_delivery_token_secret"
+    ALLOW_SIMULATED_DELIVERY: bool = True
+
+    def is_simulation_permitted(self) -> bool:
+        """Simulation is strictly disabled in production environments."""
+        if self.ENVIRONMENT.lower() == "production":
+            return False
+        return self.ALLOW_SIMULATED_DELIVERY
+
 
 settings = Settings()
+
 
 

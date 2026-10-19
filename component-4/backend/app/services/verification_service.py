@@ -1,9 +1,12 @@
 import ast
 import asyncio
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
 from app.core.errors import FileValidationException, InvalidInputException, ResourceNotFoundException
 from app.core.logging import logger
 from app.repositories.base import (
@@ -11,6 +14,7 @@ from app.repositories.base import (
     BaseTestSuiteRepository,
     BaseVerificationRunRepository,
 )
+from app.schemas.delivery import DeliveryConfirmation, DeliveryConfirmationCreate
 from app.schemas.test_suite import (
     TestSuiteProvenance,
     TrustedTestSuite,
@@ -31,7 +35,7 @@ from app.schemas.verification import (
     VerificationRunResponse,
     VerificationStatusResponse,
 )
-from app.schemas.xai import XaiExplanationResponse
+from app.schemas.xai import PostDeliveryExplanation, XaiExplanationResponse
 from app.schemas.research_reports import (
     DeploymentReadinessReport,
     ModuleConvergenceRiskReport,
@@ -242,6 +246,7 @@ class VerificationService:
             feedback_iterations=final_iterations,
             execution_telemetry=final_telemetry,
             test_suite_id=saved_suite_id,
+            delivery_confirmation=None,
             error_message=final_error,
             created_at=run.created_at,
             updated_at=now,
@@ -319,14 +324,151 @@ class VerificationService:
 
     async def get_explanation(self, run_id: str) -> XaiExplanationResponse:
         """
-        Retrieves a human-facing, evidence-grounded XAI explanation for a verification run.
-        Strictly for human consumption (never dispatched to Component 3).
-        Purely read-only and side-effect free; does not mutate storage or execute code.
+        Retrieves a human-facing XAI explanation for a verification run.
+        Strictly enforces the 3-phase delivery gate:
+          1. Verification tests passed (zero failed assertions)
+          2. Deployment-readiness governance cleared
+          3. Successful downstream delivery confirmed for the exact artifact version
+
+        Returns a pending explanation state if delivery confirmation is unavailable,
+        or an explicit non-delivery justification if verification failed or was blocked.
         """
         run = await self.get_verification_run(run_id)
         submission = await self.submission_repo.get_by_id(run.submission_id)
+        governance_report = None
+        if run.status == VerificationStatus.PASSED:
+            try:
+                governance_report = await self.get_deployment_readiness_report(run_id)
+            except Exception as exc:
+                logger.warning("Could not evaluate deployment readiness report for XAI gate: %s", exc)
         service = XaiExplanationService()
-        return service.generate_explanation(run, submission)
+        return service.generate_explanation(run, submission, governance_report=governance_report)
+
+    async def confirm_delivery(
+        self,
+        run_id: str,
+        delivery_channel: str = "user_workspace",
+        confirmed_by: Optional[str] = None,
+        artifact_version: Optional[str] = None,
+        is_simulation: bool = False,
+        auth_token: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> DeliveryConfirmation:
+        """
+        Records confirmed downstream delivery for a verified, governance-approved artifact version.
+        Prerequisite gate for unlocking user-facing post-delivery code understanding explanations.
+        Enforces backend-verified service credentials for production delivery.
+        """
+        run = await self.get_verification_run(run_id)
+        if run.status != VerificationStatus.PASSED:
+            raise InvalidInputException(
+                f"Cannot confirm delivery for verification run '{run_id}' with status '{run.status.value}'. "
+                "Artifact must pass verification tests before delivery."
+            )
+
+        readiness = await self.get_deployment_readiness_report(run_id)
+        if not readiness.is_ready_for_deployment:
+            blockers = readiness.blocking_reasons or [c.gate_name for c in readiness.gating_checks if c.status != "PASSED"]
+            raise InvalidInputException(
+                f"Deployment-readiness governance blocked delivery approval for run '{run_id}'. "
+                f"Unsatisfied gating checks: {', '.join(blockers)}."
+            )
+
+        submission = await self.submission_repo.get_by_id(run.submission_id)
+        if not submission or not submission.code:
+            raise InvalidInputException(f"Submission code not found for run '{run_id}'.")
+
+        checksum = hashlib.sha256(submission.code.encode("utf-8")).hexdigest()
+
+        if artifact_version and artifact_version != run.submission_id:
+            raise InvalidInputException(
+                f"Specified artifact version '{artifact_version}' does not match run submission ID '{run.submission_id}'."
+            )
+
+        if is_simulation:
+            # Enforce simulation environment constraints
+            if not settings.is_simulation_permitted():
+                raise InvalidInputException(
+                    "Simulated delivery confirmation is disabled in production environments. "
+                    "Production deployments require authenticated service identity."
+                )
+            # Server derives identity; do not trust caller role
+            effective_confirmer = "simulated_harness"
+        else:
+            # Production delivery confirmation requires server-side identity validation
+            if not artifact_version:
+                raise InvalidInputException(
+                    "Production delivery confirmation requires explicit artifact_version matching the verified submission ID."
+                )
+
+            # Validate authentication token using constant-time comparison
+            if not auth_token or not auth_token.strip():
+                raise InvalidInputException(
+                    "Missing production delivery service credentials. Provide valid X-Delivery-Token header or Bearer token."
+                )
+
+            expected_token = settings.DELIVERY_AUTH_TOKEN
+            if not expected_token or (settings.ENVIRONMENT.lower() == "production" and expected_token == "intelise_dev_delivery_token_secret"):
+                raise InvalidInputException(
+                    "Production delivery service credentials not configured or using prohibited default in production environment."
+                )
+
+            if not secrets.compare_digest(auth_token.strip(), expected_token.strip()):
+                raise InvalidInputException(
+                    "Invalid production delivery service credentials. Access denied."
+                )
+
+            # Server assigns authenticated identity; caller-supplied strings are rejected as proof of identity
+            effective_confirmer = "authenticated_delivery_service"
+
+        confirmation = DeliveryConfirmation(
+            delivery_id=f"dlv-{uuid.uuid4().hex[:12]}",
+            verification_run_id=run.id,
+            submission_id=run.submission_id,
+            artifact_checksum_sha256=checksum,
+            delivery_channel=delivery_channel,
+            confirmed_by=effective_confirmer,
+            delivered_at=datetime.now(timezone.utc),
+            is_delivered=True,
+            is_simulation=is_simulation,
+            notes=notes,
+        )
+
+        run.delivery_confirmation = confirmation
+        run.updated_at = datetime.now(timezone.utc)
+        await self.verification_repo.save(run)
+        logger.info(
+            "Delivery confirmed for run '%s' (submission '%s', simulation=%s, entity='%s')",
+            run.id,
+            run.submission_id,
+            is_simulation,
+            effective_confirmer,
+        )
+        return confirmation
+
+    async def get_delivery_confirmation(self, run_id: str) -> Optional[DeliveryConfirmation]:
+        """Retrieves the delivery confirmation status for a verification run."""
+        run = await self.get_verification_run(run_id)
+        return run.delivery_confirmation
+
+    async def get_post_delivery_explanation(self, run_id: str) -> PostDeliveryExplanation:
+        """
+        Retrieves the dedicated post-delivery software understanding package.
+        Raises InvalidInputException if the delivery gate is not fully satisfied.
+        Enforces that simulated delivery does not satisfy production explanation gate.
+        """
+        explanation = await self.get_explanation(run_id)
+        if not explanation.post_delivery_explanation:
+            raise InvalidInputException(
+                f"Post-delivery code understanding explanation is unavailable for run '{run_id}'. "
+                f"Reason: {explanation.eligibility_reason}"
+            )
+        if explanation.delivery_gate and explanation.delivery_gate.is_simulation:
+            raise InvalidInputException(
+                f"Post-delivery code understanding explanation is unavailable for run '{run_id}'. "
+                "Reason: Simulated delivery does not satisfy the production delivery gate."
+            )
+        return explanation.post_delivery_explanation
 
     async def record_feedback_iteration(
         self,

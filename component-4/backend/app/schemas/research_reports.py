@@ -54,6 +54,8 @@ class PerformanceMetrics(BaseModel):
 
     sample_size: int = Field(default=0, description="Number of workload iterations/requests executed")
     duration_ms: float = Field(default=0.0, description="Total benchmark run duration in ms")
+    workload_duration_ms: float = Field(default=0.0, description="Directly measured workload execution duration excluding container initialization")
+    container_startup_overhead_ms: float = Field(default=0.0, description="Container initialization and teardown overhead in ms")
     mean_latency_ms: float = Field(default=0.0, description="Arithmetic mean execution latency in ms")
     latency_p50_ms: float = Field(default=0.0, description="50th percentile (median) latency in ms")
     latency_p95_ms: float = Field(default=0.0, description="95th percentile latency in ms")

@@ -29,10 +29,21 @@ from app.schemas.verification import (
     VerificationRunResponse,
     VerificationStatusResponse,
 )
+from app.schemas.delivery import (
+    DeliveryConfirmation,
+    DeliveryConfirmationCreate,
+)
 from app.schemas.xai import (
+    BeginnerExplanation,
     CorrectionRecommendation,
+    DeliveryGateStatus,
+    DesignDecisionItem,
     EvidenceItem,
+    FunctionExplanationItem,
     InferenceProvenance,
+    ModuleResponsibilityItem,
+    PostDeliveryExplanation,
+    TechnicalExplanation,
     XaiExplanationResponse,
 )
 
@@ -100,6 +111,15 @@ __all__ = [
     "CorrectionRecommendation",
     "InferenceProvenance",
     "XaiExplanationResponse",
+    "DeliveryConfirmation",
+    "DeliveryConfirmationCreate",
+    "DeliveryGateStatus",
+    "ModuleResponsibilityItem",
+    "FunctionExplanationItem",
+    "DesignDecisionItem",
+    "BeginnerExplanation",
+    "TechnicalExplanation",
+    "PostDeliveryExplanation",
     "RepairSource",
     "RepairResponseStatus",
     "ResolutionStatus",
