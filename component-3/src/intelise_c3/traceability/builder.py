@@ -56,6 +56,12 @@ class TraceabilityGraphBuilder:
     """Translate only explicit manifest identities and evidence into a graph."""
 
     def build(self, manifest: GenerationManifest) -> TraceGraphBuild:
+        if not manifest.source.requirement_ids:
+            self._fail(
+                "EMPTY_REQUIREMENTS_LIST",
+                "manifest.source.requirement_ids",
+                "The source manifest must contain at least one requirement.",
+            )
         nodes: dict[str, TraceGraphNode] = {}
         links: dict[str, TraceGraphLink] = {}
         missing_evidence: list[str] = []
@@ -250,8 +256,18 @@ class TraceabilityGraphBuilder:
                     ),
                 )
 
-        ordered_nodes = tuple(sorted(nodes.values(), key=lambda item: item.node_id))
-        ordered_links = tuple(sorted(links.values(), key=lambda item: item.link_id))
+        ordered_nodes = tuple(
+            node.model_copy(
+                update={"created_in_generation_run_id": manifest.generation_run_id}
+            )
+            for node in sorted(nodes.values(), key=lambda item: item.node_id)
+        )
+        ordered_links = tuple(
+            link.model_copy(
+                update={"created_in_generation_run_id": manifest.generation_run_id}
+            )
+            for link in sorted(links.values(), key=lambda item: item.link_id)
+        )
         coverage = self.coverage(
             manifest.source.requirement_ids,
             ordered_nodes,

@@ -40,6 +40,7 @@ from intelise_c3.domain.scoped_regeneration import (
 from intelise_c3.domain.traceability import (
     GraphLifecycleStatus,
     GraphNodeType,
+    ImpactSet,
     TraceGraphLink,
     TraceGraphSnapshot,
 )
@@ -55,6 +56,80 @@ CATEGORY_ARTIFACT_POLICY: dict[DefectCategory, frozenset[GeneratedArtifactType]]
     DefectCategory.DATA_ACCESS: frozenset({GeneratedArtifactType.REPOSITORY}),
     DefectCategory.UI_BEHAVIOR: frozenset({GeneratedArtifactType.FRONTEND}),
 }
+
+
+def requirement_impact_set(
+    snapshot: TraceGraphSnapshot,
+    manifest: GenerationManifest,
+    requirement_id: str,
+) -> ImpactSet:
+    """Return resolved downstream impact using the scoped-repair graph policy."""
+    normalized_id = requirement_id.removeprefix("REQUIREMENT:")
+    requirement_node_id = graph_node_id(GraphNodeType.REQUIREMENT, normalized_id)
+    context = _GraphContext(snapshot, manifest)
+    if requirement_node_id not in context.nodes:
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="UNKNOWN_REQUIREMENT_ID",
+                    field="requirement_id",
+                    message=f"Requirement '{normalized_id}' is not an active graph node.",
+                )
+            ],
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    code_node_ids = {
+        link.source_node_id
+        for link in context.usable_links
+        if link.relation_type is TraceRelationType.IMPLEMENTS
+        and link.target_node_id == requirement_node_id
+        and link.source_node_id in context.record_by_node
+    }
+    api_node_ids: set[str] = set()
+    database_node_ids: set[str] = set()
+    test_hook_node_ids: set[str] = set()
+    for link in context.usable_links:
+        if link.source_node_id not in code_node_ids:
+            continue
+        target = context.nodes[link.target_node_id]
+        if target.node_type is GraphNodeType.API_OPERATION:
+            api_node_ids.add(target.node_id)
+        elif target.node_type is GraphNodeType.DATABASE_ARTIFACT:
+            database_node_ids.add(target.node_id)
+        elif target.node_type is GraphNodeType.TEST_HOOK or (
+            target.node_type is GraphNodeType.CODE_MODULE
+            and link.relation_type is TraceRelationType.VERIFIED_BY
+        ):
+            test_hook_node_ids.add(target.node_id)
+
+    sorted_code_ids = tuple(sorted(code_node_ids))
+    sorted_api_ids = tuple(sorted(api_node_ids))
+    sorted_database_ids = tuple(sorted(database_node_ids))
+    sorted_test_ids = tuple(sorted(test_hook_node_ids))
+    return ImpactSet(
+        requirement_id=normalized_id,
+        affected_node_ids=tuple(
+            sorted(
+                {
+                    *sorted_code_ids,
+                    *sorted_api_ids,
+                    *sorted_database_ids,
+                    *sorted_test_ids,
+                }
+            )
+        ),
+        code_node_ids=sorted_code_ids,
+        api_node_ids=sorted_api_ids,
+        database_node_ids=sorted_database_ids,
+        test_hook_node_ids=sorted_test_ids,
+        module_paths=tuple(
+            sorted(
+                context.record_by_node[node_id].relative_path
+                for node_id in sorted_code_ids
+            )
+        ),
+    )
 
 
 class ImpactSelector:

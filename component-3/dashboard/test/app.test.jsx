@@ -304,6 +304,85 @@ describe("Application profile", () => {
   });
 });
 
+describe("Living traceability reports", () => {
+  it("loads the versioned RTM and reports orphan and coverage-gap codes", async () => {
+    const user = userEvent.setup();
+    const snapshot = {
+      graph_id: "graph-1",
+      graph_version: 2,
+      persisted_at_utc: "2026-10-19T00:00:00Z",
+      generation_run_id: "run-1",
+      artifact_digest_sha256: "a".repeat(64),
+      graph_content_digest_sha256: "b".repeat(64),
+      relation_direction_policy_version: "C3_GRAPH_RELATION_DIRECTION_V1",
+      nodes: [{
+        node_id: "REQUIREMENT:REQ-1",
+        node_type: "REQUIREMENT",
+        source_identity: "REQ-1",
+        label: "Create task",
+        lifecycle_status: "ACTIVE",
+        attributes: {},
+      }],
+      links: [],
+      coverage: {
+        policy_version: "C3_REQUIREMENT_COVERAGE_V1",
+        verified_count: 0,
+        partial_count: 0,
+        unresolved_count: 1,
+        requirements: [{
+          requirement_id: "REQ-1",
+          status: "UNRESOLVED",
+          implementing_node_ids: [],
+          verifying_node_ids: [],
+          unresolved_link_ids: [],
+        }],
+        diagnostics: { missing_evidence: ["REQ-1 has no code evidence"] },
+      },
+    };
+    seedSession({
+      generationRun: { run: makeRun(), mode: "TEMPLATE_ONLY", durationMs: 1, at: "now" },
+      graph: { snapshot, versions: [], fetchedAt: "now" },
+    });
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "GET /api/v1/traceability/graphs/graph-1/versions/2/rtm": {
+        graph_id: "graph-1",
+        graph_version: 2,
+        rows: [{ requirement_id: "REQ-1", requirement_label: "Create task", uml_elements: [], code_modules: [], api_operations: [], database_entities: [], test_hooks: [] }],
+        table_markdown: "| Requirement | UML Elements |\n|:---|:---|\n| REQ-1 | — |",
+      },
+      "GET /api/v1/traceability/graphs/graph-1/versions/2/metrics": {
+        report_version: "1.0",
+        graph_id: "graph-1",
+        graph_version: 2,
+        total_requirements: 1,
+        covered_requirements: 0,
+        coverage_rate: 0,
+        coverage_gaps: ["REQ-1"],
+        total_active_nodes: 2,
+        orphan_node_count: 1,
+        orphan_rate: 0.5,
+        orphan_node_ids: ["CODE_MODULE:ORPHAN"],
+        diagnostics: [
+          { code: "ORPHAN_DOWNSTREAM_NODE", severity: "REVIEW_REQUIRED", affected_ids: ["CODE_MODULE:ORPHAN"], message: "One orphan requires review." },
+          { code: "REQUIREMENT_COVERAGE_GAP", severity: "REVIEW_REQUIRED", affected_ids: ["REQ-1"], message: "One requirement lacks code coverage." },
+        ],
+      },
+    });
+    render(<App />);
+    await openPage(user, /Living Traceability/);
+
+    await user.click(screen.getByRole("button", { name: "Load RTM and diagnostics" }));
+
+    expect(await screen.findByText("ORPHAN_DOWNSTREAM_NODE")).toBeInTheDocument();
+    expect(screen.getByText("REQUIREMENT_COVERAGE_GAP")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export RTM JSON" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Export RTM table" })).toBeEnabled();
+    expect(called("GET /api/v1/traceability/graphs/graph-1/versions/2/rtm")).toHaveLength(1);
+    expect(called("GET /api/v1/traceability/graphs/graph-1/versions/2/metrics")).toHaveLength(1);
+  });
+});
+
 describe("Scoped regeneration", () => {
   const scopedSession = () => ({
     fixtures: { inputPackage: null, defectScenarios: DEFECT_FIXTURE, stackCriteria: null },

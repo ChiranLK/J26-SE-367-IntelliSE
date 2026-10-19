@@ -45,6 +45,18 @@ export const api = {
   latestGraph: (graphId) => apiRequest(`/traceability/graphs/${encodeURIComponent(graphId)}`),
   graphVersion: (graphId, version) =>
     apiRequest(`/traceability/graphs/${encodeURIComponent(graphId)}/versions/${version}`),
+  graphRtm: (graphId, version = null) =>
+    apiRequest(
+      version == null
+        ? `/traceability/graphs/${encodeURIComponent(graphId)}/rtm`
+        : `/traceability/graphs/${encodeURIComponent(graphId)}/versions/${version}/rtm`,
+    ),
+  graphMetrics: (graphId, version = null) =>
+    apiRequest(
+      version == null
+        ? `/traceability/graphs/${encodeURIComponent(graphId)}/metrics`
+        : `/traceability/graphs/${encodeURIComponent(graphId)}/versions/${version}/metrics`,
+    ),
 
   createBaseline: () =>
     apiRequest("/demo/scoped-regeneration/baseline", { method: "POST", timeoutMs: 2 * MINUTE }),

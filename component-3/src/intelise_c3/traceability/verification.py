@@ -30,6 +30,41 @@ class ManifestVerificationService:
                 "The manifest evidence digest does not match its bound evidence.",
             )
 
+        # A full generation creates every record in its own run. A scoped
+        # regeneration deliberately carries forward unchanged file/link
+        # records with their original creation-run provenance; only patched
+        # records receive the new run ID. Historical manifests omit this
+        # additive field and therefore remain valid.
+        permits_historical_creation_runs = (
+            manifest.generation_mode == "SCOPED_REGENERATION"
+        )
+        mismatched_file_ids = tuple(
+            record.file_id
+            for record in manifest.files
+            if record.created_in_generation_run_id is not None
+            and record.created_in_generation_run_id != manifest.generation_run_id
+            and not permits_historical_creation_runs
+        )
+        if mismatched_file_ids:
+            self._fail(
+                "INVALID_FILE_CREATION_RUN_EVIDENCE",
+                "manifest.files.created_in_generation_run_id",
+                "File creation-run evidence must match the full-generation run.",
+            )
+        mismatched_link_ids = tuple(
+            link.link_id
+            for link in manifest.traceability.links
+            if link.created_in_generation_run_id is not None
+            and link.created_in_generation_run_id != manifest.generation_run_id
+            and not permits_historical_creation_runs
+        )
+        if mismatched_link_ids:
+            self._fail(
+                "INVALID_LINK_CREATION_RUN_EVIDENCE",
+                "manifest.traceability.links.created_in_generation_run_id",
+                "Link creation-run evidence must match the full-generation run.",
+            )
+
         workspace = self._resolve_workspace(workspace_relative_path)
         if not workspace.is_dir():
             self._fail(

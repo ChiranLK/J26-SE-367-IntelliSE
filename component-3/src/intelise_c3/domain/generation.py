@@ -104,6 +104,9 @@ class GeneratedFileRecord(DomainModel):
     api_operation_ids: tuple[str, ...] = ()
     database_entity_ids: tuple[str, ...] = ()
     test_seam_ids: tuple[str, ...] = ()
+    # Added after manifest v2.0 was introduced. Optional keeps historical
+    # manifests parseable; new generation runs always populate it.
+    created_in_generation_run_id: str | None = None
 
 
 class ApiOperationIdentity(DomainModel):
@@ -171,6 +174,8 @@ class TraceabilityLink(DomainModel):
     resolution_status: TraceResolutionStatus
     review_status: TraceReviewStatus
     provenance: TraceLinkProvenance
+    # Optional only for historical manifest compatibility.
+    created_in_generation_run_id: str | None = None
 
 
 class TraceabilityEvidence(DomainModel):

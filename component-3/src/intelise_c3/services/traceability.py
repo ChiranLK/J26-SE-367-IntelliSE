@@ -15,15 +15,26 @@ from intelise_c3.domain.traceability import (
     GraphLifecycleStatus,
     GraphNodeType,
     GraphUpdateResult,
+    ImpactSet,
+    RequirementTraceChain,
     ResearchGroundTruth,
+    RtmExport,
     TraceGraphBuild,
     TraceGraphLink,
     TraceGraphNode,
     TraceGraphSnapshot,
     TraceabilityEvaluationReport,
+    TraceabilityMetricsReport,
 )
 from intelise_c3.generation.evidence import canonical_sha256
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder, graph_node_id
+from intelise_c3.traceability.queries import (
+    chain as query_chain,
+    compute_metrics_report,
+    export_rtm as query_export_rtm,
+    impact_set as query_impact_set,
+    requirements_for_module as query_requirements_for_module,
+)
 from intelise_c3.traceability.store import SQLiteTraceabilityStore
 from intelise_c3.traceability.verification import ManifestVerificationService
 
@@ -51,6 +62,53 @@ class TraceabilityService:
 
     def latest(self, graph_id: str) -> TraceGraphSnapshot:
         return self._store.latest(graph_id)
+
+    def chain(
+        self,
+        graph_id: str,
+        requirement_id: str,
+        version: int | None = None,
+    ) -> RequirementTraceChain:
+        snapshot = self.latest(graph_id) if version is None else self.retrieve(graph_id, version)
+        return query_chain(snapshot, requirement_id)
+
+    def impact_set(
+        self,
+        graph_id: str,
+        requirement_id: str,
+        version: int | None = None,
+    ) -> ImpactSet:
+        snapshot = self.latest(graph_id) if version is None else self.retrieve(graph_id, version)
+        manifest = self._store.get_manifest(graph_id, snapshot.graph_version)
+        return query_impact_set(snapshot, requirement_id, manifest)
+
+    def requirements_for_module(
+        self,
+        graph_id: str,
+        module_identifier: str,
+        version: int | None = None,
+    ) -> tuple[str, ...]:
+        snapshot = self.latest(graph_id) if version is None else self.retrieve(graph_id, version)
+        manifest = self._store.get_manifest(graph_id, snapshot.graph_version)
+        return query_requirements_for_module(snapshot, module_identifier, manifest)
+
+    def export_rtm(
+        self,
+        graph_id: str,
+        version: int | None = None,
+    ) -> RtmExport:
+        snapshot = self.latest(graph_id) if version is None else self.retrieve(graph_id, version)
+        return query_export_rtm(snapshot)
+
+    def metrics(
+        self,
+        graph_id: str,
+        version: int | None = None,
+        oracle: ResearchGroundTruth | None = None,
+        change_report: GraphChangeReport | None = None,
+    ) -> TraceabilityMetricsReport:
+        snapshot = self.latest(graph_id) if version is None else self.retrieve(graph_id, version)
+        return compute_metrics_report(snapshot, oracle=oracle, change_report=change_report)
 
     def compare(self, graph_id: str, request: GraphComparisonRequest) -> GraphChangeReport:
         old_snapshot = self._store.get(graph_id, request.base_graph_version)
@@ -245,6 +303,23 @@ class TraceabilityService:
             if item.lifecycle_status is GraphLifecycleStatus.ACTIVE
         }
         candidate_nodes = {item.node_id: item for item in candidate.nodes}
+        # A rebuild stamps candidates with the new run. Existing stable graph
+        # identities retain their original creation evidence, including None
+        # for snapshots that predate the field.
+        candidate_nodes = {
+            node_id: (
+                node.model_copy(
+                    update={
+                        "created_in_generation_run_id": old_active_nodes[
+                            node_id
+                        ].created_in_generation_run_id
+                    }
+                )
+                if node_id in old_active_nodes
+                else node
+            )
+            for node_id, node in candidate_nodes.items()
+        }
         added_nodes = set(candidate_nodes) - set(old_active_nodes)
         removed_nodes = set(old_active_nodes) - set(candidate_nodes)
         common_nodes = set(old_active_nodes) & set(candidate_nodes)
@@ -261,6 +336,20 @@ class TraceabilityService:
             if item.lifecycle_status is GraphLifecycleStatus.ACTIVE
         }
         candidate_links = {item.logical_link_id: item for item in candidate.links}
+        candidate_links = {
+            logical_id: (
+                link.model_copy(
+                    update={
+                        "created_in_generation_run_id": old_active_links[
+                            logical_id
+                        ].created_in_generation_run_id
+                    }
+                )
+                if logical_id in old_active_links
+                else link
+            )
+            for logical_id, link in candidate_links.items()
+        }
         added_links = set(candidate_links) - set(old_active_links)
         retired_links = set(old_active_links) - set(candidate_links)
         shared_links = set(old_active_links) & set(candidate_links)

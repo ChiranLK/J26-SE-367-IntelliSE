@@ -30,6 +30,7 @@ from intelise_c3.core.errors import ApplicationError, ErrorDetail
 from intelise_c3.domain.design_context import DesignContext
 from intelise_c3.domain.generation import (
     ArtifactOrigin,
+    GenerationManifest,
     TraceRelationType,
     TraceResolutionStatus,
     TraceReviewStatus,
@@ -60,6 +61,7 @@ from intelise_c3.services.code_generation import CodeGenerationService
 from intelise_c3.services.design_understanding import DesignUnderstandingService
 from intelise_c3.services.input_validation import InputValidationService
 from intelise_c3.services.stack_selection import StackSelectionService
+from intelise_c3.traceability.verification import ManifestVerificationService
 
 FIXTURE_PATH = (
     Path(__file__).parent
@@ -339,6 +341,89 @@ def test_run_evidence_binds_inputs_prompt_model_and_artifacts(
     assert evidence.generator_version == GENERATOR_VERSION
     assert evidence.template_set_version == "react-node-task-scaffold-v2"
     assert evidence.authenticity_claim is False
+
+
+def test_manifest_creation_run_evidence_is_additive_and_historical_safe(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+) -> None:
+    generation, design = task_contexts
+    result = asyncio.run(
+        CodeGenerationService(tmp_path / "workspaces", None).generate(
+            _request(generation, design, mode=GenerationMode.TEMPLATE_ONLY)
+        )
+    )
+    manifest = result.manifest
+
+    assert all(
+        record.created_in_generation_run_id == manifest.generation_run_id
+        for record in manifest.files
+    )
+    assert all(
+        link.created_in_generation_run_id == manifest.generation_run_id
+        for link in manifest.traceability.links
+    )
+
+    historical_payload = manifest.model_dump(mode="json")
+    for record in historical_payload["files"]:
+        record.pop("created_in_generation_run_id", None)
+    for link in historical_payload["traceability"]["links"]:
+        link.pop("created_in_generation_run_id", None)
+    historical = GenerationManifest.model_validate(historical_payload)
+
+    assert all(record.created_in_generation_run_id is None for record in historical.files)
+    assert all(
+        link.created_in_generation_run_id is None
+        for link in historical.traceability.links
+    )
+    assert verify_manifest_evidence(historical)
+
+
+@pytest.mark.parametrize(
+    ("target", "expected_code"),
+    (
+        ("file", "INVALID_FILE_CREATION_RUN_EVIDENCE"),
+        ("link", "INVALID_LINK_CREATION_RUN_EVIDENCE"),
+    ),
+)
+def test_full_generation_rejects_mismatched_creation_run_evidence(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+    target: str,
+    expected_code: str,
+) -> None:
+    generation, design = task_contexts
+    workspace_root = tmp_path / "workspaces"
+    result = asyncio.run(
+        CodeGenerationService(workspace_root, None).generate(
+            _request(generation, design, mode=GenerationMode.TEMPLATE_ONLY)
+        )
+    )
+    manifest = result.manifest
+
+    if target == "file":
+        first = manifest.files[0].model_copy(
+            update={"created_in_generation_run_id": "different-run"}
+        )
+        supplied = manifest.model_copy(update={"files": (first, *manifest.files[1:])})
+    else:
+        first = manifest.traceability.links[0].model_copy(
+            update={"created_in_generation_run_id": "different-run"}
+        )
+        supplied = manifest.model_copy(
+            update={
+                "traceability": manifest.traceability.model_copy(
+                    update={"links": (first, *manifest.traceability.links[1:])}
+                )
+            }
+        )
+
+    with pytest.raises(ApplicationError) as captured:
+        ManifestVerificationService(workspace_root).verify(
+            supplied, result.workspace_relative_path
+        )
+
+    assert captured.value.errors[0].code == expected_code
 
 
 def test_filter_rag_rules_are_applied_to_llm_prompt_and_bound_to_evidence(

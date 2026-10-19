@@ -81,6 +81,12 @@ matched using filename similarity. Links retain their mapping rule, evidence
 references, details, resolution status, and review status. C2 anchors also
 produce deterministic `DESIGN_ANCHOR` links backed by the exact anchor ID.
 
+New graph nodes and links also record `created_in_generation_run_id`. During a
+living update, unchanged identities retain their original value and newly
+introduced identities record the new verified run. The field is additive:
+historical snapshots that do not contain it deserialize as `null` and are not
+rewritten.
+
 Manifest links marked `RESOLVED` are accepted only when both endpoint nodes
 exist and provenance is not `UNRESOLVED_SOURCE_REFERENCE`. Uncertain UI and
 runtime SQL-persistence links remain `UNRESOLVED` / `REVIEW_REQUIRED`.
@@ -149,6 +155,26 @@ Reports also list dangling active nodes, unresolved/review-required links, and
 missing evidence diagnostics. Here, `VERIFIED` means graph evidence is present;
 it does not mean Component 4 executed or approved a test.
 
+The metrics report exposes coverage gaps as
+`REQUIREMENT_COVERAGE_GAP` and downstream nodes with no active trace path to a
+requirement as `ORPHAN_DOWNSTREAM_NODE`. Both have severity `REVIEW_REQUIRED`.
+They are reporting diagnostics and do not make existing graph creation or
+retrieval fail.
+
+## Query and RTM export policy
+
+Requirement chains and reverse module-to-requirement lookups traverse only the
+stored graph snapshot. Requirement impact delegates to the existing scoped
+regeneration impact traversal and therefore includes only active, resolved,
+usable evidence; it is not a second impact-analysis algorithm. In particular,
+review-required database-persistence evidence is not promoted into a resolved
+impact claim.
+
+The RTM export is deterministic and version-specific. Its JSON rows preserve
+exact requirement identities and list the connected UML, code, API, database,
+and test-hook identities. `table_markdown` is a presentation of those same
+rows, not a separately inferred result.
+
 ## Precision, recall, and F1 evaluation
 
 Evaluation accepts a separately supplied `RESEARCHER_CURATED` dataset with a
@@ -174,6 +200,11 @@ truth, Component 4 output, a production dataset, or a reported scientific
 benchmark. Real evaluation results must be collected and reported separately
 by the researcher.
 
+The current GPA simulated oracle contains exactly **3 expected typed links**.
+That size is reported as `oracle_link_count=3`; it is sufficient only for a
+small deterministic regression of the metric calculation and is not a research
+sample-size claim.
+
 ### Human-review checklist for research ground truth
 
 The simulated fixture remains `NOT_VERIFIED` until a real review records all
@@ -198,6 +229,16 @@ GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}
 POST /api/v1/traceability/graphs/{graph_id}/compare
 POST /api/v1/traceability/graphs/{graph_id}/updates
 POST /api/v1/traceability/graphs/{graph_id}/versions/{version}/evaluate
+GET  /api/v1/traceability/graphs/{graph_id}/chains/{requirement_id}
+GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}/chains/{requirement_id}
+GET  /api/v1/traceability/graphs/{graph_id}/impact/{requirement_id}
+GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}/impact/{requirement_id}
+GET  /api/v1/traceability/graphs/{graph_id}/modules/{module_identifier}/requirements
+GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}/modules/{module_identifier}/requirements
+GET  /api/v1/traceability/graphs/{graph_id}/rtm
+GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}/rtm
+GET  /api/v1/traceability/graphs/{graph_id}/metrics
+GET  /api/v1/traceability/graphs/{graph_id}/versions/{version}/metrics
 ```
 
 Creation, comparison, and update requests contain the manifest plus its safe
@@ -229,6 +270,10 @@ path relative to `GENERATED_WORKSPACE_ROOT`. Arbitrary host paths are rejected.
   not inferred from similar filenames or content.
 - UI-to-file and in-memory-repository-to-SQL relationships remain review
   required.
+- `created_in_generation_run_id` is provenance metadata, not authenticated
+  authorship. Full generations require non-null values to match their run;
+  scoped regeneration preserves older values for unchanged files/links and
+  gives patched files the new run ID. Older manifests may omit the field.
 - No generated dependency is installed and no generated code is executed.
 - Scoped regeneration, graph-driven patch authorization, deployment gates,
   Component 4 XAI, and C4 readiness remain outside this task.

@@ -9,6 +9,15 @@ import { useAction } from "../state/useAction.js";
 
 const MAX_VERSIONS_FETCHED = 12;
 
+export function downloadText(filename, text, mimeType) {
+  const anchor = document.createElement("a");
+  anchor.download = filename;
+  anchor.href = `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 export function versionSummary(snapshot) {
   const summary = summarizeGraph(snapshot);
   return {
@@ -97,6 +106,14 @@ export default function Traceability({ navigate }) {
     const latest = await api.latestGraph(snapshot.graph_id);
     const versions = await fetchVersionSummaries(latest.graph_id, latest.graph_version);
     set("graph", { snapshot: latest, versions, fetchedAt: new Date().toISOString() });
+  });
+
+  const evidence = useAction(async () => {
+    const [rtm, metrics] = await Promise.all([
+      api.graphRtm(snapshot.graph_id, snapshot.graph_version),
+      api.graphMetrics(snapshot.graph_id, snapshot.graph_version),
+    ]);
+    set("graph", { ...graphState, rtm, metrics, evidenceFetchedAt: new Date().toISOString() });
   });
 
   const summary = useMemo(() => (snapshot ? summarizeGraph(snapshot) : null), [snapshot]);
@@ -189,6 +206,58 @@ export default function Traceability({ navigate }) {
               ) : null}
             </Card>
           </div>
+
+          <Card
+            title="RTM export and trace diagnostics"
+            subtitle="Read-only reports from the persisted graph version; diagnostics report gaps without blocking existing flows."
+            actions={(
+              <Button variant="secondary" onClick={() => evidence.run()} loading={evidence.loading}>
+                Load RTM and diagnostics
+              </Button>
+            )}
+          >
+            <ErrorPanel error={evidence.error} context="RTM and trace diagnostics" />
+            {graphState.rtm && graphState.metrics ? (
+              <>
+                <div className="stats">
+                  <Stat label="RTM requirements" value={graphState.rtm.rows.length} />
+                  <Stat label="Requirement coverage" value={`${(graphState.metrics.coverage_rate * 100).toFixed(1)}%`} tone={graphState.metrics.coverage_gaps.length ? "warn" : "ok"} />
+                  <Stat label="Orphan nodes" value={graphState.metrics.orphan_node_count} tone={graphState.metrics.orphan_node_count ? "warn" : "ok"} />
+                </div>
+                <div className="button-row">
+                  <Button
+                    variant="secondary"
+                    onClick={() => downloadText(
+                      `rtm-${snapshot.graph_id}-v${snapshot.graph_version}.json`,
+                      `${JSON.stringify(graphState.rtm, null, 2)}\n`,
+                      "application/json",
+                    )}
+                  >
+                    Export RTM JSON
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => downloadText(
+                      `rtm-${snapshot.graph_id}-v${snapshot.graph_version}.md`,
+                      `${graphState.rtm.table_markdown}\n`,
+                      "text/markdown",
+                    )}
+                  >
+                    Export RTM table
+                  </Button>
+                </div>
+                {graphState.metrics.diagnostics.length ? graphState.metrics.diagnostics.map((diagnostic) => (
+                  <Callout key={diagnostic.code} tone="warn" title={diagnostic.code}>
+                    {diagnostic.message} Affected identities: {diagnostic.affected_ids.join(", ")}.
+                  </Callout>
+                )) : (
+                  <Callout tone="ok" title="No orphan or coverage-gap diagnostics">
+                    This deterministic report found no active orphan downstream nodes or uncovered requirements in graph v{snapshot.graph_version}.
+                  </Callout>
+                )}
+              </>
+            ) : <p className="muted small">Load the reports to inspect and export the RTM for this exact graph version.</p>}
+          </Card>
 
           <Card title="Requirement traceability chains" subtitle="✓ resolved link · ⚠ unresolved or review required. Click a chip for its evidence.">
             <Table

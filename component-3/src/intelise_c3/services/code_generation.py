@@ -757,6 +757,7 @@ class CodeGenerationService:
                     api_operation_ids=artifact.api_operation_ids,
                     database_entity_ids=artifact.database_entity_ids,
                     test_seam_ids=artifact.test_seam_ids,
+                    created_in_generation_run_id=run_id,
                 )
             )
 
@@ -1035,6 +1036,7 @@ class CodeGenerationService:
                         evidence_refs=refs,
                         details=details,
                     ),
+                    created_in_generation_run_id=run_id,
                 )
             )
 

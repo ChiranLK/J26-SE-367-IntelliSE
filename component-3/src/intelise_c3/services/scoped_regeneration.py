@@ -429,6 +429,7 @@ class ScopedRegenerationService:
                     "sha256": sha256(patch_bytes[record.relative_path]).hexdigest(),
                     "size_bytes": len(patch_bytes[record.relative_path]),
                     "origin": ArtifactOrigin.LOCAL_LLM,
+                    "created_in_generation_run_id": new_run_id,
                 }
             )
             if record.relative_path in patch_bytes
