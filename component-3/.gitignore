@@ -10,6 +10,7 @@ dist/
 
 # Test and coverage artifacts
 .pytest_cache/
+.pytest-*/
 .coverage
 htmlcov/
 
