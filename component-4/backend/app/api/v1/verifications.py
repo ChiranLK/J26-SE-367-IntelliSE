@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from app.api.deps import get_repair_service, get_verification_service
 from app.core.errors import InvalidInputException
 from app.schemas.defect_report import DefectReportListResponse
@@ -37,7 +37,8 @@ from app.schemas.verification import (
     VerificationRunResponse,
     VerificationStatusResponse,
 )
-from app.schemas.xai import XaiExplanationResponse
+from app.schemas.delivery import DeliveryConfirmation, DeliveryConfirmationCreate
+from app.schemas.xai import PostDeliveryExplanation, XaiExplanationResponse
 from app.services.repair_service import RepairService
 from app.services.verification_service import VerificationService
 
@@ -206,6 +207,77 @@ async def get_verification_explanation(
     service: VerificationService = Depends(get_verification_service),
 ) -> XaiExplanationResponse:
     return await service.get_explanation(run_id)
+
+
+@router.post(
+    "/{run_id}/delivery-confirmation",
+    response_model=DeliveryConfirmation,
+    status_code=status.HTTP_201_CREATED,
+    summary="Confirm Artifact Delivery Gate",
+    description=(
+        "Records confirmed downstream delivery for a verified, governance-approved artifact. "
+        "Enforces that the run has passed verification and satisfied deployment-readiness governance. "
+        "Requires authenticated service identity (X-Delivery-Token or Bearer header) for production delivery. "
+        "Prerequisite gate for unlocking user-facing post-delivery code understanding explanations."
+    ),
+)
+async def confirm_delivery(
+    run_id: str,
+    payload: Optional[DeliveryConfirmationCreate] = None,
+    x_delivery_token: Optional[str] = Header(None, alias="X-Delivery-Token"),
+    authorization: Optional[str] = Header(None),
+    service: VerificationService = Depends(get_verification_service),
+) -> DeliveryConfirmation:
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    elif x_delivery_token:
+        token = x_delivery_token.strip()
+
+    channel = payload.delivery_channel if payload else "user_workspace"
+    confirmed_by = payload.confirmed_by if payload else None
+    artifact_version = payload.artifact_version if payload else None
+    is_simulation = payload.is_simulation if payload else False
+    notes = payload.notes if payload else None
+
+    return await service.confirm_delivery(
+        run_id=run_id,
+        delivery_channel=channel,
+        confirmed_by=confirmed_by,
+        artifact_version=artifact_version,
+        is_simulation=is_simulation,
+        auth_token=token,
+        notes=notes,
+    )
+
+
+@router.get(
+    "/{run_id}/delivery-confirmation",
+    response_model=Optional[DeliveryConfirmation],
+    summary="Get Delivery Confirmation Status",
+    description="Retrieves the delivery confirmation status for a verification run.",
+)
+async def get_delivery_confirmation(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> Optional[DeliveryConfirmation]:
+    return await service.get_delivery_confirmation(run_id)
+
+
+@router.get(
+    "/{run_id}/post-delivery-explanation",
+    response_model=PostDeliveryExplanation,
+    summary="Get Dedicated Post-Delivery Software Understanding Package",
+    description=(
+        "Retrieves the comprehensive 8-dimension post-delivery software understanding package "
+        "comprising beginner and technical layers. Available strictly upon confirmed delivery of verified code."
+    ),
+)
+async def get_post_delivery_explanation(
+    run_id: str,
+    service: VerificationService = Depends(get_verification_service),
+) -> PostDeliveryExplanation:
+    return await service.get_post_delivery_explanation(run_id)
 
 
 @router.post(

@@ -17,15 +17,28 @@ sys.path.insert(0, str(backend_dir))
 
 from app.benchmark.dataset import PILOT_BENCHMARK_SCENARIOS, REVISED_BENCHMARK_SCENARIOS
 from app.benchmark.evaluator import BenchmarkEvaluator
+from app.benchmark.phase3_dataset import (
+    DATASET_VERSION,
+    PHASE3_ALL_SCENARIOS,
+    PHASE3_DEV_SCENARIOS,
+    PHASE3_HELDOUT_SCENARIOS,
+    generate_phase3_manifest,
+)
 
 
 async def main():
     parser = argparse.ArgumentParser(description="INTELISE Component 4 Research Benchmark Evaluator")
     parser.add_argument(
         "--dataset",
-        choices=["revised", "pilot"],
-        default="revised",
-        help="Benchmark dataset to evaluate (Default: revised)",
+        choices=["phase3_heldout", "phase3_dev", "phase3_all", "revised", "pilot"],
+        default="phase3_heldout",
+        help="Benchmark dataset to evaluate (Default: phase3_heldout)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Custom output JSON filename (Default: auto-selected by dataset)",
     )
     parser.add_argument(
         "--simulated",
@@ -38,14 +51,50 @@ async def main():
     use_real_docker = not args.simulated
     mode_label = "REAL DOCKER CONTAINER SANDBOX" if use_real_docker else "FAST SIMULATED EXECUTION"
     dataset_choice = args.dataset
-    dataset = REVISED_BENCHMARK_SCENARIOS if dataset_choice == "revised" else PILOT_BENCHMARK_SCENARIOS
-    output_filename = "benchmark_results_revised.json" if dataset_choice == "revised" else "benchmark_results_pilot_reeval.json"
+
+    manifest_hash = None
+    if dataset_choice == "phase3_heldout":
+        dataset = PHASE3_HELDOUT_SCENARIOS
+        eval_version = f"{DATASET_VERSION}-heldout"
+        split_label = "held_out"
+        default_output = "benchmark_results_phase3_heldout.json"
+        manifest = generate_phase3_manifest()
+        manifest_hash = manifest["checksums"]["held_out_subset_sha256"]
+    elif dataset_choice == "phase3_dev":
+        dataset = PHASE3_DEV_SCENARIOS
+        eval_version = f"{DATASET_VERSION}-dev"
+        split_label = "dev"
+        default_output = "benchmark_results_phase3_dev.json"
+        manifest = generate_phase3_manifest()
+        manifest_hash = manifest["checksums"]["dev_subset_sha256"]
+    elif dataset_choice == "phase3_all":
+        dataset = PHASE3_ALL_SCENARIOS
+        eval_version = f"{DATASET_VERSION}-full100"
+        split_label = "all_100"
+        default_output = "benchmark_results_phase3_100.json"
+        manifest = generate_phase3_manifest()
+        manifest_hash = manifest["checksums"]["overall_manifest_sha256"]
+    elif dataset_choice == "revised":
+        dataset = REVISED_BENCHMARK_SCENARIOS
+        eval_version = "v2_methodology_corrected"
+        split_label = "revised_24"
+        default_output = "benchmark_results_revised.json"
+    else:
+        dataset = PILOT_BENCHMARK_SCENARIOS
+        eval_version = "v1_pilot"
+        split_label = "pilot_18"
+        default_output = "benchmark_results_pilot_reeval.json"
+
+    output_filename = args.output or default_output
 
     print("=" * 80)
-    print(f"INTELISE Component 4 — Seeded-Defect Research Benchmark Evaluation (SO6)")
+    print("INTELISE Component 4 — Seeded-Defect Research Benchmark Evaluation (SO6)")
     print(f"Dataset:        {dataset_choice.upper()} FIXTURES ({len(dataset)} Scenarios)")
+    print(f"Dataset Split:  {split_label}")
+    if manifest_hash:
+        print(f"Manifest Hash:  {manifest_hash}")
     print(f"Execution Mode: {mode_label}")
-    print(f"Integrity:      ZERO GROUND-TRUTH LEAKAGE (Independent predictions before scoring)")
+    print("Integrity:      ZERO GROUND-TRUTH LEAKAGE (Independent predictions before scoring)")
     print("=" * 80)
 
     evaluator = BenchmarkEvaluator(use_real_docker=use_real_docker)
@@ -53,6 +102,9 @@ async def main():
         scenarios=dataset,
         save_to_file=True,
         output_filename=output_filename,
+        evaluation_version=eval_version,
+        dataset_split=split_label,
+        manifest_checksum=manifest_hash,
     )
 
     print(f"\nTotal Scenarios Evaluated: {summary.total_scenarios}")

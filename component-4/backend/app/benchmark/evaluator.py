@@ -1,3 +1,4 @@
+import hashlib
 import json
 import statistics
 import time
@@ -61,6 +62,9 @@ class BenchmarkEvaluator:
         scenarios: Optional[List[BenchmarkScenario]] = None,
         save_to_file: bool = True,
         output_filename: str = "benchmark_results_revised.json",
+        evaluation_version: str = "v2_methodology_corrected",
+        dataset_split: Optional[str] = None,
+        manifest_checksum: Optional[str] = None,
     ) -> BenchmarkEvaluationSummary:
         """
         Executes the evaluation suite across benchmark scenarios.
@@ -115,6 +119,7 @@ class BenchmarkEvaluator:
         regression_count = 0
         non_conv_count = 0
         drift_count = 0
+        integration_count = 0
 
         scenario_records: List[Dict[str, Any]] = []
 
@@ -210,6 +215,8 @@ class BenchmarkEvaluator:
                 non_conv_count += 1
             elif group == BenchmarkScenarioGroup.SEMANTIC_DRIFT:
                 drift_count += 1
+            elif group == BenchmarkScenarioGroup.INTEGRATION_DEFECT:
+                integration_count += 1
 
             # A. Binary Defect Detection Metrics
             if sc.has_defect:
@@ -378,11 +385,68 @@ class BenchmarkEvaluator:
         ci_baseline_res = await self.ci_baseline.evaluate(dataset)
         static_baseline_res = self.static_baseline.evaluate(dataset)
 
+        ci_map = {r.scenario_id: r for r in ci_baseline_res.scenario_records}
+        static_map = {r.scenario_id: r for r in static_baseline_res.scenario_records}
+        dataset_map = {s.scenario_id: s for s in dataset}
+        timestamp_now = datetime.now(timezone.utc).isoformat()
+
+        # Phase 3C Evidence Collection: Enrich every scenario record with complete multi-system observations
+        for rec in scenario_records:
+            sid = rec["scenario_id"]
+            sc_obj = dataset_map.get(sid)
+            ci_rec = ci_map.get(sid)
+            static_rec = static_map.get(sid)
+
+            rec["dataset_version"] = evaluation_version
+            rec["partition"] = dataset_split
+            rec["evaluator_version"] = "v3.0.0-phase3c-ready"
+            rec["execution_timestamp"] = timestamp_now
+            rec["artifact_checksum"] = (
+                (sc_obj.checksum_sha256 if sc_obj else None)
+                or (hashlib.sha256(sc_obj.module_code.encode("utf-8")).hexdigest() if sc_obj else "unknown")
+            )
+            rec["component4"] = {
+                "detected_has_defect": rec["predictions"]["detected_has_defect"],
+                "predicted_category": rec["predictions"]["predicted_category"],
+                "predicted_cwe": rec["predictions"]["predicted_cwe"],
+                "localized_line": rec["predictions"]["localized_line"],
+                "drift_detected": rec["predictions"]["drift_detected"],
+                "defects_count": rec["predictions"]["defects_count"],
+                "duration_ms": rec["duration_ms"],
+                "provenance": "EMPIRICAL_EXECUTION",
+            }
+            rec["conventional_ci"] = {
+                "detected_has_defect": ci_rec.detected_has_defect if ci_rec else False,
+                "execution_status": ci_rec.execution_status if ci_rec else "UNKNOWN",
+                "container_exit_code": ci_rec.container_exit_code if ci_rec else 0,
+                "timeout": ci_rec.timeout if ci_rec else False,
+                "duration_ms": round(ci_rec.duration_ms, 2) if ci_rec else 0.0,
+                "sanitized_evidence": ci_rec.sanitized_evidence if ci_rec else "",
+                "provenance": ci_rec.provenance if ci_rec else "EMPIRICAL_EXECUTION",
+            }
+            rec["static_analysis"] = {
+                "detected_has_defect": static_rec.detected_has_defect if static_rec else False,
+                "execution_status": static_rec.execution_status if static_rec else "UNKNOWN",
+                "findings_count": static_rec.findings_count if static_rec else 0,
+                "sanitized_evidence": static_rec.sanitized_evidence if static_rec else "",
+                "provenance": static_rec.provenance if static_rec else "EMPIRICAL_EXECUTION",
+            }
+
         results_payload = {
-            "evaluation_version": "v2_methodology_corrected",
+            "evaluation_version": evaluation_version,
+            "dataset_split": dataset_split,
+            "manifest_checksum": manifest_checksum,
             "evaluation_mode": "real_docker" if self.use_real_docker else "in_process_sandbox",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": timestamp_now,
             "total_scenarios": len(dataset),
+            "clean_controls_evaluated": clean_count,
+            "functional_bugs_evaluated": functional_count,
+            "security_vulnerabilities_evaluated": security_count,
+            "performance_bottlenecks_evaluated": perf_count,
+            "regressions_evaluated": regression_count,
+            "non_convergent_evaluated": non_conv_count,
+            "semantic_drift_cases_evaluated": drift_count,
+            "integration_defects_evaluated": integration_count,
             "binary_detection_metrics": {
                 "true_positives": binary_tp,
                 "false_positives": binary_fp,
@@ -454,7 +518,9 @@ class BenchmarkEvaluator:
                 pass
 
         return BenchmarkEvaluationSummary(
-            evaluation_version="v2_methodology_corrected",
+            evaluation_version=evaluation_version,
+            dataset_split=dataset_split,
+            manifest_checksum=manifest_checksum,
             total_scenarios=len(dataset),
             clean_controls_evaluated=clean_count,
             functional_bugs_evaluated=functional_count,
@@ -463,6 +529,7 @@ class BenchmarkEvaluator:
             regressions_evaluated=regression_count,
             non_convergent_evaluated=non_conv_count,
             semantic_drift_cases_evaluated=drift_count,
+            integration_defects_evaluated=integration_count,
             overall_precision=round(overall_prec, 3),
             overall_recall=round(overall_rec, 3),
             overall_f1=round(overall_f1, 3),
@@ -580,9 +647,10 @@ class BenchmarkEvaluator:
                 tf()
                 t_dur = (time.perf_counter() - t0) * 1000.0
                 total_time += t_dur
-                is_perf_breach = ("performance" in requested) and (t_dur > 200.0)
+                complexity_patterns = self.defect_service.inspect_workload_complexity_patterns(scenario.module_code)
+                is_perf_breach = ("performance" in requested) and (t_dur > 200.0 or (bool(complexity_patterns) and t_dur >= 5.0))
                 status = TestResultStatus.FAILED if is_perf_breach else TestResultStatus.PASSED
-                err_msg = f"Latency SLA breach: took {t_dur:.1f}ms > 200ms" if is_perf_breach else None
+                err_msg = f"Latency SLA breach: took {t_dur:.1f}ms (threshold 200ms)" if is_perf_breach else None
                 results.append(
                     TestResult(
                         test_id=f"t_{scenario.scenario_id}_{tf.__name__}",

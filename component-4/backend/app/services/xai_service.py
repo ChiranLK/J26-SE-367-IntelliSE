@@ -16,6 +16,7 @@ from app.schemas.xai import (
     XaiExplanationResponse,
 )
 from app.services.ollama_client import OllamaClient, OllamaInferenceException
+from app.services.post_delivery_xai_service import PostDeliveryXaiService
 
 
 
@@ -618,22 +619,39 @@ class OllamaExplanationProvider(BaseExplanationProvider):
 
 class XaiExplanationService:
     """
-    Dedicated explanation service orchestrating human-facing XAI generation
-    and proposal-required machine-readable traceability-scoped defect reports.
+    Dedicated explanation service orchestrating human-facing post-delivery code understanding
+    and proposal-required machine-readable traceability-scoped defect reports for Component 3.
     """
 
-    def __init__(self, provider: Optional[BaseExplanationProvider] = None):
-        # Default to Ollama provider with transparent deterministic fallback
+    def __init__(
+        self,
+        provider: Optional[BaseExplanationProvider] = None,
+        post_delivery_service: Optional[PostDeliveryXaiService] = None,
+    ):
         self.provider = provider or OllamaExplanationProvider()
+        self.post_delivery_service = post_delivery_service or PostDeliveryXaiService()
 
     def generate_explanation(
         self,
         run: VerificationRunResponse,
         submission: Optional[CodeSubmissionResponse] = None,
+        governance_report: Optional[Any] = None,
     ) -> XaiExplanationResponse:
         """
-        Generates a human-facing, evidence-grounded XAI explanation.
-        Purely read-only and side-effect free; never executes code or mutates storage.
+        Generates human-facing XAI explanation through the post-delivery understanding gate.
+        Enforces that user-facing explanations are provided exclusively for successfully delivered software,
+        while intermediate defect explanations are suppressed from end-user views during repair attempts.
+        """
+        return self.post_delivery_service.generate_explanation(run, submission, governance_report)
+
+    def generate_internal_defect_explanation(
+        self,
+        run: VerificationRunResponse,
+        submission: Optional[CodeSubmissionResponse] = None,
+    ) -> XaiExplanationResponse:
+        """
+        Internal research/audit method to inspect defect diagnostics without exposing them
+        to end users during intermediate repair attempts.
         """
         return self.provider.generate(run, submission)
 

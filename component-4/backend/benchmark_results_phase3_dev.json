@@ -1,0 +1,1362 @@
+{
+  "evaluation_version": "v3.0.0-heldout-dev",
+  "dataset_split": "dev",
+  "manifest_checksum": "56638e4172a8f074f51eceb1db44a4a0e96654d9428a2a89b9930ee95a5c082e",
+  "evaluation_mode": "real_docker",
+  "timestamp": "2026-10-19T04:51:55.789895+00:00",
+  "total_scenarios": 40,
+  "clean_controls_evaluated": 8,
+  "functional_bugs_evaluated": 10,
+  "security_vulnerabilities_evaluated": 6,
+  "performance_bottlenecks_evaluated": 4,
+  "regressions_evaluated": 4,
+  "non_convergent_evaluated": 2,
+  "semantic_drift_cases_evaluated": 2,
+  "integration_defects_evaluated": 4,
+  "binary_detection_metrics": {
+    "true_positives": 26,
+    "false_positives": 1,
+    "true_negatives": 8,
+    "false_negatives": 5,
+    "accuracy": 0.85,
+    "precision": 0.963,
+    "recall": 0.839,
+    "f1_score": 0.897
+  },
+  "classification_metrics": {
+    "overall_precision": 0.852,
+    "overall_recall": 0.742,
+    "overall_f1": 0.793,
+    "categories": {
+      "functional_bug": {
+        "category": "functional_bug",
+        "true_positives": 16,
+        "false_positives": 4,
+        "false_negatives": 1,
+        "precision": 0.8,
+        "recall": 0.941,
+        "f1_score": 0.865,
+        "target_recall": 0.85,
+        "target_met": true
+      },
+      "security_vulnerability": {
+        "category": "security_vulnerability",
+        "true_positives": 4,
+        "false_positives": 0,
+        "false_negatives": 2,
+        "precision": 1.0,
+        "recall": 0.667,
+        "f1_score": 0.8,
+        "target_recall": 0.9,
+        "target_met": false
+      },
+      "performance_bottleneck": {
+        "category": "performance_bottleneck",
+        "true_positives": 2,
+        "false_positives": 0,
+        "false_negatives": 2,
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1_score": 0.667,
+        "target_recall": 0.85,
+        "target_met": false
+      },
+      "regression": {
+        "category": "regression",
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 3,
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1_score": 0.4,
+        "target_recall": 0.85,
+        "target_met": false
+      }
+    }
+  },
+  "confusion_matrix": {
+    "clean_control": {
+      "clean_control": 8,
+      "functional_bug": 1,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "functional_bug": {
+      "clean_control": 1,
+      "functional_bug": 16,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "security_vulnerability": {
+      "clean_control": 2,
+      "functional_bug": 0,
+      "security_vulnerability": 4,
+      "performance_bottleneck": 0,
+      "regression": 0
+    },
+    "performance_bottleneck": {
+      "clean_control": 2,
+      "functional_bug": 0,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 2,
+      "regression": 0
+    },
+    "regression": {
+      "clean_control": 0,
+      "functional_bug": 3,
+      "security_vulnerability": 0,
+      "performance_bottleneck": 0,
+      "regression": 1
+    }
+  },
+  "localization_metrics": {
+    "scenarios_evaluated": 31,
+    "exact_line_matches": 13,
+    "exact_line_accuracy": 0.419,
+    "near_line_matches": 22,
+    "near_line_accuracy": 0.71
+  },
+  "semantic_drift_metrics": {
+    "scenarios_evaluated": 2,
+    "true_positives": 0,
+    "false_positives": 0,
+    "true_negatives": 1,
+    "false_negatives": 1,
+    "precision": 1.0,
+    "recall": 0.0,
+    "f1_score": 0.0
+  },
+  "convergence_repair_metrics": {
+    "scenarios_evaluated": 2,
+    "correct_escalations": 2,
+    "correct_escalation_rate": 1.0,
+    "evaluation_mode": "LOCAL_CONTROLLED_REPAIR_HARNESS",
+    "component_3_live_integration": false
+  },
+  "baselines": {
+    "conventional_ci_f1": 0.769,
+    "conventional_ci_recall": 0.645,
+    "conventional_ci_precision": 0.952,
+    "static_analysis_recall": 0.129,
+    "static_analysis_precision": 1.0
+  },
+  "reproducibility": {
+    "docker_sandbox_isolated": true,
+    "nfr_latency_threshold_ms": 200.0,
+    "specialized_agents_active": [
+      "UnitTestAgent",
+      "IntegrationTestAgent",
+      "PerformanceTestAgent"
+    ],
+    "zero_ground_truth_leakage_verified": true
+  },
+  "explicit_limitations": [
+    "Component 3 repair is evaluated through controlled local candidate patches (COMPONENT_3_ENABLED=false).",
+    "Static analysis baseline is limited to AST patterns and cannot detect dynamic runtime logic bugs.",
+    "Performance scenarios require container host CPU availability to measure latency accurately."
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "PH3-DEV-001",
+      "name": "Matrix-Vector Linear Transformation",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1895.69,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-002",
+      "name": "CSV Tokenizer with Quoted Strings",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1410.1,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-003",
+      "name": "Financial Banker's Rounding Calculator",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1371.25,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-004",
+      "name": "Safe Parameterized SQL Search (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1269.62,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-005",
+      "name": "Safe Subprocess List Execution (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1316.31,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-006",
+      "name": "Safe Path Confinement with Basename (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 6,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1352.81,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-007",
+      "name": "Safe Environment Secret Loader (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1294.15,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-008",
+      "name": "Safe Math Literal Parsing (Negative Security Control)",
+      "group": "clean_control",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1302.43,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-009",
+      "name": "Off-by-One Pagination Page Index Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 5,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1378.74,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-010",
+      "name": "Leap Year Century Boundary Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1308.56,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-011",
+      "name": "Stack Pop Underflow Without Bounds Check",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 9,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 9,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1443.76,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-012",
+      "name": "Discount Calculation Inverted Percentage Logic",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1403.39,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-013",
+      "name": "Roman Numeral Subtractive Pair Defect (IX)",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 7,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 3,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1371.2,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-014",
+      "name": "Even-Length Median Integer Division Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 10,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 3,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1290.44,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-015",
+      "name": "Binary Search Upper Bound Truncation Boundary Defect",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1429.0,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-016",
+      "name": "Fahrenheit to Celsius Conversion Sign Inversion",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 2
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1304.28,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-017",
+      "name": "Inclusive Date Range Filter Exclusive Boundary",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1451.86,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-018",
+      "name": "Phone Number Regex Missing String Anchors",
+      "group": "functional_bug",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 7,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 6,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1417.13,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-019",
+      "name": "OS Command Injection via os.system (CWE-78)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-78",
+        "expected_line": 6,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-78",
+        "localized_line": 6,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1386.99,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-020",
+      "name": "SQL Injection via String Concatenation (CWE-89)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-89",
+        "expected_line": 8,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1314.82,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-021",
+      "name": "Path Traversal File Read (CWE-22)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-22",
+        "expected_line": 5,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1368.52,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-022",
+      "name": "Dynamic Expression Evaluation via eval (CWE-95)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-95",
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-95",
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1223.18,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-023",
+      "name": "Hardcoded Secret API Token (CWE-798)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-798",
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-798",
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1265.21,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-024",
+      "name": "Subprocess Invocation with shell=True (CWE-78)",
+      "group": "security_vulnerability",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe": "CWE-78",
+        "expected_line": 7,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "predicted_cwe": "CWE-78",
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1244.39,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-025",
+      "name": "Quadratic String Concatenation in Loop",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 6,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1279.71,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-026",
+      "name": "Unmemoized Naive Recursive Fibonacci",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 6,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1674.01,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-027",
+      "name": "Quadratic Pairwise Distance Calculation",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 8,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "predicted_cwe": null,
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 2248.46,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-028",
+      "name": "Unindexed Linear Lookup Inside Iteration Loop",
+      "group": "performance_bottleneck",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe": null,
+        "expected_line": 9,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": null,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1317.86,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-029",
+      "name": "REST Envelope Response Format Mismatch",
+      "group": "integration_defect",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 5,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1514.51,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-030",
+      "name": "HTTP Error Status Code Contract Violation (200 OK on Error)",
+      "group": "integration_defect",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 6,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 5,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1491.4,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-031",
+      "name": "Timestamp Serialization Epoch Float vs ISO-8601 Mismatch",
+      "group": "integration_defect",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 8,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 7,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1463.95,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-032",
+      "name": "Webhook Dispatcher Missing Authorization Header",
+      "group": "integration_defect",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1517.19,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-033",
+      "name": "User Profile Serializer Field Renaming Regression",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 5,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1518.5,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-034",
+      "name": "Tax Surcharge Calculation Zero-Rated Items Regression",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 5,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "regression",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1512.09,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-035",
+      "name": "Multi-Tenant Cache Key Collision Regression",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1468.3,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-036",
+      "name": "Sort Stability Regression with Inverted Secondary Ordering",
+      "group": "regression",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe": null,
+        "expected_line": 8,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1706.16,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-037",
+      "name": "Positive Drift: Assertion Weakened to Nullity Check",
+      "group": "semantic_drift",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": true,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": false,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1513.2,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-038",
+      "name": "Negative Drift Control: Variable Assignment Refactoring",
+      "group": "semantic_drift",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "unknown",
+        "expected_cwe": null,
+        "expected_line": null,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": false
+      },
+      "predictions": {
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "predicted_cwe": null,
+        "localized_line": null,
+        "drift_detected": false,
+        "defects_count": 0
+      },
+      "repair_loop_evaluation": {
+        "evaluated": false,
+        "stopping_condition": "NOT_EVALUATED_IN_SINGLE_PASS",
+        "iterations": 1,
+        "converged": null,
+        "escalation_required": null
+      },
+      "duration_ms": 1437.41,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-039",
+      "name": "Contradictory Requirements Repair Oscillation",
+      "group": "non_convergent_by_design",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 4,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": true
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 4,
+        "drift_detected": null,
+        "defects_count": 2
+      },
+      "repair_loop_evaluation": {
+        "evaluated": true,
+        "stopping_condition": "STOP_ITERATION_CAP_REACHED",
+        "iterations": 3,
+        "converged": false,
+        "escalation_required": true
+      },
+      "duration_ms": 1402.96,
+      "execution_mode": "real_docker"
+    },
+    {
+      "scenario_id": "PH3-DEV-040",
+      "name": "Persistent Defect Cap Exhaustion Repair Loop",
+      "group": "non_convergent_by_design",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe": null,
+        "expected_line": 3,
+        "has_semantic_drift": false,
+        "is_non_convergent_by_design": true
+      },
+      "predictions": {
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "predicted_cwe": null,
+        "localized_line": 3,
+        "drift_detected": null,
+        "defects_count": 1
+      },
+      "repair_loop_evaluation": {
+        "evaluated": true,
+        "stopping_condition": "STOP_ITERATION_CAP_REACHED",
+        "iterations": 3,
+        "converged": false,
+        "escalation_required": true
+      },
+      "duration_ms": 1683.78,
+      "execution_mode": "real_docker"
+    }
+  ]
+}
