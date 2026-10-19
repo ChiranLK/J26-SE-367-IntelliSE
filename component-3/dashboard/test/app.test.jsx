@@ -458,6 +458,8 @@ describe("Scoped regeneration", () => {
     expect(result).toHaveTextContent("Repair success: NOT EVALUATED");
     expect(result).toHaveTextContent("No handoff was produced");
     expect(result).toHaveTextContent("C4 retest is still PENDING");
+    expect(result).toHaveTextContent("RAGA-CHUNK-001");
+    expect(result).toHaveTextContent("node-svc-001");
   });
 
   it("shows a stale-report conflict from the backend as an error", async () => {

@@ -172,7 +172,7 @@ async def create_mock_scoped_regeneration(
     payload: ScopedRegenerationRequest,
     request: Request,
 ) -> ScopedRegenerationResult:
-    """Same pipeline as ``/scoped-regenerations``; only the model output is a test double."""
+    """Deterministic fallback demo; it does not perform AI or RAG retrieval."""
     settings = request.app.state.settings
     traceability = TraceabilityService(
         verifier=ManifestVerificationService(settings.generated_workspace_root),

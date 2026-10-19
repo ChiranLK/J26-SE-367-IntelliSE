@@ -62,7 +62,7 @@ export const api = {
     apiRequest("/demo/scoped-regeneration/baseline", { method: "POST", timeoutMs: 2 * MINUTE }),
   impactSelection: (request) =>
     apiRequest("/impact-selections", { method: "POST", body: request }),
-  // MOCK uses the same real service with a deterministic test-double model.
+  // MOCK is a deterministic fallback pipeline and does not claim AI/RAG repair.
   // REAL_LOCAL_OLLAMA uses the existing endpoint that calls local Ollama.
   scopedRegeneration: (mode, request) =>
     mode === "MOCK"

@@ -136,7 +136,16 @@ export function makeRegenerationResult({ status = "REVIEW_REQUIRED", mock = true
     c4_retest_handoff: null,
     escalation: null,
     discarded_workspace_relative_path: null,
-    metrics: { total_latency_ms: 1, llm_call_count: 0, rejected_attempt_count: 0, repair_success: "NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST" },
+    metrics: { total_latency_ms: 1, llm_call_count: 0, rejected_attempt_count: 0, within_request_attempt_count: 0, within_request_attempt_limit: 2, repair_success: "NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST" },
+    repair_execution_mode: mock ? "DETERMINISTIC_TEST_DOUBLE" : "AI_RAG_LOCAL_LLM",
+    retrieval_evidence: [{
+      module_path: "backend/src/services/taskService.js",
+      rag_a_chunk_ids: mock ? [] : ["RAGA-CHUNK-001"],
+      rag_b_rule_ids: mock ? [] : ["node-svc-001"],
+      applied_to_prompt: !mock,
+    }],
+    patch_event: null,
+    human_review_package: null,
     c4_testing_claim: false,
     execution_claim: "GENERATED_CODE_NOT_EXECUTED",
   };

@@ -413,6 +413,54 @@ Output goes to git-ignored `generated-workspaces/experiments/` and
 
 ## Limitations and human-review requirements
 
+### Trigger C RAG integration (provisional)
+
+The real local-Ollama repair path now builds one versioned prompt with two
+separate evidence sections:
+
+- `DEFECT_CONTEXT_EVIDENCE_JSON`: RAG A chunks retrieved only from the
+  graph-scoped, current module versions using the simulated C4 explanation.
+- `BEST_PRACTICE_RULES`: RAG B rule cards filtered for the Node.js module
+  layer. These are configured engineering-policy assumptions, not defect
+  evidence.
+
+The result and `regeneration-record.json` record the RAG A backend, embedding
+model and chunk IDs; RAG B backend, embedding model and rule IDs; old/new
+artifact digests; changed files/symbols; and graph versions. Prompt hashes in
+the new manifest bind these exact sections to the new run without changing the
+historical manifest schema.
+
+`changed_symbols` preserves only a graph-corroborated C4 location claim and is
+labelled `GRAPH_CORROBORATED_C4_LOCATION_CLAIM`. It is not an AST-derived
+symbol diff.
+
+The deterministic demo endpoint does **not** use RAG and is labelled
+`DETERMINISTIC_TEST_DOUBLE`. Only the local-Ollama endpoint may be described as
+AI/RAG-driven repair. Test coverage that exercises the RAG orchestration with a
+model double is separately labelled `SIMULATED_RAG_TEST_DOUBLE`.
+
+The provisional C4 contract still has no `module_id`, no per-module digest,
+and makes `explanation` optional. As an interim adapter, C3 validates the
+whole-application digest against the graph, resolves the module from the
+location path, and uses the verified manifest file SHA-256 for stale chunk
+filtering. Missing or stale RAG A context stops automatic patching with
+`INSUFFICIENT_DEFECT_CONTEXT`; C3 does not patch from graph scope alone.
+
+Current acceptance scope:
+
+- C3-06: matching simulated defect evidence can produce one scoped new run,
+  digest and graph version, pending independent C4 re-test.
+- C3-07: unknown modules and stale/mismatched digests are rejected with an
+  explicit request to re-verify the current artifact.
+- C3-08: the within-request attempt limit produces a human-review package with
+  the defect report, attempt records, rejection reasons and source version.
+- C3-09 and C3-10 deployment-readiness decisions are intentionally deferred.
+
+Cross-round repair history, Component 4 non-convergence signals, and Component
+4 semantic-preservation flags remain deferred until an approved C4 contract is
+available. C3 never edits or executes Component 4's frozen tests and never
+treats a C4 suggestion as authoritative defect truth.
+
 - Defect reports are simulated and the contract is provisional.
 - Impact precision is only as good as the traceability links. In the current
   graph the generated test file links to the service module only, so controller,

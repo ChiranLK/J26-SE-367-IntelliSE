@@ -9,6 +9,8 @@ from intelise_c3.domain.scoped_regeneration import (
     ScopedRegenerationResult,
 )
 from intelise_c3.llm.ollama import OllamaLLMClient
+from intelise_c3.rag.defect_context import ChromaDefectContextStore
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.scoped_regeneration import ScopedRegenerationService
 from intelise_c3.services.traceability import TraceabilityService
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
@@ -35,11 +37,42 @@ def _service(request: Request, *, with_model: bool) -> ScopedRegenerationService
         builder=TraceabilityGraphBuilder(),
         store=SQLiteTraceabilityStore(settings.traceability_store_path),
     )
+    service_args = {}
+    if with_model:
+        configured_rag_model = getattr(settings, "rag_embedding_model", None)
+        defect_store = getattr(
+            request.app.state, "trigger_c_defect_context_store", None
+        )
+        rag_runtime = getattr(request.app.state, "trigger_c_rag_runtime", None)
+        if defect_store is None:
+            defect_store = ChromaDefectContextStore(
+                settings.rag_persist_dir,
+                configured_rag_model,
+            )
+        if rag_runtime is None:
+            rag_runtime = RagRuntime.from_settings(settings)
+        service_args = {
+            "defect_context_store": defect_store,
+            "rag_runtime": rag_runtime,
+            "rag_a_backend": getattr(
+                request.app.state, "trigger_c_rag_a_backend", "chroma"
+            ),
+            "rag_a_embedding_model": getattr(
+                request.app.state,
+                "trigger_c_rag_a_embedding_model",
+                configured_rag_model,
+            ),
+        }
     return ScopedRegenerationService(
         settings.generated_workspace_root,
         traceability,
         OllamaLLMClient(settings) if with_model else None,
-        model_evidence_class="REAL_LOCAL_OLLAMA",
+        model_evidence_class=getattr(
+            request.app.state,
+            "trigger_c_model_evidence_class",
+            "REAL_LOCAL_OLLAMA",
+        ),
+        **service_args,
     )
 
 

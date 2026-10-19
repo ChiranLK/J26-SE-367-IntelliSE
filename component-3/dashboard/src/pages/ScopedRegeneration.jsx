@@ -127,7 +127,11 @@ function Result({ entry }) {
   const graph = result.graph_versioning;
   const preservation = result.preservation;
   const handoff = result.c4_retest_handoff;
-  const mode = result.model_evidence_class === "MOCKED_TEST_DOUBLE" ? "MOCK" : "REAL_LOCAL_OLLAMA";
+  const mode = result.model_evidence_class === "MOCKED_TEST_DOUBLE"
+    ? "MOCK"
+    : result.model_evidence_class === "SIMULATED_RAG_TEST_DOUBLE"
+      ? "SIMULATED_RAG_TEST_DOUBLE"
+      : "REAL_LOCAL_OLLAMA";
   return (
     <div data-testid="regeneration-result">
       <div className="result-head">
@@ -154,7 +158,45 @@ function Result({ entry }) {
         <Stat label="Collateral edits" value={preservation ? preservation.collateral_edit_count : "–"} tone={preservation?.collateral_edit_count ? "bad" : undefined} />
         <Stat label="Model calls" value={result.metrics.llm_call_count} />
         <Stat label="Rejected attempts" value={result.metrics.rejected_attempt_count} />
+        <Stat label="Attempt counter" value={`${result.metrics.within_request_attempt_count ?? result.patch_attempts.length}/${result.metrics.within_request_attempt_limit ?? "?"}`} />
       </div>
+
+      <Card title="Trigger C retrieval evidence" subtitle={result.repair_execution_mode === "DETERMINISTIC_TEST_DOUBLE" ? "Deterministic fallback: RAG was not applied." : "RAG A defect context and RAG B best-practice rules actually supplied to the patch prompt."}>
+        <Table
+          dense
+          empty="No retrieval evidence was applied."
+          rowKey={(row) => row.module_path}
+          rows={result.retrieval_evidence ?? []}
+          columns={[
+            { key: "module_path", header: "Impacted module", render: (row) => <code>{row.module_path}</code> },
+            { key: "rag_a_chunk_ids", header: "RAG A chunks", render: (row) => row.rag_a_chunk_ids.length ? row.rag_a_chunk_ids.map((id) => <div key={id}><code>{id}</code></div>) : "not applied" },
+            { key: "rag_b_rule_ids", header: "RAG B rules", render: (row) => row.rag_b_rule_ids.length ? row.rag_b_rule_ids.map((id) => <div key={id}><code>{id}</code></div>) : "not applied" },
+            { key: "applied_to_prompt", header: "Prompt", render: (row) => row.applied_to_prompt ? "applied" : "not applied" },
+          ]}
+        />
+        {result.patch_event ? (
+          <KeyValues items={[
+            { label: "Trigger", value: result.patch_event.trigger },
+            { label: "Defect", value: result.patch_event.defect_ids.join(", ") },
+            { label: "RTM references", value: result.patch_event.rtm_requirement_ids.join(", ") },
+            { label: "Changed files", value: result.patch_event.changed_files.join(", ") },
+            { label: "Changed symbols", value: result.patch_event.changed_symbols.join(", ") || "not supplied" },
+            { label: "Symbol evidence basis", value: result.patch_event.changed_symbol_basis },
+            { label: "Rationale", value: result.patch_event.rationale },
+          ]} />
+        ) : null}
+      </Card>
+
+      {result.human_review_package ? (
+        <Card title="Human-review package" tone="warn">
+          <KeyValues items={[
+            { label: "Reason", value: result.human_review_package.reason_code },
+            { label: "Required action", value: result.human_review_package.required_action },
+            { label: "Source artifact", value: <Hash value={result.human_review_package.source_artifact_digest_sha256} length={24} /> },
+            { label: "Rejected attempts", value: result.human_review_package.rejection_reasons.join(", ") || "none" },
+          ]} />
+        </Card>
+      ) : null}
 
       {versioning ? (
         <div className="grid grid-2">
@@ -448,19 +490,19 @@ export default function ScopedRegeneration() {
         {impact ? <Impact impact={impact} /> : null}
       </Card>
 
-      <Card title="4 · Scoped regeneration" subtitle="Two clearly separated modes. Both call the same pipeline; only the model differs.">
+      <Card title="4 · Scoped regeneration" subtitle="Two clearly separated modes: deterministic fallback or AI/RAG local Ollama repair.">
         <div className="mode-grid">
           <div className="mode-card">
             <div>
               <strong>MOCK model</strong> <ModeBadge mode="MOCK" />
-              <p className="muted small">POST /api/v1/demo/scoped-regenerations/mock. A fixed repaired service file stands in for the model. It checks the pipeline only and repairs just the service scenario; other scenarios fail visibly.</p>
+              <p className="muted small">POST /api/v1/demo/scoped-regenerations/mock. Deterministic fallback only: a fixed repaired service file stands in for the model. It is not AI-driven and does not use RAG.</p>
               <Button onClick={() => regenerate.run("MOCK")} loading={regenerate.loading && lastRunMode === "MOCK"} disabled={!request || regenerate.loading || consumed}>Run MOCK regeneration</Button>
             </div>
           </div>
           <div className="mode-card">
             <div>
               <strong>REAL local Ollama</strong> <ModeBadge mode="REAL_LOCAL_OLLAMA" />
-              <p className="muted small">POST /api/v1/scoped-regenerations. The configured local model proposes the patch. Output quality is unknown and may be rejected by the guards.</p>
+              <p className="muted small">POST /api/v1/scoped-regenerations. RAG A defect evidence and RAG B rules ground the configured local model prompt. Output quality is unknown and may be rejected by the guards.</p>
               <Button onClick={() => regenerate.run("REAL_LOCAL_OLLAMA")} loading={regenerate.loading && lastRunMode === "REAL_LOCAL_OLLAMA"} disabled={!request || regenerate.loading || consumed}>Run REAL Ollama regeneration</Button>
               {!ollamaOk ? <div className="text-warn small">Ollama is not ready: {ollama?.detail ?? "status unknown"}</div> : null}
             </div>
