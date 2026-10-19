@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import App from "../src/App.jsx";
@@ -15,6 +15,7 @@ import {
 } from "./helpers.js";
 
 const INPUT_PACKAGE = {
+  contract_version: "1.0",
   c1: {
     project_id: "TASK-DEMO",
     srs_version: "SRS-1",
@@ -97,9 +98,9 @@ describe("C1/C2 inputs", () => {
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
 
-    await user.click(screen.getByRole("button", { name: "Load simulated fixture" }));
+    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
     expect(await screen.findByText("SIMULATED fixture notice")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Run validation" }));
+    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
 
     expect(await screen.findByText("ACCEPTED by C3 validation")).toBeInTheDocument();
     expect(called("POST /api/v1/validate-input")[0].body).toEqual(INPUT_PACKAGE);
@@ -115,10 +116,10 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
-    await user.click(screen.getByRole("button", { name: "Load simulated fixture" }));
+    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
 
     await user.click(await screen.findByRole("button", { name: "Make a requirement DRAFT" }));
-    await user.click(screen.getByRole("button", { name: "Run validation" }));
+    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
 
     const panel = await screen.findByTestId("error-panel");
     expect(panel).toHaveTextContent("REQUIREMENT_NOT_APPROVED");
@@ -135,14 +136,36 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
-    await user.click(screen.getByRole("button", { name: "Load simulated fixture" }));
-    await screen.findByRole("button", { name: "Run validation" });
+    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
+    await screen.findByRole("button", { name: "Validate C1/C2 inputs" });
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 
-    await user.click(screen.getByRole("button", { name: "Run validation" }));
+    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
 
     expect(await screen.findByTestId("error-panel")).toHaveTextContent("Backend unreachable");
     expect(screen.queryByText("ACCEPTED by C3 validation")).not.toBeInTheDocument();
+  });
+
+  it("combines separately pasted C1 and C2 outputs without inventing upstream fields", async () => {
+    const user = userEvent.setup();
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "POST /api/v1/validate-input": GENERATION_CONTEXT,
+    });
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+
+    fireEvent.change(screen.getByLabelText("Component 1 JSON"), {
+      target: { value: JSON.stringify(INPUT_PACKAGE.c1) },
+    });
+    fireEvent.change(screen.getByLabelText("Component 2 JSON"), {
+      target: { value: JSON.stringify(INPUT_PACKAGE.c2) },
+    });
+    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
+
+    expect(await screen.findByText("ACCEPTED by C3 validation")).toBeInTheDocument();
+    expect(called("POST /api/v1/validate-input")[0].body).toEqual(INPUT_PACKAGE);
+    expect(screen.getAllByText("PASTED_OR_EDITED")).toHaveLength(2);
   });
 });
 
@@ -225,6 +248,59 @@ describe("Code generation", () => {
     expect(block.querySelector("script")).toBeNull();
     expect(screen.getByText("display only · never executed")).toBeInTheDocument();
     expect(called("POST /api/v1/demo/code-preview")[0].body.relative_path).toBe("backend/src/services/taskService.js");
+  });
+
+  it("builds and starts a dynamic generated UI with one action and shows the new local port", async () => {
+    const user = userEvent.setup();
+    const run = makeRun({ runId: "dynamic-run", dynamic: true });
+    seedSession({
+      ...approvedSession(),
+      generationRun: { run, mode: "TEMPLATE_ONLY", durationMs: 5, at: "2026-10-19T00:00:00Z" },
+    });
+    const built = {
+      preview_id: "dynamic-run",
+      generation_run_id: "dynamic-run",
+      workspace_relative_path: run.workspace_relative_path,
+      artifact_digest_sha256: run.manifest.artifact_digest_sha256,
+      status: "BUILT",
+      ui_url: "http://127.0.0.1:13056/",
+      api_url: "http://127.0.0.1:13057/",
+      ui_port: 13056,
+      api_port: 13057,
+      updated_at_utc: "2026-10-19T00:00:00Z",
+      execution_claim: "GENERATED_JS_EXECUTES_ONLY_INSIDE_DISPOSABLE_DOCKER_CONTAINER_NOT_ON_HOST",
+      runtime_db_claim: "IN_MEMORY",
+      browser_verification_claim: false,
+    };
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "POST /api/v1/demo/preview/build": built,
+      "POST /api/v1/demo/preview/start": { ...built, status: "RUNNING" },
+    });
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    await user.click(screen.getByRole("button", { name: "Build & Start Local Preview" }));
+
+    expect(await screen.findByText("Generated application is running locally")).toBeInTheDocument();
+    expect(screen.getAllByText("http://127.0.0.1:13056/").length).toBeGreaterThan(0);
+    expect(called("POST /api/v1/demo/preview/build")).toHaveLength(1);
+    expect(called("POST /api/v1/demo/preview/start")[0].body).toEqual({ preview_id: "dynamic-run" });
+  });
+});
+
+describe("Application profile", () => {
+  it("blocks custom non-CRUD generation instead of substituting an unrelated CRUD app", async () => {
+    const user = userEvent.setup();
+    seedSession({ validation: { ok: true, generationContext: GENERATION_CONTEXT } });
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /Design & Stack/);
+
+    await user.click(screen.getByRole("button", { name: /Custom \/ non-CRUD application/ }));
+
+    expect(screen.getByText("Custom generation is not implemented yet")).toBeInTheDocument();
+    expect(screen.getByText(/will not silently generate an unrelated CRUD application/)).toBeInTheDocument();
   });
 });
 
@@ -343,7 +419,7 @@ describe("Readiness", () => {
 
     await openPage(user, /Readiness/);
 
-    expect(screen.getByText("DEPLOYMENT BLOCKED")).toBeInTheDocument();
+    expect(screen.getAllByText("DEPLOYMENT BLOCKED").length).toBeGreaterThan(0);
     expect(screen.getByText("C4 RETEST PENDING")).toBeInTheDocument();
     expect(screen.getByTestId("deployment-blockers")).toHaveTextContent("Independent C4 retest evidence is missing.");
     expect(screen.queryByText(/approved for deployment/i)).not.toBeInTheDocument();

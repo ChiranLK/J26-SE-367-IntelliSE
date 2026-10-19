@@ -52,16 +52,31 @@ export const OVERVIEW_OK = {
   ],
 };
 
+export const CRUD_DOMAINS = {
+  catalog_version: "1.0",
+  review_status: "NOT_INDEPENDENTLY_REVIEWED",
+  domains: [
+    {
+      domain_id: "student_management",
+      title: "Student Management",
+      fixture_id: "student_management",
+      classification: "SIMULATED_C1_C2_FIXTURE",
+      notice: "SIMULATED",
+    },
+  ],
+};
+
 export const baseRoutes = () => ({
   "GET /api/v1/health": HEALTH,
   "GET /api/v1/demo/overview": OVERVIEW_OK,
+  "GET /api/v1/demo/crud-domains": CRUD_DOMAINS,
 });
 
 export function seedSession(partial) {
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...emptySession(), ...partial }));
 }
 
-export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1" } = {}) {
+export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic = false } = {}) {
   const files = [
     { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: mode === "LOCAL_LLM" ? "LOCAL_LLM" : "TEMPLATE", sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
     { file_id: "F2", relative_path: "backend/src/app.js", module_identity: "app", artifact_type: "SOURCE", origin: "TEMPLATE", sha256: "b".repeat(64), size_bytes: 80, requirement_ids: [] },
@@ -75,7 +90,15 @@ export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1" } = {}) {
     stack_approval: { classification: "CALLER_ASSERTED_PROVISIONAL_APPROVAL", authenticity_verified: false },
     files,
     artifact_digest_sha256: "c".repeat(64),
-    run_evidence: { evidence_digest_sha256: "d".repeat(64) },
+    run_evidence: {
+      evidence_digest_sha256: "d".repeat(64),
+      ...(dynamic
+        ? {
+            generator_version: "react-node-crud-generator-v1",
+            template_set_version: "react-node-crud-scaffold-v1",
+          }
+        : {}),
+    },
     execution_status: "NOT_EXECUTED",
     trust_boundary: "Generated code is untrusted and was not executed.",
     llm_inference: mode === "LOCAL_LLM"

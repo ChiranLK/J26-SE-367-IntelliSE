@@ -24,6 +24,7 @@ from intelise_c3.contracts.stack_selection import (
     TeamProficiency,
 )
 from intelise_c3.core.config import Settings
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.core.errors import ApplicationError
 from intelise_c3.llm.ollama import OllamaLLMClient
 from intelise_c3.services.code_generation import CodeGenerationService
@@ -102,7 +103,11 @@ async def run(mode: GenerationMode) -> int:
     settings = Settings()
     request = build_simulated_request(mode)
     client = OllamaLLMClient(settings) if mode is GenerationMode.LOCAL_LLM else None
-    service = CodeGenerationService(settings.generated_workspace_root, client)
+    service = CodeGenerationService(
+        settings.generated_workspace_root,
+        client,
+        RagRuntime.from_settings(settings),
+    )
     try:
         result = await service.generate(request)
     except ApplicationError as exception:

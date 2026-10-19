@@ -71,6 +71,7 @@ export default function DesignStack({ navigate }) {
   const generationContext = session.validation?.ok ? session.validation.generationContext : null;
   const design = session.designContext;
   const report = session.stackReport;
+  const applicationProfile = session.applicationProfile ?? "SCHEMA_DRIVEN_CRUD";
 
   const [approvedBy, setApprovedBy] = useState("LOCAL-RESEARCHER-DEMO");
   const [reference, setReference] = useState(`SIMULATED-DEMO-APPROVAL-${new Date().toISOString().slice(0, 10)}`);
@@ -108,7 +109,16 @@ export default function DesignStack({ navigate }) {
 
   const candidates = report ? report.candidate_calculations : [];
   const approval = session.approval;
-  const canApprove = acknowledged && approvedBy.trim() && reference.trim();
+  const profileSupported = applicationProfile === "SCHEMA_DRIVEN_CRUD";
+  const canApprove = profileSupported && acknowledged && approvedBy.trim() && reference.trim();
+  const chooseProfile = (profile) => {
+    set("applicationProfile", profile);
+    set("approval", null);
+    set("generationRun", null);
+    set("preview", null);
+    set("structural", null);
+    set("graph", null);
+  };
 
   return (
     <div className="page">
@@ -149,8 +159,30 @@ export default function DesignStack({ navigate }) {
       </Card>
       {design ? <Classes design={design} /> : null}
 
+      <Card title="2 · Application profile" subtitle="The application profile is separate from the implementation stack.">
+        <div className="profile-grid">
+          <button type="button" className={`profile-card${profileSupported ? " profile-active" : ""}`} onClick={() => chooseProfile("SCHEMA_DRIVEN_CRUD")}>
+            <strong>Schema-driven CRUD application</strong>
+            <span>Implemented for independent entities with supported scalar fields.</span>
+            <StatusBadge status="SATISFIED" label="IMPLEMENTED MVP" />
+          </button>
+          <button type="button" className={`profile-card${!profileSupported ? " profile-active" : ""}`} onClick={() => chooseProfile("CUSTOM_NON_CRUD")}>
+            <strong>Custom / non-CRUD application</strong>
+            <span>Calculator, workflow, or other behavior that cannot be derived as CRUD.</span>
+            <StatusBadge status="REVIEW_REQUIRED" label="REVIEW REQUIRED" />
+          </button>
+        </div>
+        {!profileSupported ? (
+          <Callout tone="warn" title="Custom generation is not implemented yet">
+            C3 will not silently generate an unrelated CRUD application. A researcher must define and approve a
+            versioned non-CRUD behavior specification and generator before generation can continue. A calculator still
+            requires an implementation stack; this option does not bypass stack selection.
+          </Callout>
+        ) : null}
+      </Card>
+
       <Card
-        title="2 · Stack candidates and scores"
+        title="3 · Stack candidates and scores"
         subtitle="POST /api/v1/stack-selection · deterministic policy, four candidates"
         actions={<Button onClick={() => selectStack.run()} loading={selectStack.loading} disabled={!design}>Run stack selection</Button>}
       >
@@ -203,7 +235,7 @@ export default function DesignStack({ navigate }) {
         )}
       </Card>
 
-      <Card title="3 · Explicit provisional approval" subtitle="Generation stays blocked until a researcher approves. The backend re-checks this gate.">
+      <Card title="4 · Explicit provisional approval" subtitle="Generation stays blocked until a researcher approves. The backend re-checks this gate.">
         {!report ? (
           <p className="muted small">Run stack selection first.</p>
         ) : (
@@ -226,7 +258,7 @@ export default function DesignStack({ navigate }) {
               </span>
             </label>
             <div className="button-row">
-              <Button onClick={() => decide(APPROVAL_STATUS.APPROVED)} disabled={!canApprove}>
+              <Button onClick={() => decide(APPROVAL_STATUS.APPROVED)} disabled={!canApprove} title={!profileSupported ? "Custom non-CRUD generation is not implemented" : undefined}>
                 Approve {report.selected_stack.candidate.frontend} + {report.selected_stack.candidate.backend}
               </Button>
               <Button variant="danger" onClick={() => decide(APPROVAL_STATUS.REJECTED)}>Reject</Button>

@@ -94,6 +94,7 @@ def _with_recomputed_evidence(manifest, *, files=None, traceability=None, source
         template_set_version=evidence.template_set_version,
         llm_inference=manifest.llm_inference,
         artifact_digest_sha256=artifact_digest,
+        rag_evidence=evidence.rag,
     )
     return manifest.model_copy(
         update={

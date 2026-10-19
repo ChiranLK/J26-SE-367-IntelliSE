@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
 import { Button, Callout, Card, ErrorPanel, JsonView, KeyValues, Loading, PageHeader, SimBanner, SimulatedBadge, StatusBadge, Table } from "../components/ui.jsx";
 import { FAULT_PRESETS, applyFault } from "../lib/requests.js";
@@ -6,7 +6,7 @@ import { formatTime } from "../lib/format.js";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 
-function parsePackage(text) {
+function parseJson(text) {
   if (!text.trim()) return { value: null, error: null };
   try {
     return { value: JSON.parse(text), error: null };
@@ -18,14 +18,36 @@ function parsePackage(text) {
 export default function Inputs({ navigate }) {
   const { session, set } = useSession();
   const [injected, setInjected] = useState(null);
-  const parsed = useMemo(() => parsePackage(session.inputText), [session.inputText]);
-  const pkg = parsed.value;
+  const [crudDomains, setCrudDomains] = useState([]);
 
-  const load = useAction(async () => {
-    const envelope = await api.fixture("input-package");
+  const parsedC1 = useMemo(() => parseJson(session.c1InputText ?? ""), [session.c1InputText]);
+  const parsedC2 = useMemo(() => parseJson(session.c2InputText ?? ""), [session.c2InputText]);
+  const pkg = useMemo(() => {
+    if (!parsedC1.value || !parsedC2.value) return null;
+    return {
+      contract_version: session.inputContractVersion || "1.0",
+      c1: parsedC1.value,
+      c2: parsedC2.value,
+    };
+  }, [parsedC1.value, parsedC2.value, session.inputContractVersion]);
+
+  useEffect(() => {
+    api.crudDomains().then((catalog) => setCrudDomains(catalog.domains ?? [])).catch(() => setCrudDomains([]));
+  }, []);
+  const load = useAction(async (fixtureId = "input-package") => {
+    const envelope = await api.fixture(fixtureId);
     set("fixtures", { ...session.fixtures, inputPackage: envelope });
     set("inputText", JSON.stringify(envelope.payload, null, 2));
+    set("inputContractVersion", envelope.payload.contract_version ?? "1.0");
+    set("c1InputText", JSON.stringify(envelope.payload.c1 ?? {}, null, 2));
+    set("c2InputText", JSON.stringify(envelope.payload.c2 ?? {}, null, 2));
+    set("inputSources", { c1: "SIMULATED_FIXTURE", c2: "SIMULATED_FIXTURE" });
     set("validation", null);
+    set("applicationProfile", "SCHEMA_DRIVEN_CRUD");
+    set("generationRun", null);
+    set("preview", null);
+    set("structural", null);
+    set("graph", null);
     setInjected(null);
   });
 
@@ -35,6 +57,7 @@ export default function Inputs({ navigate }) {
       const generationContext = await api.validateInput(pkg);
       // New accepted input invalidates everything derived from the old one.
       set("designContext", null);
+      set("applicationProfile", "SCHEMA_DRIVEN_CRUD");
       set("stackReport", null);
       set("approval", null);
       set("generationRun", null);
@@ -55,6 +78,8 @@ export default function Inputs({ navigate }) {
     if (!pkg) return;
     const faulty = applyFault(pkg, presetId);
     set("inputText", JSON.stringify(faulty, null, 2));
+    set("c1InputText", JSON.stringify(faulty.c1 ?? {}, null, 2));
+    set("c2InputText", JSON.stringify(faulty.c2 ?? {}, null, 2));
     set("validation", null);
     setInjected(FAULT_PRESETS.find((item) => item.id === presetId));
   };
@@ -62,33 +87,75 @@ export default function Inputs({ navigate }) {
   const restore = () => {
     if (!session.fixtures.inputPackage) return;
     set("inputText", JSON.stringify(session.fixtures.inputPackage.payload, null, 2));
+    set("inputContractVersion", session.fixtures.inputPackage.payload.contract_version ?? "1.0");
+    set("c1InputText", JSON.stringify(session.fixtures.inputPackage.payload.c1 ?? {}, null, 2));
+    set("c2InputText", JSON.stringify(session.fixtures.inputPackage.payload.c2 ?? {}, null, 2));
+    set("inputSources", { c1: "SIMULATED_FIXTURE", c2: "SIMULATED_FIXTURE" });
     set("validation", null);
     setInjected(null);
   };
 
   const validation = session.validation;
   const context = validation?.ok ? validation.generationContext : null;
+  const inputReady = Boolean(pkg && !parsedC1.error && !parsedC2.error);
+  const simulated = session.inputSources?.c1 === "SIMULATED_FIXTURE" || session.inputSources?.c2 === "SIMULATED_FIXTURE";
+
+  const updateInput = (component, value, source = "PASTED_OR_EDITED") => {
+    set(component === "c1" ? "c1InputText" : "c2InputText", value);
+    set("inputSources", { ...(session.inputSources ?? {}), [component]: source });
+    set("inputText", "");
+    set("validation", null);
+  };
+
+  const uploadInput = async (component, file) => {
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseJson(text);
+    if (parsed.error) {
+      updateInput(component, text, "UPLOADED_FILE");
+      return;
+    }
+    const value = parsed.value?.[component] ?? parsed.value;
+    updateInput(component, JSON.stringify(value, null, 2), "UPLOADED_FILE");
+    if (parsed.value?.contract_version) set("inputContractVersion", parsed.value.contract_version);
+  };
 
   return (
     <div className="page">
       <PageHeader
         title="C1/C2 Inputs"
-        subtitle="Load the simulated upstream package and run the real FR-C3-01 validation API."
-        badges={<SimulatedBadge>SIMULATED C1/C2 FIXTURE</SimulatedBadge>}
+        subtitle="Upload or paste separate upstream JSON outputs, then run the real FR-C3-01 validation API."
+        badges={simulated ? <SimulatedBadge>SIMULATED C1/C2 FIXTURE</SimulatedBadge> : <StatusBadge status="REVIEW_REQUIRED" label="PROVISIONAL CONTRACT" />}
       />
       <SimBanner>
-        Component 1 and Component 2 are not integrated. This package is a simulated fixture; passing
-        validation does not mean it was approved by C1 or C2.
+        Direct Component 1 and Component 2 integration is not yet verified. Uploaded or pasted JSON
+        uses C3&apos;s provisional contract; approval reference strings are preserved but not authenticated.
       </SimBanner>
 
+      {/* ---- Quick Load Presentation Fixtures ------------------------- */}
       <Card
         title="Load fixture"
+        subtitle="Quickly load pre-validated requirements and architecture outputs for presentation."
         actions={
-          <Button onClick={() => load.run()} loading={load.loading}>
-            {session.fixtures.inputPackage ? "Reload simulated fixture" : "Load simulated fixture"}
+          <Button onClick={() => load.run("input-package")} loading={load.loading}>
+            {session.fixtures.inputPackage ? "Reload Task fixture" : "Load Task Management fixture"}
           </Button>
         }
       >
+        <div className="fault-row">
+          <span className="muted small">Dynamic CRUD demo domains (SIMULATED C1/C2):</span>
+          {crudDomains.map((domain) => (
+            <Button
+              key={domain.domain_id}
+              variant="secondary"
+              onClick={() => load.run(domain.fixture_id)}
+              loading={load.loading}
+              title={domain.notice}
+            >
+              {domain.title}
+            </Button>
+          ))}
+        </div>
         {session.fixtures.inputPackage ? (
           <p className="small">{session.fixtures.inputPackage.notice}</p>
         ) : (
@@ -98,7 +165,76 @@ export default function Inputs({ navigate }) {
         <ErrorPanel error={load.error} context="Load fixture" />
       </Card>
 
-      {parsed.error ? <Callout tone="bad" title="Package JSON is not valid">{parsed.error}</Callout> : null}
+      {/* ---- Primary C1 & C2 Input Areas ----------------------------- */}
+      <div className="grid grid-2 upstream-input-grid">
+        <Card
+          title="Component 1 output"
+          subtitle="Approved SRS package, stable requirement IDs, versions and provenance references."
+          actions={<span className="badge badge-neutral">{session.inputSources?.c1 ?? "NONE"}</span>}
+        >
+          <label className="file-input-label">
+            Upload C1 JSON
+            <input
+              aria-label="Upload C1 JSON"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => uploadInput("c1", event.target.files?.[0])}
+            />
+          </label>
+          <textarea
+            className="json-editor upstream-json-editor"
+            spellCheck={false}
+            placeholder='Paste the C1 object here, for example {"contract_version":"1.0", ...}'
+            value={session.c1InputText ?? ""}
+            onChange={(event) => updateInput("c1", event.target.value)}
+            aria-label="Component 1 JSON"
+          />
+          {parsedC1.error ? <Callout tone="bad" title="C1 JSON is not valid">{parsedC1.error}</Callout> : null}
+        </Card>
+
+        <Card
+          title="Component 2 output"
+          subtitle="Validated UML release, UI references and requirement-to-UML anchors."
+          actions={<span className="badge badge-neutral">{session.inputSources?.c2 ?? "NONE"}</span>}
+        >
+          <label className="file-input-label">
+            Upload C2 JSON
+            <input
+              aria-label="Upload C2 JSON"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => uploadInput("c2", event.target.files?.[0])}
+            />
+          </label>
+          <textarea
+            className="json-editor upstream-json-editor"
+            spellCheck={false}
+            placeholder='Paste the C2 object here, for example {"contract_version":"1.0", ...}'
+            value={session.c2InputText ?? ""}
+            onChange={(event) => updateInput("c2", event.target.value)}
+            aria-label="Component 2 JSON"
+          />
+          {parsedC2.error ? <Callout tone="bad" title="C2 JSON is not valid">{parsedC2.error}</Callout> : null}
+        </Card>
+      </div>
+
+      <Card title="Input envelope" subtitle="C3 combines the two objects only for the existing validation endpoint.">
+        <label className="contract-version-field">
+          Provisional contract version
+          <input
+            type="text"
+            aria-label="Input contract version"
+            value={session.inputContractVersion ?? "1.0"}
+            onChange={(event) => {
+              set("inputContractVersion", event.target.value);
+              set("validation", null);
+            }}
+          />
+        </label>
+        <p className="muted small">
+          Both inputs are required. C3 does not create missing approvals, requirements, UML elements or anchors.
+        </p>
+      </Card>
 
       {pkg ? (
         <>
@@ -156,8 +292,8 @@ export default function Inputs({ navigate }) {
             title="Validate with the real API"
             subtitle="POST /api/v1/validate-input"
             actions={
-              <Button onClick={() => validate.run()} loading={validate.loading} disabled={Boolean(parsed.error)}>
-                Run validation
+              <Button onClick={() => validate.run()} loading={validate.loading} disabled={!inputReady}>
+                Validate C1/C2 inputs
               </Button>
             }
           >
@@ -198,26 +334,19 @@ export default function Inputs({ navigate }) {
                   ]}
                 />
                 <Callout tone="info">Approval references are recorded as opaque strings. C3 does not verify that they are authentic.</Callout>
-                <Button variant="secondary" onClick={() => navigate("design")}>Continue to Design &amp; Stack</Button>
+                <Button onClick={() => navigate("design")} style={{ marginTop: "0.5rem" }}>
+                  Proceed to Step 2: Tech Stack Selection →
+                </Button>
               </div>
             ) : null}
           </Card>
-          <JsonView value={pkg} summary="Package JSON as sent to the API" />
-          <details className="json-view">
-            <summary>Edit package JSON</summary>
-            <textarea
-              className="json-editor"
-              spellCheck={false}
-              value={session.inputText}
-              onChange={(event) => {
-                set("inputText", event.target.value);
-                set("validation", null);
-              }}
-              aria-label="Package JSON editor"
-            />
-          </details>
+          <JsonView value={pkg} summary="Combined package JSON sent to the validation API" />
         </>
-      ) : null}
+      ) : (
+        <Callout tone="info" title="Waiting for both upstream inputs">
+          Supply valid JSON for Component 1 and Component 2. No downstream generation can start until both are present and accepted by the backend.
+        </Callout>
+      )}
     </div>
   );
 }

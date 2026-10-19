@@ -54,6 +54,8 @@ from intelise_c3.generation.templates import (
     task_management_templates,
     template_task_service,
 )
+from intelise_c3.rag import create_store
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.code_generation import CodeGenerationService
 from intelise_c3.services.design_understanding import DesignUnderstandingService
 from intelise_c3.services.input_validation import InputValidationService
@@ -216,7 +218,7 @@ def test_valid_local_llm_generation_writes_manifest_and_preserves_identities(
     assert result.manifest.execution_status == "NOT_EXECUTED"
     assert result.manifest.llm_inference is not None
     assert result.manifest.llm_inference.prompt_template_version == (
-        "react-node-task-service-v4"
+            "react-node-task-service-v5-rag"
     )
     assert result.manifest.source.requirement_ids == (
         "REQ-TASK-001",
@@ -333,10 +335,47 @@ def test_run_evidence_binds_inputs_prompt_model_and_artifacts(
     assert evidence.input_hashes.prompt_request_sha256 == canonical_sha256(
         client.requests[0]
     )
-    assert evidence.prompt_template_version == "react-node-task-service-v4"
+    assert evidence.prompt_template_version == "react-node-task-service-v5-rag"
     assert evidence.generator_version == GENERATOR_VERSION
     assert evidence.template_set_version == "react-node-task-scaffold-v2"
     assert evidence.authenticity_claim is False
+
+
+def test_filter_rag_rules_are_applied_to_llm_prompt_and_bound_to_evidence(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+) -> None:
+    generation, design = task_contexts
+    client = StubLLMClient(_model_output())
+    runtime = RagRuntime.for_test(create_store("filter", "rules"))
+
+    result = asyncio.run(
+        CodeGenerationService(tmp_path / "workspaces", client, runtime).generate(
+            _request(generation, design)
+        )
+    )
+
+    evidence = result.manifest.run_evidence.rag
+    assert evidence is not None
+    assert evidence.enabled is True
+    assert evidence.backend == "filter"
+    assert evidence.embedding_model is None
+    assert evidence.rule_corpus_sha256 is not None
+    service = next(
+        item
+        for item in evidence.retrievals
+        if item.module_path == "backend/src/services/taskService.js"
+    )
+    assert service.applied_to_prompt is True
+    assert "node-svc-001" in service.retrieved_rule_ids
+    assert "[node-svc-001]" in client.requests[0].messages[1].content
+    assert verify_manifest_evidence(result.manifest)
+
+    altered = service.model_copy(update={"retrieved_rule_ids": ("forged-rule",)})
+    altered_rag = evidence.model_copy(update={"retrievals": (altered,)})
+    altered_evidence = result.manifest.run_evidence.model_copy(update={"rag": altered_rag})
+    altered_manifest = result.manifest.model_copy(update={"run_evidence": altered_evidence})
+    assert not verify_manifest_evidence(altered_manifest)
 
 
 def test_altering_bound_evidence_invalidates_verification(

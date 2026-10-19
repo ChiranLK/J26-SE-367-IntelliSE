@@ -1,0 +1,10 @@
+{
+  "id": "spring-ctrl-001",
+  "stack": "spring",
+  "layer": "controller",
+  "category": "layering",
+  "priority": 3,
+  "rule": "Controllers must not access repositories directly. Delegate all business and data access to the service layer.",
+  "bad_example": "@RestController class GpaController { @Autowired GpaRecordRepository repo; ... repo.findAll(); }",
+  "good_example": "@RestController class GpaController { private final GpaRecordService service; ... service.list(); }"
+}

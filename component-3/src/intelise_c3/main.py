@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from intelise_c3.api.router import api_router
 from intelise_c3.core.config import get_settings
 from intelise_c3.core.errors import register_exception_handlers
+from intelise_c3.services.docker_preview import DockerPreviewService
 
 
 def create_app() -> FastAPI:
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
         openapi_url="/api/v1/openapi.json",
     )
     application.state.settings = settings
+    application.state.preview_service = DockerPreviewService(settings)
     application.include_router(api_router, prefix="/api/v1")
     register_exception_handlers(application)
     return application

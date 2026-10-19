@@ -4,9 +4,27 @@ This React dashboard is the **graphical interface for demonstrating Component 3 
 It is not the web application that C3 generates. Every action calls the real C3
 FastAPI services; Swagger and the terminal are not needed during the demo.
 
-The dashboard lives in `component-3/dashboard/` and only talks to
-`http://127.0.0.1:8000/api/v1` through the Vite dev proxy. It never executes,
-installs, or builds generated code. The generated files are shown as escaped text.
+The dashboard lives in `component-3/dashboard/` and talks to
+`http://127.0.0.1:8000/api/v1` through the Vite dev proxy. Source previews are
+escaped read-only text. A user-authorized local preview may build and execute a
+verified dynamic CRUD workspace only inside a disposable Docker container; it
+never executes generated JavaScript directly on the Windows host.
+
+## Supplying Component 1 and Component 2 outputs
+
+The **C1/C2 Inputs** page accepts the two upstream JSON objects separately by
+file upload or paste. C3 combines them into its existing provisional versioned
+envelope and sends that envelope to `POST /api/v1/validate-input`. Both inputs
+must parse as JSON and pass the backend identity, approval-state, version,
+release-state, report-reference, and anchor checks before downstream actions
+are enabled.
+
+An uploaded combined package is also accepted: the C1 uploader extracts its
+`c1` member and the C2 uploader extracts its `c2` member. Source labels
+distinguish uploaded/pasted values from the clearly labeled simulated demo
+fixtures. These controls do not establish direct C1/C2 service integration,
+authenticate an approval reference, or turn the provisional contract into an
+approved upstream schema.
 
 ## What is real and what is simulated
 
@@ -24,6 +42,38 @@ installs, or builds generated code. The generated files are shown as escaped tex
 | Deployment | **Not implemented.** Always `BLOCKED` |
 
 Simulated data is labeled in the interface (orange dashed badges).
+
+## Dynamic CRUD domains and Docker browser preview
+
+On **C1/C2 Inputs**, load **Student Management**, **Library Management**, or
+**Inventory Management** (each is a **SIMULATED** fixture, not real C1/C2).
+
+After **Code Generation** for a dynamic CRUD run, use **Build & Start Local
+Preview** for the one-click flow, or open **Application Preview** for separate
+**Build / Start / Stop** controls. Generated JavaScript runs
+only inside that container; the dashboard host orchestrates Docker and publishes
+loopback ports dynamically (do not assume port 5173 is free). Open the displayed
+`http://127.0.0.1:<ui-port>/` URL when status is `RUNNING`.
+
+This is a **local isolated preview**, not deployment. Starting it does not alter
+the C4 retest gate or the `DEPLOYMENT BLOCKED` decision. Each build receives
+dynamically selected loopback UI and API ports.
+
+## Application profiles
+
+The dashboard keeps application behavior separate from technology selection:
+
+- **Schema-driven CRUD application** is the implemented MVP profile. C3 derives
+  entities, scalar fields, validation, routes, UI forms/lists, SQL design
+  artifacts, and traceability from accepted C1/C2 evidence.
+- **Custom / non-CRUD application** is an explicit `REVIEW_REQUIRED` option for
+  calculators, workflows, and other behavior that cannot be represented by the
+  current CRUD specification. It intentionally blocks generation until a
+  versioned behavior contract and generator are approved. It never substitutes
+  unrelated Task, Student, Library, or Inventory code.
+
+A calculator still needs an implementation technology; the custom profile does
+not create a fifth stack or bypass the four-candidate stack policy.
 
 ## Start the three processes (Windows PowerShell)
 
@@ -166,8 +216,9 @@ Everything else uses the existing C3 endpoints unchanged.
   expected scopes are authored by the implementer and not independently reviewed.
 - Scores, weights, and confidences in stack selection are provisional policy
   assumptions. Approvals are caller-asserted; the approver is not authenticated.
-- Generated code is never installed, built, or run by C3 or the dashboard.
-  Structural verification is static inspection, not testing.
+- Generated code is never installed or run directly on the Windows host.
+  Dynamic CRUD workspaces can be built and run in the restricted Docker preview.
+  Structural verification remains static inspection, not Component 4 testing.
 - `MOCK` repair proves the pipeline only and repairs a single scenario (the
   service module); other scenarios fail visibly.
 - `repair_success` is always `NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST`.

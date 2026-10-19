@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,6 +49,23 @@ class Settings(BaseSettings):
     traceability_store_path: Path = Field(
         default=COMPONENT_ROOT / "runtime" / "traceability" / "traceability.sqlite3",
         description="Local append-only SQLite traceability snapshot store.",
+    )
+    rag_enabled: bool = Field(
+        default=True,
+        description="Enable best-practice retrieval for generation prompts and audit evidence.",
+    )
+    rag_backend: Literal["filter", "chroma"] = Field(
+        default="filter",
+        description="Best-practice retrieval backend; filter remains the offline default.",
+    )
+    rag_persist_dir: Path = Field(
+        default=COMPONENT_ROOT / "rag_db",
+        description="Local Chroma persistence directory inside Component 3.",
+    )
+    rag_embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        min_length=1,
+        description="Local sentence-transformers model used only by the Chroma backend.",
     )
 
     @field_validator("ollama_base_url")
@@ -113,6 +131,23 @@ class Settings(BaseSettings):
                 "TRACEABILITY_STORE_PATH must be a .sqlite, .sqlite3, or .db file."
             )
         return resolved
+
+    @field_validator("rag_persist_dir")
+    @classmethod
+    def require_component_rag_store(cls, value: Path) -> Path:
+        """Prevent Chroma from persisting outside the controlled component tree."""
+        resolved = value.resolve() if value.is_absolute() else (COMPONENT_ROOT / value).resolve()
+        if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
+            raise ValueError("RAG_PERSIST_DIR must be a child of component-3/.")
+        return resolved
+
+    @field_validator("rag_embedding_model")
+    @classmethod
+    def normalize_rag_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("RAG_EMBEDDING_MODEL must not be blank.")
+        return normalized
 
     model_config = SettingsConfigDict(
         env_file=".env",

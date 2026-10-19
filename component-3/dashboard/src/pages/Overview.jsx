@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { api } from "../api/endpoints.js";
 import { Badge, Button, Callout, Card, ErrorPanel, KeyValues, Loading, PageHeader, StatusBadge, Table } from "../components/ui.jsx";
 import { formatTime } from "../lib/format.js";
 import { useBackend } from "../state/backend.jsx";
@@ -17,6 +19,39 @@ export default function Overview({ navigate }) {
   const { session } = useSession();
   const ollama = overview?.ollama;
 
+  const [switching, setSwitching] = useState(false);
+  const [colabUrl, setColabUrl] = useState(() => localStorage.getItem("colab_tunnel_url") || "");
+  const [showColabInput, setShowColabInput] = useState(false);
+  const [switchError, setSwitchError] = useState(null);
+
+  const isColabActive = Boolean(ollama?.base_url && String(ollama.base_url).includes("11435"));
+
+  const handleSwitch = async (engine) => {
+    setSwitching(true);
+    setSwitchError(null);
+    try {
+      if (engine === "COLAB") {
+        const urlToUse = colabUrl.trim();
+        if (!urlToUse) {
+          setShowColabInput(true);
+          setSwitching(false);
+          return;
+        }
+        localStorage.setItem("colab_tunnel_url", urlToUse);
+        await api.engineSwitch("COLAB", urlToUse);
+      } else {
+        await api.engineSwitch("LOCAL");
+      }
+      await refresh();
+      setShowColabInput(false);
+    } catch (err) {
+      console.error(err);
+      setSwitchError(err.message || "Failed to switch engine");
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   return (
     <div className="page">
       <PageHeader
@@ -24,7 +59,7 @@ export default function Overview({ navigate }) {
         subtitle="InteliSE Component 3: living requirement traceability and defect-feedback-driven scoped regeneration."
         badges={
           <>
-            <Badge tone="sim">C1/C2 inputs SIMULATED</Badge>
+            <Badge tone="sim">C1/C2 SIMULATED</Badge>
             <Badge tone="sim">C4 defects SIMULATED</Badge>
           </>
         }
@@ -32,8 +67,8 @@ export default function Overview({ navigate }) {
 
       <Callout tone="info" title="What this dashboard is">
         This is the C3 research demo interface. Every button calls the real Component 3 FastAPI
-        service. It is not the React application that Component 3 generates, and it never
-        executes generated code.
+        service. It is not the application that Component 3 generates. Generated source stays
+        read-only in this UI unless you explicitly start its restricted local Docker preview.
       </Callout>
 
       {loading ? <Loading label="Checking the Component 3 API and local Ollama" /> : null}
@@ -65,6 +100,59 @@ export default function Overview({ navigate }) {
               { label: "Graph store file", value: overview?.traceability_store_name },
             ]}
           />
+          <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid var(--line)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <span className="small muted"><strong>Inference Engine:</strong></span>
+              <Badge tone={isColabActive ? "llm" : "info"}>
+                {isColabActive ? "Google Colab GPU (7B)" : "Local Machine (3B Offline)"}
+              </Badge>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <Button
+                variant={!isColabActive ? "primary" : "secondary"}
+                onClick={() => handleSwitch("LOCAL")}
+                loading={switching}
+                disabled={switching || !isColabActive}
+              >
+                Use Local 3B Model
+              </Button>
+              <Button
+                variant={isColabActive ? "primary" : "secondary"}
+                onClick={() => {
+                  if (showColabInput && colabUrl.trim()) {
+                    handleSwitch("COLAB");
+                  } else {
+                    setShowColabInput(!showColabInput);
+                  }
+                }}
+                loading={switching}
+                disabled={switching}
+              >
+                {showColabInput ? "Connect Colab" : "Use Google Colab GPU"}
+              </Button>
+            </div>
+            {showColabInput ? (
+              <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+                <input
+                  type="text"
+                  placeholder="Colab Tunnel URL (e.g. https://...trycloudflare.com)"
+                  value={colabUrl}
+                  onChange={(e) => setColabUrl(e.target.value)}
+                  style={{ flex: 1, padding: "0.35rem 0.5rem", fontSize: "0.85rem", borderRadius: "6px", border: "1px solid var(--line)" }}
+                />
+                <Button variant="primary" onClick={() => handleSwitch("COLAB")} loading={switching} disabled={!colabUrl.trim()}>
+                  Connect
+                </Button>
+              </div>
+            ) : null}
+            {switchError ? (
+              <div style={{ marginTop: "0.5rem" }}>
+                <Callout tone="bad" title="Engine switch failed">
+                  {switchError}
+                </Callout>
+              </div>
+            ) : null}
+          </div>
           {ollama && !(ollama.reachable && ollama.model_installed) ? (
             <Callout tone="warn" title="Local-model steps are unavailable">
               LOCAL_LLM generation and REAL_LOCAL_OLLAMA repair need Ollama running with the

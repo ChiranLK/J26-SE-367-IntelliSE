@@ -1,0 +1,10 @@
+{
+  "id": "spring-svc-001",
+  "stack": "spring",
+  "layer": "service",
+  "category": "dependency-injection",
+  "priority": 3,
+  "rule": "Inject dependencies through the constructor (final fields) so collaborators can be mocked by independent tests.",
+  "bad_example": "@Autowired private GpaRecordRepository repo;  // field injection, hard to mock",
+  "good_example": "private final GpaRecordRepository repo; public GpaRecordService(GpaRecordRepository repo) { this.repo = repo; }"
+}

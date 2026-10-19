@@ -6,7 +6,21 @@ const MINUTE = 60 * 1000;
 export const api = {
   health: () => apiRequest("/health", { timeoutMs: 5000 }),
   overview: () => apiRequest("/demo/overview", { timeoutMs: 10000 }),
+  engineSwitch: (engine, colabTunnelUrl = null, customModel = null) =>
+    apiRequest("/demo/engine-switch", {
+      method: "POST",
+      body: { engine, colab_tunnel_url: colabTunnelUrl, custom_model: customModel },
+    }),
+  engineReload: () => apiRequest("/demo/engine-reload", { method: "POST", body: {} }),
+  crudDomains: () => apiRequest("/demo/crud-domains"),
   fixture: (fixtureId) => apiRequest(`/demo/fixtures/${encodeURIComponent(fixtureId)}`),
+  previewBuild: (request) =>
+    apiRequest("/demo/preview/build", { method: "POST", body: request, timeoutMs: 12 * MINUTE }),
+  previewStart: (previewId) =>
+    apiRequest("/demo/preview/start", { method: "POST", body: { preview_id: previewId } }),
+  previewStop: (previewId) =>
+    apiRequest("/demo/preview/stop", { method: "POST", body: { preview_id: previewId } }),
+  previewStatus: (previewId) => apiRequest(`/demo/preview/${encodeURIComponent(previewId)}`),
 
   validateInput: (inputPackage) =>
     apiRequest("/validate-input", { method: "POST", body: inputPackage }),

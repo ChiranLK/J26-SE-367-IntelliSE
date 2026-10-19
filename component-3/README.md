@@ -234,6 +234,24 @@ npm run dev     # then open http://127.0.0.1:5173
 See `docs/ui-research-demo.md` for the three-process Windows start-up, the
 five-minute walkthrough, helper endpoints, and limitations.
 
+## Best-practice RAG
+
+Generation supports an offline deterministic `filter` backend and an optional
+real embedding-backed `chroma` backend. The default remains `filter`; Chroma and
+sentence-transformers are installed separately so ordinary C3 setup does not
+silently download an embedding model.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-rag.txt
+$env:RAG_BACKEND = "chroma"
+.\.venv\Scripts\python.exe scripts\rag_demo.py
+```
+
+See [docs/rag-best-practice-retrieval.md](docs/rag-best-practice-retrieval.md)
+for the evidence fields, real-model demo, ablation procedure, and research
+limitations. This is best-practice RAG for generation; it is not yet Component
+4 defect-context RAG.
+
 ## Configuration
 
 The defaults are safe for a locally running Ollama instance:

@@ -5,7 +5,7 @@ import json
 from intelise_c3.domain.design_context import DesignContext
 from intelise_c3.domain.llm import LLMInferenceRequest, LLMMessage
 
-BUSINESS_LOGIC_PROMPT_VERSION = "react-node-task-service-v4"
+BUSINESS_LOGIC_PROMPT_VERSION = "react-node-task-service-v5-rag"
 MODEL_GENERATED_PATH = "backend/src/services/taskService.js"
 
 BUSINESS_LOGIC_RESPONSE_SCHEMA = {
@@ -19,7 +19,10 @@ BUSINESS_LOGIC_RESPONSE_SCHEMA = {
 }
 
 
-def build_task_service_prompt(design_context: DesignContext) -> LLMInferenceRequest:
+def build_task_service_prompt(
+    design_context: DesignContext,
+    best_practice_block: str = "",
+) -> LLMInferenceRequest:
     """Ground a fixed-interface implementation request in accepted C1/C2 data."""
     grounding = {
         "project_id": design_context.project_id,
@@ -100,8 +103,9 @@ def build_task_service_prompt(design_context: DesignContext) -> LLMInferenceRequ
                     "`error.code = code`, then throws it; call it as "
                     "`fail(400, 'INVALID_TASK_INPUT', ...)` for invalid input and "
                     "`fail(404, 'TASK_NOT_FOUND', ...)` for a missing task. Do not "
-                    "replace these with plain `throw new Error(...)`. Grounding "
-                    "JSON follows:\n"
+                    "replace these with plain `throw new Error(...)`. "
+                    + ((best_practice_block + "\n") if best_practice_block else "")
+                    + "Grounding JSON follows:\n"
                     + json.dumps(grounding, sort_keys=True, separators=(",", ":"))
                 ),
             ),

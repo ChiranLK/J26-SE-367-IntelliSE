@@ -27,9 +27,11 @@ from intelise_c3.domain.generation import (
     DatabaseColumnIdentity,
     DatabaseArtifactReference,
     DatabaseTableIdentity,
+    GeneratedArtifactType,
     GeneratedFileRecord,
     GenerationManifest,
     GenerationRunResult,
+    RagRetrievalEvidence,
     RunEvidence,
     SourceIdentitySnapshot,
     StackApprovalEvidence,
@@ -85,6 +87,7 @@ from intelise_c3.prompts.code_generation import (
     build_task_service_prompt,
 )
 from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
+from intelise_c3.rag.runtime import RagRuntime
 
 _REQUIRED_SERVICE_PATTERNS = {
     "export function createTaskService(repository)": re.compile(
@@ -161,13 +164,20 @@ class _ModelGeneratedArtifact(BaseModel):
 class CodeGenerationService:
     """Authorize, generate, validate, and write without executing artifacts."""
 
-    def __init__(self, workspace_root: Path, llm_client: LLMClient | None) -> None:
+    def __init__(
+        self,
+        workspace_root: Path,
+        llm_client: LLMClient | None,
+        rag_runtime: RagRuntime | None = None,
+    ) -> None:
         self._workspace_root = workspace_root
         self._llm_client = llm_client
+        self._rag_runtime = rag_runtime or RagRuntime.disabled()
 
     async def generate(self, request: CodeGenerationRequest) -> GenerationRunResult:
         """Create one isolated workspace or fail without template fallback."""
         self._validate_authorization(request)
+        rag = self._rag_runtime.new_run()
         legacy_task = self._is_legacy_task_design(request.design_context)
         crud_spec = (
             None
@@ -187,7 +197,25 @@ class CodeGenerationService:
                         "LOCAL_LLM mode requires the configured local Ollama client.",
                         status.HTTP_503_SERVICE_UNAVAILABLE,
                     )
-                prompt_request = build_task_service_prompt(request.design_context)
+                best_practices = rag.retrieve(
+                    module_path=MODEL_GENERATED_PATH,
+                    task=(
+                        "Generate a Node.js service with injected repository dependencies, "
+                        "validated input, consistent errors, and mockable test seams. "
+                        "Accepted requirements: "
+                        + "; ".join(
+                            requirement.title
+                            for requirement in request.design_context.requirements
+                        )
+                    ),
+                    stack="node",
+                    layer="service",
+                    applied_to_prompt=True,
+                )
+                prompt_request = build_task_service_prompt(
+                    request.design_context,
+                    best_practice_block=best_practices,
+                )
                 llm_result = await self._llm_client.generate(prompt_request)
                 service_artifact = self._parse_model_artifact(llm_result.output_text)
                 llm_metadata = llm_result.metadata
@@ -227,6 +255,12 @@ class CodeGenerationService:
             mapping_policy_version = DYNAMIC_TRACEABILITY_MAPPING_POLICY_VERSION
             manifest_spec = crud_spec
 
+        self._record_template_retrievals(
+            rag,
+            artifacts,
+            skip_paths={MODEL_GENERATED_PATH} if prompt_request is not None else set(),
+        )
+
         self._validate_artifact_set(
             artifacts,
             allowed_paths={artifact.relative_path for artifact in artifacts},
@@ -248,6 +282,7 @@ class CodeGenerationService:
             template_set_version=template_set_version,
             mapping_policy_version=mapping_policy_version,
             crud_spec=manifest_spec,
+            rag_evidence=rag.evidence(),
         )
         relative_workspace = PurePosixPath(request.workspace_name) / run_id
         self._write_workspace(relative_workspace, artifacts, manifest)
@@ -271,6 +306,38 @@ class CodeGenerationService:
             and tuple(attribute.name for attribute in task.attributes)
             == ("id", "title", "completed")
         )
+
+    @staticmethod
+    def _record_template_retrievals(
+        rag: RagRuntime,
+        artifacts: tuple[TemplateArtifact, ...],
+        *,
+        skip_paths: set[str],
+    ) -> None:
+        """Audit retrieval for deterministic modules without claiming prompt use."""
+        mapping = {
+            GeneratedArtifactType.FRONTEND: ("react", "ui"),
+            GeneratedArtifactType.API: ("node", "api"),
+            GeneratedArtifactType.CONTROLLER: ("node", "controller"),
+            GeneratedArtifactType.BUSINESS_LOGIC: ("node", "service"),
+            GeneratedArtifactType.REPOSITORY: ("node", "repository"),
+            GeneratedArtifactType.DATABASE: ("node", "database"),
+            GeneratedArtifactType.TEST: ("node", "test_seam"),
+        }
+        for artifact in sorted(artifacts, key=lambda item: item.relative_path):
+            if artifact.relative_path in skip_paths or artifact.artifact_type not in mapping:
+                continue
+            stack, layer = mapping[artifact.artifact_type]
+            rag.retrieve(
+                module_path=artifact.relative_path,
+                task=(
+                    f"Generate {artifact.module_identity} as the {layer} module at "
+                    f"{artifact.relative_path}."
+                ),
+                stack=stack,
+                layer=layer,
+                applied_to_prompt=False,
+            )
 
     def _validate_authorization(self, request: CodeGenerationRequest) -> None:
         generation = request.generation_context
@@ -598,6 +665,7 @@ class CodeGenerationService:
         template_set_version: str,
         mapping_policy_version: str,
         crud_spec: CrudApplicationSpec | None,
+        rag_evidence: RagRetrievalEvidence,
     ) -> GenerationManifest:
         source = request.design_context
         requirement_ids = tuple(item.requirement_id for item in source.requirements)
@@ -732,6 +800,7 @@ class CodeGenerationService:
             template_set_version=template_set_version,
             llm_inference=llm_metadata,
             artifact_digest_sha256=digest.hexdigest(),
+            rag_evidence=rag_evidence,
         )
         return GenerationManifest(
             generation_run_id=run_id,
@@ -782,6 +851,7 @@ class CodeGenerationService:
                 prompt_template_version=prompt_template_version,
                 generator_version=generator_version,
                 template_set_version=template_set_version,
+                rag=rag_evidence,
                 evidence_digest_sha256=evidence_digest,
             ),
             trust_boundary=(

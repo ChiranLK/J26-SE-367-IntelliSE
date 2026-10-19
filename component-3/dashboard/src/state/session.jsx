@@ -9,11 +9,17 @@ export const STORAGE_KEY = "intelise-c3-demo-session-v1";
 export const emptySession = () => ({
   fixtures: { inputPackage: null, defectScenarios: null, stackCriteria: null },
   inputText: "",
+  inputContractVersion: "1.0",
+  c1InputText: "",
+  c2InputText: "",
+  inputSources: { c1: "NONE", c2: "NONE" },
   validation: null, // { ok, at, generationContext?, error? }
   designContext: null,
+  applicationProfile: "SCHEMA_DRIVEN_CRUD",
   stackReport: null,
   approval: null, // { status, approvedBy, approvalReference, acknowledgesProvisionalPolicy, at }
   generationRun: null, // { run, mode, durationMs, at }
+  preview: null,
   structural: null,
   graph: null, // { snapshot, versions: [snapshot...] }
   scoped: { scenarioId: null, baseline: null, impact: null, runs: [] },
@@ -22,7 +28,21 @@ export const emptySession = () => ({
 function load() {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    return raw ? { ...emptySession(), ...JSON.parse(raw) } : emptySession();
+    if (!raw) return emptySession();
+    const stored = JSON.parse(raw);
+    const migrated = { ...emptySession(), ...stored };
+    if ((!stored.c1InputText || !stored.c2InputText) && stored.inputText) {
+      try {
+        const legacyPackage = JSON.parse(stored.inputText);
+        migrated.inputContractVersion = legacyPackage.contract_version ?? "1.0";
+        migrated.c1InputText = legacyPackage.c1 ? JSON.stringify(legacyPackage.c1, null, 2) : "";
+        migrated.c2InputText = legacyPackage.c2 ? JSON.stringify(legacyPackage.c2, null, 2) : "";
+        migrated.inputSources = { c1: "MIGRATED_SESSION", c2: "MIGRATED_SESSION" };
+      } catch {
+        // Keep an invalid legacy draft untouched; the user can paste into the new editors.
+      }
+    }
+    return migrated;
   } catch {
     return emptySession();
   }

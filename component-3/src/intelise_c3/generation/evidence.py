@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from intelise_c3.domain.generation import (
     CanonicalInputHashes,
     GenerationManifest,
+    RagRetrievalEvidence,
 )
 from intelise_c3.domain.llm import LLMInferenceMetadata, LLMInferenceRequest
 
@@ -78,6 +79,7 @@ def evidence_digest_payload(
     template_set_version: str,
     llm_inference: LLMInferenceMetadata | None,
     artifact_digest_sha256: str,
+    rag_evidence: RagRetrievalEvidence | None = None,
 ) -> dict[str, Any]:
     """Return the fields bound by the evidence digest, excluding the digest."""
     model_configuration = None
@@ -92,7 +94,7 @@ def evidence_digest_payload(
                 llm_inference.generation_parameters.model_dump(mode="json")
             ),
         }
-    return {
+    payload = {
         "evidence_schema_version": "1.0",
         "canonicalization": CANONICALIZATION_VERSION,
         "generation_run_id": generation_run_id,
@@ -103,6 +105,10 @@ def evidence_digest_payload(
         "local_model_configuration": model_configuration,
         "artifact_digest_sha256": artifact_digest_sha256,
     }
+    # Preserve verification of historical manifests that predate RAG evidence.
+    if rag_evidence is not None:
+        payload["rag"] = rag_evidence.model_dump(mode="json")
+    return payload
 
 
 def compute_evidence_digest(**payload_arguments: Any) -> str:
@@ -120,5 +126,6 @@ def verify_manifest_evidence(manifest: GenerationManifest) -> bool:
         template_set_version=evidence.template_set_version,
         llm_inference=manifest.llm_inference,
         artifact_digest_sha256=manifest.artifact_digest_sha256,
+        rag_evidence=evidence.rag,
     )
     return computed == evidence.evidence_digest_sha256

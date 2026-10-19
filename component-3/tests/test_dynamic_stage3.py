@@ -50,6 +50,7 @@ def _rebind_manifest(result, workspace: Path, *, files=None):
         template_set_version=evidence.template_set_version,
         llm_inference=manifest.llm_inference,
         artifact_digest_sha256=artifact_digest,
+        rag_evidence=evidence.rag,
     )
     updated = manifest.model_copy(
         update={

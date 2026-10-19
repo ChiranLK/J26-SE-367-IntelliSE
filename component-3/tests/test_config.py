@@ -14,6 +14,10 @@ def test_configuration_defaults_are_valid(monkeypatch) -> None:
     monkeypatch.delenv("OLLAMA_NUM_CTX", raising=False)
     monkeypatch.delenv("GENERATED_WORKSPACE_ROOT", raising=False)
     monkeypatch.delenv("TRACEABILITY_STORE_PATH", raising=False)
+    monkeypatch.delenv("RAG_ENABLED", raising=False)
+    monkeypatch.delenv("RAG_BACKEND", raising=False)
+    monkeypatch.delenv("RAG_PERSIST_DIR", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_MODEL", raising=False)
 
     settings = Settings(_env_file=None)
 
@@ -26,6 +30,10 @@ def test_configuration_defaults_are_valid(monkeypatch) -> None:
     assert settings.ollama_num_ctx == 4096
     assert settings.generated_workspace_root.name == "generated-workspaces"
     assert settings.traceability_store_path.name == "traceability.sqlite3"
+    assert settings.rag_enabled is True
+    assert settings.rag_backend == "filter"
+    assert settings.rag_persist_dir.name == "rag_db"
+    assert settings.rag_embedding_model == "all-MiniLM-L6-v2"
 
 
 def test_environment_overrides_are_loaded(monkeypatch) -> None:
@@ -38,6 +46,10 @@ def test_environment_overrides_are_loaded(monkeypatch) -> None:
     monkeypatch.setenv(
         "TRACEABILITY_STORE_PATH", "runtime/custom-traceability/graph.db"
     )
+    monkeypatch.setenv("RAG_ENABLED", "false")
+    monkeypatch.setenv("RAG_BACKEND", "chroma")
+    monkeypatch.setenv("RAG_PERSIST_DIR", "runtime/custom-rag")
+    monkeypatch.setenv("RAG_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 
     settings = Settings(_env_file=None)
 
@@ -48,6 +60,10 @@ def test_environment_overrides_are_loaded(monkeypatch) -> None:
     assert settings.ollama_num_ctx == 8192
     assert settings.generated_workspace_root.name == "custom-workspaces"
     assert settings.traceability_store_path.name == "graph.db"
+    assert settings.rag_enabled is False
+    assert settings.rag_backend == "chroma"
+    assert settings.rag_persist_dir.name == "custom-rag"
+    assert settings.rag_embedding_model == "BAAI/bge-small-en-v1.5"
 
 
 @pytest.mark.parametrize(
@@ -85,3 +101,13 @@ def test_traceability_store_cannot_escape_component_directory() -> None:
             traceability_store_path=COMPONENT_ROOT.parent / "outside-c3.sqlite3",
             _env_file=None,
         )
+
+
+def test_rag_store_cannot_escape_component_directory() -> None:
+    with pytest.raises(ValidationError):
+        Settings(rag_persist_dir=COMPONENT_ROOT.parent / "outside-rag", _env_file=None)
+
+
+def test_unknown_rag_backend_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Settings(rag_backend="remote", _env_file=None)

@@ -3,6 +3,7 @@ import { api } from "../api/endpoints.js";
 import { CodePreview } from "../components/CodePreview.jsx";
 import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, SimulatedBadge, Stat, StatusBadge, Table } from "../components/ui.jsx";
 import { formatBytes, formatDuration } from "../lib/format.js";
+import { isDynamicCrudManifest, summarizeDynamicRun } from "../lib/crudSummary.js";
 import { buildGenerationRequest, buildStructuralRequest } from "../lib/requests.js";
 import { useBackend } from "../state/backend.jsx";
 import { useSession } from "../state/session.jsx";
@@ -17,12 +18,16 @@ export default function Generation({ navigate }) {
   const { session, set } = useSession();
   const { overview } = useBackend();
   const [mode, setMode] = useState("TEMPLATE_ONLY");
-  const [workspaceName, setWorkspaceName] = useState("demo-task-management");
+  const [workspaceName, setWorkspaceName] = useState(() => {
+    const project = session.validation?.generationContext?.project_id ?? "generated-application";
+    return project.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "") || "generated-application";
+  });
   const [previewPath, setPreviewPath] = useState(null);
 
   const generationContext = session.validation?.ok ? session.validation.generationContext : null;
   const approved = session.approval?.status === "APPROVED_FOR_MVP_GENERATION";
-  const ready = Boolean(generationContext && session.designContext && session.stackReport && approved);
+  const profileSupported = (session.applicationProfile ?? "SCHEMA_DRIVEN_CRUD") === "SCHEMA_DRIVEN_CRUD";
+  const ready = Boolean(generationContext && session.designContext && session.stackReport && approved && profileSupported);
   const stored = session.generationRun;
   const run = stored?.run;
   const ollama = overview?.ollama;
@@ -42,6 +47,7 @@ export default function Generation({ navigate }) {
     set("generationRun", { run: result, mode, durationMs: Date.now() - started, at: new Date().toISOString() });
     set("structural", null);
     set("graph", null);
+    set("preview", null);
     setPreviewPath(null);
   });
 
@@ -50,11 +56,24 @@ export default function Generation({ navigate }) {
     set("structural", report);
   });
 
+  const launchPreview = useAction(async () => {
+    const built = await api.previewBuild({
+      manifest: run.manifest,
+      workspace_relative_path: run.workspace_relative_path,
+    });
+    set("preview", built);
+    const running = await api.previewStart(built.preview_id);
+    set("preview", running);
+    return running;
+  });
+
   const files = run?.manifest.files ?? [];
   const templateCount = files.filter((file) => file.origin === "TEMPLATE").length;
   const llmCount = files.filter((file) => file.origin === "LOCAL_LLM").length;
   const manifest = run?.manifest;
   const llm = manifest?.llm_inference;
+  const dynamicRun = manifest && isDynamicCrudManifest(manifest);
+  const crudSummary = dynamicRun ? summarizeDynamicRun({ designContext: session.designContext, manifest }) : null;
 
   return (
     <div className="page">
@@ -66,11 +85,18 @@ export default function Generation({ navigate }) {
 
       {!ready ? (
         <Callout tone="warn" title="Approved stack required">
-          Generation needs validated input, a design context, a stack selection, and an explicit approval.
+          Generation needs validated input, a supported application profile, a design context, a stack selection, and an explicit approval.
           The backend enforces the same gate.{" "}
           <button type="button" className="link-button" onClick={() => navigate(generationContext ? "design" : "inputs")}>
             Open the previous step
           </button>
+        </Callout>
+      ) : null}
+
+      {!profileSupported ? (
+        <Callout tone="warn" title="Custom / non-CRUD generation is blocked">
+          This MVP has no approved non-CRUD behavior specification or generator. It will not substitute Task,
+          Student, Library, or Inventory code for a calculator or another custom application.
         </Callout>
       ) : null}
 
@@ -80,12 +106,52 @@ export default function Generation({ navigate }) {
             <label key={item.id} className={`mode-card${mode === item.id ? " mode-active" : ""}`}>
               <input type="radio" name="mode" checked={mode === item.id} onChange={() => setMode(item.id)} />
               <div>
-                <strong>{item.label}</strong> {item.id === "LOCAL_LLM" ? <Badge tone="llm">uses local Ollama</Badge> : <Badge tone="info">templates</Badge>}
+                <strong>{item.label}</strong>{" "}
+                {item.id === "LOCAL_LLM" ? (
+                  <Badge tone="llm">
+                    {ollama?.base_url?.includes("11435")
+                      ? `Colab GPU (${ollama?.configured_model || "7B"})`
+                      : `Local (${ollama?.configured_model || "3B"})`}
+                  </Badge>
+                ) : (
+                  <Badge tone="info">templates</Badge>
+                )}
                 <div className="muted small">{item.help}</div>
               </div>
             </label>
           ))}
         </div>
+        {mode === "LOCAL_LLM" ? (
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "0.5rem 0.75rem",
+              background: "var(--accent-soft)",
+              border: "1px solid var(--line)",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="small">
+              Engine:{" "}
+              <strong>
+                {ollama?.base_url?.includes("11435")
+                  ? "Google Colab GPU"
+                  : "Local Machine (Offline)"}
+              </strong>{" "}
+              (<code>{ollama?.configured_model}</code> on <code>{ollama?.base_url}</code>)
+            </span>
+            <Button
+              variant="secondary"
+              onClick={() => navigate("overview")}
+              style={{ fontSize: "0.8rem", padding: "2px 8px" }}
+            >
+              Switch Engine in Overview
+            </Button>
+          </div>
+        ) : null}
         {mode === "LOCAL_LLM" && !ollamaOk ? (
           <Callout tone="warn" title="Ollama is not ready">
             {ollama ? ollama.detail : "The Ollama status is unknown because the API has not answered."} The request will
@@ -115,6 +181,51 @@ export default function Generation({ navigate }) {
 
       {run ? (
         <>
+          {crudSummary ? (
+            <Card title="Dynamic CRUD summary" subtitle="Derived from the verified manifest and design context — not filename heuristics.">
+              <KeyValues
+                items={[
+                  { label: "Domain entities", value: crudSummary.entities.map((entity) => entity.name).join(", ") },
+                  { label: "Generated files", value: crudSummary.fileCount },
+                  { label: "Selected stack", value: `${manifest.selected_frontend} + ${manifest.selected_backend}` },
+                  { label: "SQL tables (design artifact)", value: crudSummary.sqlTables.join(", ") || "—" },
+                  { label: "Manifest digest", value: <Hash value={crudSummary.artifactDigest} length={24} /> },
+                  { label: "Traceability", value: session.graph ? `graph v${session.graph.snapshot.graph_version}` : "Not created yet" },
+                  { label: "Structural check", value: session.structural?.overall_status ?? "Not run yet" },
+                ]}
+              />
+              {crudSummary.entities.map((entity) => (
+                <div key={entity.name} className="class-box">
+                  <div className="class-name">{entity.name}</div>
+                  <div className="class-members">
+                    {entity.fields.map((field) => (
+                      <div key={field.name}>
+                        <code>
+                          {field.name}: {field.type}
+                        </code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <h3 className="subhead">API paths</h3>
+              <ul className="plain-list">
+                {crudSummary.apiPaths.map((path) => (
+                  <li key={path}>
+                    <code>{path}</code>
+                  </li>
+                ))}
+              </ul>
+              <Callout tone="warn" title="REVIEW_REQUIRED and simulated labels">
+                <ul className="plain-list">
+                  {crudSummary.reviewRequired.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </Callout>
+            </Card>
+          ) : null}
+
           <div className="stats">
             <Stat label="Files generated" value={files.length} />
             <Stat label="TEMPLATE origin" value={templateCount} tone="info" />
@@ -211,8 +322,25 @@ export default function Generation({ navigate }) {
           </Card>
 
           <div className="button-row">
+            {dynamicRun ? (
+              <Button variant="secondary" onClick={() => launchPreview.run()} loading={launchPreview.loading}>
+                Build & Start Local Preview
+              </Button>
+            ) : null}
+            {session.preview?.status === "RUNNING" && session.preview.ui_url ? (
+              <a className="btn btn-primary" href={session.preview.ui_url} target="_blank" rel="noreferrer">Open Generated UI</a>
+            ) : null}
+            {dynamicRun ? <Button variant="ghost" onClick={() => navigate("preview")}>Preview details</Button> : null}
             <Button onClick={() => navigate("traceability")}>Continue to Living Traceability</Button>
           </div>
+          {launchPreview.loading ? <Loading label="Building and starting isolated local preview" startedAt={launchPreview.startedAt} note="Docker builds the generated application, then assigns new loopback UI and API ports." /> : null}
+          <ErrorPanel error={launchPreview.error} context="Local preview" />
+          {session.preview?.status === "RUNNING" ? (
+            <Callout tone="info" title="Generated application is running locally">
+              UI: <a href={session.preview.ui_url} target="_blank" rel="noreferrer">{session.preview.ui_url}</a>{" "}
+              · API: <code>{session.preview.api_url}</code>. This is an isolated preview, not production deployment.
+            </Callout>
+          ) : null}
           <JsonView value={manifest} summary="Full generation manifest" />
         </>
       ) : null}
