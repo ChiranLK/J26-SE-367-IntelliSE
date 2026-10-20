@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
-import { Button, Callout, Card, ErrorPanel, JsonView, KeyValues, Loading, PageHeader, SimBanner, SimulatedBadge, StatusBadge, Table } from "../components/ui.jsx";
+import { Button, Callout, Card, ErrorPanel, JsonView, KeyValues, Loading, PageHeader, SimulatedBadge, StatusBadge, Table } from "../components/ui.jsx";
 import { FAULT_PRESETS, applyFault } from "../lib/requests.js";
 import { formatTime } from "../lib/format.js";
+import { inspectC1SrsDocument, inspectC2PlantUmlDocument } from "../lib/sourceDocumentIntake.js";
+import { adaptUpstreamInputs } from "../lib/upstreamInputAdapter.js";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 
@@ -19,17 +21,30 @@ export default function Inputs({ navigate }) {
   const { session, set } = useSession();
   const [injected, setInjected] = useState(null);
   const [crudDomains, setCrudDomains] = useState([]);
+  const sourceDocuments = session.sourceDocuments ?? { c1Name: "", c1Text: "", c2Name: "", c2Text: "" };
+  const c1Document = useMemo(() => inspectC1SrsDocument(sourceDocuments.c1Text), [sourceDocuments.c1Text]);
+  const c2Document = useMemo(() => inspectC2PlantUmlDocument(sourceDocuments.c2Text), [sourceDocuments.c2Text]);
+  const documentFindings = useMemo(
+    () => [...c1Document.issues, ...c2Document.issues, ...(sourceDocuments.c2Text ? c2Document.missing_contract_evidence : [])],
+    [c1Document, c2Document, sourceDocuments.c2Text],
+  );
 
   const parsedC1 = useMemo(() => parseJson(session.c1InputText ?? ""), [session.c1InputText]);
   const parsedC2 = useMemo(() => parseJson(session.c2InputText ?? ""), [session.c2InputText]);
-  const pkg = useMemo(() => {
+  const compatibility = useMemo(() => {
     if (!parsedC1.value || !parsedC2.value) return null;
+    return adaptUpstreamInputs(parsedC1.value, parsedC2.value, {
+      c2ValidationReportRef: session.c2ValidationReportRef ?? "",
+    });
+  }, [parsedC1.value, parsedC2.value, session.c2ValidationReportRef]);
+  const pkg = useMemo(() => {
+    if (!compatibility) return null;
     return {
       contract_version: session.inputContractVersion || "1.0",
-      c1: parsedC1.value,
-      c2: parsedC2.value,
+      c1: compatibility.c1,
+      c2: compatibility.c2,
     };
-  }, [parsedC1.value, parsedC2.value, session.inputContractVersion]);
+  }, [compatibility, session.inputContractVersion]);
 
   useEffect(() => {
     api.crudDomains().then((catalog) => setCrudDomains(catalog.domains ?? [])).catch(() => setCrudDomains([]));
@@ -41,6 +56,7 @@ export default function Inputs({ navigate }) {
     set("inputContractVersion", envelope.payload.contract_version ?? "1.0");
     set("c1InputText", JSON.stringify(envelope.payload.c1 ?? {}, null, 2));
     set("c2InputText", JSON.stringify(envelope.payload.c2 ?? {}, null, 2));
+    set("c2ValidationReportRef", envelope.payload.c2?.validation_report_ref ?? "");
     set("inputSources", { c1: "SIMULATED_FIXTURE", c2: "SIMULATED_FIXTURE" });
     set("validation", null);
     set("applicationProfile", "SCHEMA_DRIVEN_CRUD");
@@ -90,6 +106,7 @@ export default function Inputs({ navigate }) {
     set("inputContractVersion", session.fixtures.inputPackage.payload.contract_version ?? "1.0");
     set("c1InputText", JSON.stringify(session.fixtures.inputPackage.payload.c1 ?? {}, null, 2));
     set("c2InputText", JSON.stringify(session.fixtures.inputPackage.payload.c2 ?? {}, null, 2));
+    set("c2ValidationReportRef", session.fixtures.inputPackage.payload.c2?.validation_report_ref ?? "");
     set("inputSources", { c1: "SIMULATED_FIXTURE", c2: "SIMULATED_FIXTURE" });
     set("validation", null);
     setInjected(null);
@@ -97,7 +114,7 @@ export default function Inputs({ navigate }) {
 
   const validation = session.validation;
   const context = validation?.ok ? validation.generationContext : null;
-  const inputReady = Boolean(pkg && !parsedC1.error && !parsedC2.error);
+  const inputReady = Boolean(pkg && !parsedC1.error && !parsedC2.error && !compatibility?.errors.length);
   const simulated = session.inputSources?.c1 === "SIMULATED_FIXTURE" || session.inputSources?.c2 === "SIMULATED_FIXTURE";
 
   const updateInput = (component, value, source = "PASTED_OR_EDITED") => {
@@ -109,28 +126,169 @@ export default function Inputs({ navigate }) {
 
   const uploadInput = async (component, file) => {
     if (!file) return;
-    const text = await file.text();
-    const parsed = parseJson(text);
-    if (parsed.error) {
-      updateInput(component, text, "UPLOADED_FILE");
-      return;
+    try {
+      set("uploading", true);
+      const text = await file.text();
+      const parsed = parseJson(text);
+      if (parsed.error) {
+        updateInput(component, text, "UPLOADED_FILE");
+        return;
+      }
+      const value = parsed.value?.[component] ?? parsed.value;
+      updateInput(component, JSON.stringify(value, null, 2), "UPLOADED_FILE");
+      if (component === "c2") set("c2ValidationReportRef", value?.validation_report_ref ?? "");
+      if (parsed.value?.contract_version) set("inputContractVersion", parsed.value.contract_version);
+    } finally {
+      set("uploading", false);
     }
-    const value = parsed.value?.[component] ?? parsed.value;
-    updateInput(component, JSON.stringify(value, null, 2), "UPLOADED_FILE");
-    if (parsed.value?.contract_version) set("inputContractVersion", parsed.value.contract_version);
+  };
+
+  const uploadSourceDocument = async (component, file) => {
+    if (!file) return;
+    try {
+      set("uploading", true);
+      const text = await file.text();
+      set("sourceDocuments", {
+        ...sourceDocuments,
+        [`${component}Name`]: file.name,
+        [`${component}Text`]: text,
+      });
+    } finally {
+      set("uploading", false);
+    }
   };
 
   return (
     <div className="page">
+      {session.uploading ? <Loading label="Uploading file..." /> : null}
       <PageHeader
         title="C1/C2 Inputs"
-        subtitle="Upload or paste separate upstream JSON outputs, then run the real FR-C3-01 validation API."
-        badges={simulated ? <SimulatedBadge>SIMULATED C1/C2 FIXTURE</SimulatedBadge> : <StatusBadge status="REVIEW_REQUIRED" label="PROVISIONAL CONTRACT" />}
+        subtitle="Provide the finalized C1 SRS text and C2 PlantUML source, then inspect evidence readiness before C3 validation."
+        badges={simulated ? <SimulatedBadge>SIMULATED C1/C2 FIXTURE</SimulatedBadge> : <StatusBadge status="REVIEW_REQUIRED" label="PP1 DOCUMENT INTAKE" />}
       />
-      <SimBanner>
-        Direct Component 1 and Component 2 integration is not yet verified. Uploaded or pasted JSON
-        uses C3&apos;s provisional contract; approval reference strings are preserved but not authenticated.
-      </SimBanner>
+      <Card
+        title="PP1 finalized source documents"
+        subtitle="Accepts the currently available C1 SRS .txt and C2 PlantUML .puml without pretending they are complete approved contracts."
+        actions={<StatusBadge status={(sourceDocuments.c1Text && sourceDocuments.c2Text) ? "REVIEW_REQUIRED" : "PENDING"} label={(sourceDocuments.c1Text && sourceDocuments.c2Text) ? "ANALYZED · REVIEW REQUIRED" : "WAITING FOR FILES"} />}
+      >
+        <div className="grid grid-2 upstream-input-grid">
+          <div className="source-document-panel source-document-panel-c1">
+            <div className="source-panel-heading">
+              <span className="source-panel-id">C1</span>
+              <div>
+                <h3>Finalized SRS</h3>
+                <p>Requirements and source provenance</p>
+              </div>
+            </div>
+            <label className="file-input-label">
+              <span>Upload SRS document <small>.txt</small></span>
+              <input aria-label="Upload C1 SRS document" type="file" accept="text/plain,.txt" onChange={(event) => uploadSourceDocument("c1", event.target.files?.[0])} />
+            </label>
+            <p className={`source-file-name${sourceDocuments.c1Name ? " source-file-ready" : ""}`}>{sourceDocuments.c1Name || "No file selected"}</p>
+            <label className="source-text-label">
+              <span>SRS source text</span>
+              <textarea
+                className="json-editor upstream-json-editor"
+                aria-label="C1 finalized SRS text"
+                spellCheck={false}
+                placeholder="Paste the finalized Component 1 SRS text here, or choose a .txt file above."
+                value={sourceDocuments.c1Text}
+                onChange={(event) => set("sourceDocuments", { ...sourceDocuments, c1Name: "PASTED_TEXT", c1Text: event.target.value })}
+              />
+            </label>
+            {sourceDocuments.c1Text ? (
+              <div className="source-summary">
+                <KeyValues items={[
+                  { label: "Title", value: c1Document.title },
+                  { label: "Project", value: c1Document.project_id },
+                  { label: "Requirement IDs", value: c1Document.requirements.length },
+                  { label: "Source SHA-256", value: c1Document.source_sha256 ? <code className="source-hash">{c1Document.source_sha256}</code> : "Not supplied" },
+                ]} />
+              </div>
+            ) : <p className="muted small">The original text stays in this browser session; C3 does not rewrite it.</p>}
+          </div>
+          <div className="source-document-panel source-document-panel-c2">
+            <div className="source-panel-heading">
+              <span className="source-panel-id">C2</span>
+              <div>
+                <h3>Finalized PlantUML</h3>
+                <p>Class design and relationships</p>
+              </div>
+            </div>
+            <label className="file-input-label">
+              <span>Upload UML document <small>.puml</small></span>
+              <input aria-label="Upload C2 PlantUML document" type="file" accept="text/plain,.puml,.plantuml" onChange={(event) => uploadSourceDocument("c2", event.target.files?.[0])} />
+            </label>
+            <p className={`source-file-name${sourceDocuments.c2Name ? " source-file-ready" : ""}`}>{sourceDocuments.c2Name || "No file selected"}</p>
+            <label className="source-text-label">
+              <span>PlantUML source</span>
+              <textarea
+                className="json-editor upstream-json-editor"
+                aria-label="C2 finalized PlantUML source"
+                spellCheck={false}
+                placeholder="Paste the finalized Component 2 PlantUML source here, or choose a .puml file above."
+                value={sourceDocuments.c2Text}
+                onChange={(event) => set("sourceDocuments", { ...sourceDocuments, c2Name: "PASTED_TEXT", c2Text: event.target.value })}
+              />
+            </label>
+            {sourceDocuments.c2Text ? (
+              <div className="source-summary">
+                <KeyValues items={[
+                  { label: "PlantUML envelope", value: <StatusBadge status={c2Document.valid_envelope ? "SATISFIED" : "BLOCKED"} label={c2Document.valid_envelope ? "VALID" : "INVALID"} /> },
+                  { label: "Concrete classes", value: c2Document.concrete_classes.length },
+                  { label: "Abstract classes", value: c2Document.abstract_classes.length },
+                  { label: "Enums", value: c2Document.enums.length },
+                ]} />
+              </div>
+            ) : <p className="muted small">The original PlantUML stays unchanged for deterministic inspection.</p>}
+          </div>
+        </div>
+
+        {sourceDocuments.c1Text ? (
+          <section className="requirements-section">
+            <div className="requirements-heading">
+              <div>
+                <h3>Extracted requirements</h3>
+                <p>Stable C1 identities preserved from the uploaded document.</p>
+              </div>
+              <div className="requirement-legend">
+                <span className="requirement-type requirement-type-fr">FR</span>
+                <span className="requirement-type requirement-type-nfr">NFR</span>
+              </div>
+            </div>
+            <Table
+              dense
+              rowKey={(row) => row.requirement_id}
+              rows={c1Document.requirements}
+              columns={[
+                { key: "label", header: "Source" },
+                { key: "requirement_id", header: "Requirement ID", render: (row) => <code>{row.requirement_id}</code> },
+                { key: "kind", header: "Type", render: (row) => <span className={`requirement-type requirement-type-${row.kind.toLowerCase()}`}>{row.kind}</span> },
+                { key: "statement", header: "Requirement statement" },
+              ]}
+            />
+          </section>
+        ) : null}
+
+        {(sourceDocuments.c1Text || sourceDocuments.c2Text) ? (
+          <Callout tone="warn" title={`${documentFindings.length} evidence and compatibility finding${documentFindings.length === 1 ? "" : "s"}`}>
+            Generation is not marked ready while these source-contract gaps remain.
+            <details className="finding-details">
+              <summary>Review findings</summary>
+              {documentFindings.map((issue) => (
+                <div key={issue.code}><strong>{issue.code}:</strong> {issue.message}</div>
+              ))}
+            </details>
+          </Callout>
+        ) : null}
+        <p className="muted small">
+          This document intake is format/evidence inspection only. Use the complete JSON contract section below after C1 approval and C2 release metadata are available; only then can the real validation API create a GenerationContext.
+        </p>
+      </Card>
+
+      <details className="advanced-tools">
+        <summary>Advanced JSON contracts and simulated test fixtures</summary>
+        <div className="advanced-tools-body">
 
       {/* ---- Quick Load Presentation Fixtures ------------------------- */}
       <Card
@@ -215,26 +373,30 @@ export default function Inputs({ navigate }) {
             aria-label="Component 2 JSON"
           />
           {parsedC2.error ? <Callout tone="bad" title="C2 JSON is not valid">{parsedC2.error}</Callout> : null}
+          {compatibility?.adapted && !parsedC2.value?.validation_report_ref ? (
+            <label className="source-text-label">
+              C2 validation report reference
+              <input
+                type="text"
+                aria-label="C2 validation report reference"
+                placeholder="Actual reference, or clearly labelled SIMULATED-... PP1 reference"
+                value={session.c2ValidationReportRef ?? ""}
+                onChange={(event) => {
+                  set("c2ValidationReportRef", event.target.value);
+                  set("validation", null);
+                }}
+              />
+            </label>
+          ) : null}
         </Card>
       </div>
 
-      <Card title="Input envelope" subtitle="C3 combines the two objects only for the existing validation endpoint.">
-        <label className="contract-version-field">
-          Provisional contract version
-          <input
-            type="text"
-            aria-label="Input contract version"
-            value={session.inputContractVersion ?? "1.0"}
-            onChange={(event) => {
-              set("inputContractVersion", event.target.value);
-              set("validation", null);
-            }}
-          />
-        </label>
-        <p className="muted small">
-          Both inputs are required. C3 does not create missing approvals, requirements, UML elements or anchors.
-        </p>
-      </Card>
+      {compatibility?.adapted ? (
+        <Callout tone={compatibility.errors.length ? "sim" : "info"} title="PP1 JSON compatibility mapping active">
+          {compatibility.warnings.map((warning) => <div key={warning}>• {warning}</div>)}
+          {compatibility.errors.map((error) => <div key={error.code}><strong>{error.code}:</strong> {error.message}</div>)}
+        </Callout>
+      ) : null}
 
       {pkg ? (
         <>
@@ -347,6 +509,8 @@ export default function Inputs({ navigate }) {
           Supply valid JSON for Component 1 and Component 2. No downstream generation can start until both are present and accepted by the backend.
         </Callout>
       )}
+        </div>
+      </details>
     </div>
   );
 }

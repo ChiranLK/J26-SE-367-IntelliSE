@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
 import { CodePreview } from "../components/CodePreview.jsx";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, ModeBadge, PageHeader, SimBanner, SimulatedBadge, Stat, StatusBadge, Table } from "../components/ui.jsx";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, ModeBadge, PageHeader, SimBanner, SimulatedBadge, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
 import { formatBytes, formatDuration, formatTime } from "../lib/format.js";
 import { buildDefectReport, buildScopedRequest } from "../lib/requests.js";
 import { useBackend } from "../state/backend.jsx";
@@ -387,8 +387,8 @@ export default function ScopedRegeneration() {
   return (
     <div className="page">
       <PageHeader
-        title="Scoped Regeneration"
-        subtitle="Defect feedback to graph-selected patch scope, using the real FR-C3-06/07 services."
+        title="RAG-Grounded Scoped Regeneration"
+        subtitle="Use traceability evidence to retrieve current defect context and patch only the implicated module."
         badges={
           <>
             <SimulatedBadge>SIMULATED C4 DEFECT</SimulatedBadge>
@@ -402,8 +402,8 @@ export default function ScopedRegeneration() {
       </SimBanner>
 
       <Card
-        title="1 · Simulated C4 defect scenarios"
-        subtitle="GET /api/v1/demo/fixtures/defect-scenarios"
+        title="1 · Select a simulated C4 defect"
+        subtitle="A clearly labelled fixture stands in for the future Component 4 contract."
         actions={<Button onClick={() => loadScenarios.run()} loading={loadScenarios.loading}>{scenarios.length ? "Reload scenarios" : "Load SIMULATED defect fixture"}</Button>}
       >
         <ErrorPanel error={loadScenarios.error} context="Load defect scenarios" />
@@ -449,8 +449,8 @@ export default function ScopedRegeneration() {
       </Card>
 
       <Card
-        title="2 · Simulated defective baseline"
-        subtitle="POST /api/v1/demo/scoped-regeneration/baseline · real generation run and real graph; the service module is a defective test-double output"
+        title="2 · Create the defective baseline"
+        subtitle="The generation run and graph are real; the deliberately defective service output is a test double."
         actions={<Button onClick={() => createBaseline.run()} loading={createBaseline.loading}>{baseline ? "Create a fresh baseline" : "Create baseline"}</Button>}
       >
         {createBaseline.loading ? <Loading label="Generating baseline run and graph" startedAt={createBaseline.startedAt} /> : null}
@@ -479,8 +479,8 @@ export default function ScopedRegeneration() {
       </Card>
 
       <Card
-        title="3 · Impact selection"
-        subtitle="POST /api/v1/impact-selections · read-only, no model call"
+        title="3 · Compute the graph impact set"
+        subtitle="Read-only traceability traversal selects the affected requirements, UML, code, API, database, and test evidence."
         actions={<Button onClick={() => previewImpact.run()} loading={previewImpact.loading} disabled={!request}>Preview impact selection</Button>}
       >
         {!request ? <p className="muted small">Load the defect fixture and create a baseline first.</p> : null}
@@ -490,24 +490,21 @@ export default function ScopedRegeneration() {
         {impact ? <Impact impact={impact} /> : null}
       </Card>
 
-      <Card title="4 · Scoped regeneration" subtitle="Two clearly separated modes: deterministic fallback or AI/RAG local Ollama repair.">
+      <Card className="research-highlight" title="4 · Retrieve evidence and repair the scoped module" subtitle="The research path combines RAG A defect context with RAG B best-practice rules before local-model inference.">
         <div className="mode-grid">
-          <div className="mode-card">
-            <div>
-              <strong>MOCK model</strong> <ModeBadge mode="MOCK" />
-              <p className="muted small">POST /api/v1/demo/scoped-regenerations/mock. Deterministic fallback only: a fixed repaired service file stands in for the model. It is not AI-driven and does not use RAG.</p>
-              <Button onClick={() => regenerate.run("MOCK")} loading={regenerate.loading && lastRunMode === "MOCK"} disabled={!request || regenerate.loading || consumed}>Run MOCK regeneration</Button>
-            </div>
-          </div>
-          <div className="mode-card">
+          <div className="mode-card mode-active">
             <div>
               <strong>REAL local Ollama</strong> <ModeBadge mode="REAL_LOCAL_OLLAMA" />
-              <p className="muted small">POST /api/v1/scoped-regenerations. RAG A defect evidence and RAG B rules ground the configured local model prompt. Output quality is unknown and may be rejected by the guards.</p>
+              <p className="muted small">RAG A defect evidence and RAG B rules ground the configured local-model prompt. Output quality is not assumed and may be rejected by deterministic guards.</p>
               <Button onClick={() => regenerate.run("REAL_LOCAL_OLLAMA")} loading={regenerate.loading && lastRunMode === "REAL_LOCAL_OLLAMA"} disabled={!request || regenerate.loading || consumed}>Run REAL Ollama regeneration</Button>
               {!ollamaOk ? <div className="text-warn small">Ollama is not ready: {ollama?.detail ?? "status unknown"}</div> : null}
             </div>
           </div>
         </div>
+        <TechnicalDetails summary="Deterministic pipeline test mode (does not use RAG)">
+          <p className="muted small">A fixed repaired service file can exercise orchestration without calling a model. It must not be presented as AI- or RAG-driven repair.</p>
+          <Button variant="secondary" onClick={() => regenerate.run("MOCK")} loading={regenerate.loading && lastRunMode === "MOCK"} disabled={!request || regenerate.loading || consumed}>Run MOCK regeneration</Button>
+        </TechnicalDetails>
         {consumed ? (
           <Callout tone="info" title="This baseline has been repaired">
             Its graph version advanced, so the defect report is now stale by design. Create a fresh baseline to run another mode.

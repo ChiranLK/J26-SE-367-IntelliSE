@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, PageHeader, Stat, StatusBadge, Table } from "../components/ui.jsx";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, PageHeader, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
 import { buildGraphCreateRequest } from "../lib/requests.js";
 import { activeLinks, attentionLinks, buildRequirementChains, labelFor, linkNeedsAttention, nodeIndex, summarizeGraph } from "../lib/traceGraph.js";
 import { formatTime } from "../lib/format.js";
@@ -132,7 +132,7 @@ export default function Traceability({ navigate }) {
     <div className="page">
       <PageHeader
         title="Living Traceability"
-        subtitle="The real C3 graph for the current generation run: requirement → UML → code → API → database → test hook."
+        subtitle="A persistent, versioned evidence graph from requirement → UML → code → API → database → test hook."
         badges={<Badge tone="info">REAL C3 API</Badge>}
       />
 
@@ -144,8 +144,8 @@ export default function Traceability({ navigate }) {
       ) : null}
 
       <Card
-        title="Build graph"
-        subtitle="POST /api/v1/traceability/graphs (the backend verifies the manifest and workspace hashes first)"
+        title="Build a verified graph snapshot"
+        subtitle="The backend verifies manifest, workspace hashes, artifact digest, and run evidence before accepting the graph."
         actions={<Button onClick={() => build.run()} loading={build.loading} disabled={!stored}>{snapshot ? "Rebuild graph (adds a version)" : "Build traceability graph"}</Button>}
       >
         {stored ? <p className="small">Source run <code>{stored.run.manifest.generation_run_id}</code> · {stored.mode}</p> : null}
@@ -332,7 +332,9 @@ export default function Traceability({ navigate }) {
           <div className="button-row">
             <Button onClick={() => navigate("scoped")}>Continue to Scoped Regeneration</Button>
           </div>
-          <JsonView value={snapshot} summary="Full graph snapshot as returned by the API" />
+          <TechnicalDetails summary="Graph snapshot and machine-readable evidence">
+            <JsonView value={snapshot} summary="Open full graph JSON" />
+          </TechnicalDetails>
         </>
       ) : null}
     </div>

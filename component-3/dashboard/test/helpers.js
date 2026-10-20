@@ -77,8 +77,13 @@ export function seedSession(partial) {
 }
 
 export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic = false } = {}) {
+  const generatedOrigin = mode === "LOCAL_LLM"
+    ? "LOCAL_LLM"
+    : mode === "EXPERIMENTAL_CLAUDE"
+      ? "EXPERIMENTAL_CLAUDE"
+      : "TEMPLATE";
   const files = [
-    { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: mode === "LOCAL_LLM" ? "LOCAL_LLM" : "TEMPLATE", sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
+    { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: generatedOrigin, sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
     { file_id: "F2", relative_path: "backend/src/app.js", module_identity: "app", artifact_type: "SOURCE", origin: "TEMPLATE", sha256: "b".repeat(64), size_bytes: 80, requirement_ids: [] },
   ];
   return {
@@ -101,15 +106,17 @@ export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic 
     },
     execution_status: "NOT_EXECUTED",
     trust_boundary: "Generated code is untrusted and was not executed.",
-    llm_inference: mode === "LOCAL_LLM"
+    llm_inference: mode === "LOCAL_LLM" || mode === "EXPERIMENTAL_CLAUDE"
       ? {
-          provider: "ollama-local",
-          configured_model_identifier: "qwen2.5-coder:3b",
-          response_model_identifier: "qwen2.5-coder:3b",
+          provider: mode === "LOCAL_LLM" ? "ollama-local" : "teamsoclo-claude",
+          configured_model_identifier: mode === "LOCAL_LLM" ? "qwen2.5-coder:3b" : "claude-haiku-4-5",
+          response_model_identifier: mode === "LOCAL_LLM" ? "qwen2.5-coder:3b" : "claude-haiku-4-5",
           prompt_template_version: "v-test",
-          generation_parameters: { temperature: 0, num_ctx: 4096, timeout_seconds: 120 },
+          generation_parameters: mode === "LOCAL_LLM"
+            ? { temperature: 0, num_ctx: 4096, timeout_seconds: 120 }
+            : { temperature: 0, max_tokens: 4096, timeout_seconds: 120 },
           client_inference_latency_ms: 1500,
-          response: { eval_count: 99 },
+          response: mode === "LOCAL_LLM" ? { eval_count: 99 } : { output_tokens: 99 },
         }
       : null,
   };

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api/endpoints.js";
 import { CodePreview } from "../components/CodePreview.jsx";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, SimulatedBadge, Stat, StatusBadge, Table } from "../components/ui.jsx";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, SimulatedBadge, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
 import { formatBytes, formatDuration } from "../lib/format.js";
 import { isDynamicCrudManifest, summarizeDynamicRun } from "../lib/crudSummary.js";
 import { buildGenerationRequest, buildStructuralRequest } from "../lib/requests.js";
@@ -10,14 +10,14 @@ import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 
 const MODES = [
-  { id: "TEMPLATE_ONLY", label: "TEMPLATE_ONLY", help: "Deterministic C3 templates only. No model call." },
-  { id: "LOCAL_LLM", label: "LOCAL_LLM", help: "The business-logic module is written by the local Ollama model; everything else stays templated." },
+  { id: "LOCAL_LLM", label: "Local Ollama", help: "The business-logic module is written by the configured Ollama engine; scaffold files remain deterministic." },
+  { id: "EXPERIMENTAL_CLAUDE", label: "External LLM API", help: "Explicit experimental API call. The actual provider and model are recorded in the generation manifest." },
 ];
 
 export default function Generation({ navigate }) {
   const { session, set } = useSession();
   const { overview } = useBackend();
-  const [mode, setMode] = useState("TEMPLATE_ONLY");
+  const [mode, setMode] = useState("LOCAL_LLM");
   const [workspaceName, setWorkspaceName] = useState(() => {
     const project = session.validation?.generationContext?.project_id ?? "generated-application";
     return project.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "") || "generated-application";
@@ -43,7 +43,9 @@ export default function Generation({ navigate }) {
       workspaceName,
     });
     const started = Date.now();
-    const result = await api.generate(request);
+    const result = mode === "EXPERIMENTAL_CLAUDE"
+      ? await api.generateExperimental(request)
+      : await api.generate(request);
     set("generationRun", { run: result, mode, durationMs: Date.now() - started, at: new Date().toISOString() });
     set("structural", null);
     set("graph", null);
@@ -70,8 +72,10 @@ export default function Generation({ navigate }) {
   const files = run?.manifest.files ?? [];
   const templateCount = files.filter((file) => file.origin === "TEMPLATE").length;
   const llmCount = files.filter((file) => file.origin === "LOCAL_LLM").length;
+  const externalLlmCount = files.filter((file) => file.origin === "EXPERIMENTAL_CLAUDE").length;
   const manifest = run?.manifest;
   const llm = manifest?.llm_inference;
+  const rag = manifest?.run_evidence?.rag;
   const dynamicRun = manifest && isDynamicCrudManifest(manifest);
   const crudSummary = dynamicRun ? summarizeDynamicRun({ designContext: session.designContext, manifest }) : null;
 
@@ -79,7 +83,7 @@ export default function Generation({ navigate }) {
     <div className="page">
       <PageHeader
         title="Code Generation"
-        subtitle="Generate the React + Node.js MVP workspace with the real FR-C3-03/04 service. Generated code is only written and displayed; it is never installed or run."
+        subtitle="Generate a traceable React + Node.js workspace from the validated design context. Source remains read-only until an isolated preview is explicitly started."
         badges={<SimulatedBadge>SIMULATED C1/C2 INPUT</SimulatedBadge>}
       />
 
@@ -100,7 +104,7 @@ export default function Generation({ navigate }) {
         </Callout>
       ) : null}
 
-      <Card title="Generation settings" subtitle="POST /api/v1/generation-runs">
+      <Card title="Choose the generation engine" subtitle="Every run records its actual provider, model, prompt version, file origins, and evidence digest.">
         <div className="mode-grid">
           {MODES.map((item) => (
             <label key={item.id} className={`mode-card${mode === item.id ? " mode-active" : ""}`}>
@@ -114,7 +118,7 @@ export default function Generation({ navigate }) {
                       : `Local (${ollama?.configured_model || "3B"})`}
                   </Badge>
                 ) : (
-                  <Badge tone="info">templates</Badge>
+                  <Badge tone="warn">Experimental API</Badge>
                 )}
                 <div className="muted small">{item.help}</div>
               </div>
@@ -141,13 +145,9 @@ export default function Generation({ navigate }) {
                   ? "Google Colab GPU"
                   : "Local Machine (Offline)"}
               </strong>{" "}
-              (<code>{ollama?.configured_model}</code> on <code>{ollama?.base_url}</code>)
+              (<code>{ollama?.configured_model}</code>)
             </span>
-            <Button
-              variant="secondary"
-              onClick={() => navigate("overview")}
-              style={{ fontSize: "0.8rem", padding: "2px 8px" }}
-            >
+            <Button variant="secondary" onClick={() => navigate("overview")}>
               Switch Engine in Overview
             </Button>
           </div>
@@ -158,6 +158,12 @@ export default function Generation({ navigate }) {
             still be sent so you can see the real backend error.
           </Callout>
         ) : null}
+        {mode === "EXPERIMENTAL_CLAUDE" ? (
+          <Callout tone="warn" title="Explicit external-model experiment">
+            The API credential stays in the backend environment. There is no fallback to templates or Ollama, and
+            the response manifest records the actual provider and model returned by the service.
+          </Callout>
+        ) : null}
         <div className="form-grid">
           <label>
             Workspace name
@@ -166,14 +172,14 @@ export default function Generation({ navigate }) {
         </div>
         <div className="button-row">
           <Button onClick={() => generate.run()} loading={generate.loading} disabled={!ready}>
-            Generate with {mode}
+            Generate with {MODES.find((item) => item.id === mode)?.label}
           </Button>
         </div>
         {generate.loading ? (
           <Loading
-            label={`Generating (${mode})`}
+            label={`Generating (${MODES.find((item) => item.id === mode)?.label})`}
             startedAt={generate.startedAt}
-            note={mode === "LOCAL_LLM" ? "The API call is synchronous, so no incremental progress is reported. Local model inference commonly takes tens of seconds." : "The API call is synchronous and normally finishes in under a second."}
+            note={mode === "LOCAL_LLM" ? "The API call is synchronous, so no incremental progress is reported. Local model inference commonly takes tens of seconds." : "The external API call is synchronous, uses the backend-only credential, and never falls back silently."}
           />
         ) : null}
         <ErrorPanel error={generate.error} context="Generation" />
@@ -228,18 +234,37 @@ export default function Generation({ navigate }) {
 
           <div className="stats">
             <Stat label="Files generated" value={files.length} />
-            <Stat label="TEMPLATE origin" value={templateCount} tone="info" />
-            <Stat label="LOCAL_LLM origin" value={llmCount} tone="llm" />
+            <Stat label="Deterministic scaffold" value={templateCount} tone="info" />
+            <Stat label="Local-model files" value={llmCount} tone="llm" />
+            <Stat label="External-model files" value={externalLlmCount} tone="warn" />
             <Stat label="Execution status" value={manifest.execution_status.replaceAll("_", " ")} hint="Generated code was never run" />
             <Stat label="Request time" value={formatDuration(stored.durationMs)} />
           </div>
+
+          {rag ? (
+            <Card className="research-highlight" title="RAG B · generation guidance" subtitle="Best-practice rules retrieved for the selected stack and module layer.">
+              <div className="result-head">
+                <StatusBadge status={rag.enabled ? "SATISFIED" : "NOT_RUN"} label={rag.enabled ? "ENABLED" : "NOT APPLIED"} />
+                <Badge tone="llm">{String(rag.backend).toUpperCase()}</Badge>
+                {rag.embedding_model ? <code>{rag.embedding_model}</code> : null}
+              </div>
+              {rag.retrievals?.length ? (
+                <Table dense rowKey={(row) => `${row.module_path}-${row.layer}`} rows={rag.retrievals} columns={[
+                  { key: "module_path", header: "Target module", render: (row) => <code>{row.module_path}</code> },
+                  { key: "layer", header: "Layer" },
+                  { key: "retrieved_rule_ids", header: "Retrieved rules", render: (row) => row.retrieved_rule_ids?.map((id) => <Badge key={id} tone="llm">{id}</Badge>) },
+                  { key: "applied_to_prompt", header: "Prompt", render: (row) => <StatusBadge status={row.applied_to_prompt ? "SATISFIED" : "NOT_RUN"} label={row.applied_to_prompt ? "APPLIED" : "NOT APPLIED"} /> },
+                ]} />
+              ) : <p className="muted small">No best-practice retrievals were recorded for this run.</p>}
+            </Card>
+          ) : null}
 
           <div className="grid grid-2">
             <Card title="Run evidence">
               <KeyValues
                 items={[
                   { label: "Generation run ID", value: <code>{manifest.generation_run_id}</code> },
-                  { label: "Mode", value: <Badge tone={manifest.generation_mode === "LOCAL_LLM" ? "llm" : "info"}>{manifest.generation_mode}</Badge> },
+                  { label: "Mode", value: <Badge tone={manifest.generation_mode === "LOCAL_LLM" ? "llm" : manifest.generation_mode === "EXPERIMENTAL_CLAUDE" ? "warn" : "info"}>{manifest.generation_mode}</Badge> },
                   { label: "Artifact digest", value: <Hash value={manifest.artifact_digest_sha256} length={24} /> },
                   { label: "Evidence digest", value: <Hash value={manifest.run_evidence.evidence_digest_sha256} length={24} /> },
                   { label: "Workspace", value: <code>{run.workspace_relative_path}</code> },
@@ -250,7 +275,7 @@ export default function Generation({ navigate }) {
               />
               <Callout tone="info">{manifest.trust_boundary}</Callout>
             </Card>
-            <Card title="Local model evidence" subtitle={llm ? "Recorded by the Ollama client" : undefined}>
+            <Card title="Model evidence" subtitle={llm ? "Recorded by the configured inference client" : undefined}>
               {llm ? (
                 <KeyValues
                   items={[
@@ -259,8 +284,9 @@ export default function Generation({ navigate }) {
                     { label: "Response model", value: <code>{llm.response_model_identifier}</code> },
                     { label: "Prompt template", value: llm.prompt_template_version },
                     { label: "Client latency", value: formatDuration(llm.client_inference_latency_ms) },
-                    { label: "Eval tokens", value: llm.response.eval_count },
-                    { label: "Temperature / ctx", value: `${llm.generation_parameters.temperature} / ${llm.generation_parameters.num_ctx}` },
+                    { label: "Output tokens", value: llm.response.eval_count ?? llm.response.output_tokens ?? "Not reported" },
+                    { label: "Temperature", value: llm.generation_parameters.temperature },
+                    { label: "Context / max tokens", value: llm.generation_parameters.num_ctx ?? llm.generation_parameters.max_tokens ?? "Not reported" },
                   ]}
                 />
               ) : (
@@ -293,7 +319,7 @@ export default function Generation({ navigate }) {
 
           <Card
             title="C3 structural verification (static)"
-            subtitle="POST /api/v1/structural-verifications · inspects files without executing them. This is not Component 4 testing."
+            subtitle="Inspects generated structure without executing source. This is not Component 4 testing."
             actions={<Button variant="secondary" onClick={() => structural.run()} loading={structural.loading}>Run structural verification</Button>}
           >
             {structural.loading ? <Loading label="Inspecting generated structure" startedAt={structural.startedAt} /> : null}
@@ -341,7 +367,9 @@ export default function Generation({ navigate }) {
               · API: <code>{session.preview.api_url}</code>. This is an isolated preview, not production deployment.
             </Callout>
           ) : null}
-          <JsonView value={manifest} summary="Full generation manifest" />
+          <TechnicalDetails summary="Generation manifest and canonical evidence">
+            <JsonView value={manifest} summary="Open full manifest JSON" />
+          </TechnicalDetails>
         </>
       ) : null}
     </div>

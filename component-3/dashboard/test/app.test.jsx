@@ -88,6 +88,24 @@ describe("backend status", () => {
 });
 
 describe("C1/C2 inputs", () => {
+  const openAdvancedInputs = async (user) => {
+    await user.click(screen.getByText("Advanced JSON contracts and simulated test fixtures"));
+  };
+
+  it("accepts pasted finalized C1 SRS text and C2 PlantUML source in the primary PP1 intake", async () => {
+    const user = userEvent.setup();
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+
+    await user.type(screen.getByLabelText("C1 finalized SRS text"), "R01 | FR | Unreviewed model prediction\nAdd two numbers.\nRequirement ID: req-1");
+    await user.type(screen.getByLabelText("C2 finalized PlantUML source"), "@startuml\nclass Calculator\n@enduml");
+
+    expect(screen.getByText("req-1")).toBeInTheDocument();
+    expect(screen.getByText("VALID")).toBeInTheDocument();
+    expect(screen.getByText(/C2_RELEASE_METADATA_MISSING/)).toBeInTheDocument();
+  });
+
   it("loads the simulated fixture and sends exactly that package to the validation API", async () => {
     const user = userEvent.setup();
     const { called } = installFetch({
@@ -97,6 +115,7 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
+    await openAdvancedInputs(user);
 
     await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
     expect(await screen.findByText("SIMULATED fixture notice")).toBeInTheDocument();
@@ -116,6 +135,7 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
+    await openAdvancedInputs(user);
     await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
 
     await user.click(await screen.findByRole("button", { name: "Make a requirement DRAFT" }));
@@ -136,6 +156,7 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
+    await openAdvancedInputs(user);
     await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
     await screen.findByRole("button", { name: "Validate C1/C2 inputs" });
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
@@ -154,6 +175,7 @@ describe("C1/C2 inputs", () => {
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
+    await openAdvancedInputs(user);
 
     fireEvent.change(screen.getByLabelText("Component 1 JSON"), {
       target: { value: JSON.stringify(INPUT_PACKAGE.c1) },
@@ -166,6 +188,41 @@ describe("C1/C2 inputs", () => {
     expect(await screen.findByText("ACCEPTED by C3 validation")).toBeInTheDocument();
     expect(called("POST /api/v1/validate-input")[0].body).toEqual(INPUT_PACKAGE);
     expect(screen.getAllByText("PASTED_OR_EDITED")).toHaveLength(2);
+  });
+
+  it("adapts the limited PP1 C1/C2 JSON shapes and requires the missing C2 report reference", async () => {
+    const user = userEvent.setup();
+    const { called } = installFetch({ ...baseRoutes(), "POST /api/v1/validate-input": GENERATION_CONTEXT });
+    const c1 = {
+      contract_version: "1.0", project_id: "GPA", srs_version: "SRS-1", approval_status: "APPROVED",
+      approval_provenance_ref: "C1-APPROVAL", validation_report_ref: "C1-REPORT",
+      requirements: [{ requirement_id: "REQ-GPA-1", type: "FUNCTIONAL", title: "Calculate GPA", description: "SRS detail", priority: "MUST", status: "APPROVED" }],
+    };
+    const c2 = {
+      contract_version: "1.0", project_id: "GPA", source_srs_version: "SRS-1", uml_version: "UML-1",
+      release_status: "VALIDATED", validation_state: "PASSED",
+      uml_elements: [{ element_id: "UML-GPA-1", type: "CLASS_DIAGRAM", name: "GPA", plantuml_source: "@startuml\nclass GPA\n@enduml" }],
+      ui_artifacts: [{ artifact_id: "UI-GPA-1", type: "WIREFRAME", name: "GPA screen" }],
+      requirement_uml_anchors: [{ requirement_id: "REQ-GPA-1", uml_element_id: "UML-GPA-1" }],
+    };
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+    await openAdvancedInputs(user);
+
+    fireEvent.change(screen.getByLabelText("Component 1 JSON"), { target: { value: JSON.stringify(c1) } });
+    fireEvent.change(screen.getByLabelText("Component 2 JSON"), { target: { value: JSON.stringify(c2) } });
+    expect(screen.getByText(/C2_VALIDATION_REPORT_REF_REQUIRED/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate C1/C2 inputs" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("C2 validation report reference"), "SIMULATED-PP1-C2-REPORT");
+    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
+
+    const sent = called("POST /api/v1/validate-input")[0].body;
+    expect(sent.c1.requirements[0]).toEqual({ requirement_id: "REQ-GPA-1", title: "Calculate GPA", status: "APPROVED" });
+    expect(sent.c2.uml_elements[0].uml_id).toBe("UML-GPA-1");
+    expect(sent.c2.uml_elements[0].plantuml_source).toContain("class GPA");
+    expect(sent.c2.validation_report_ref).toBe("SIMULATED-PP1-C2-REPORT");
+    expect(sent.c2.requirement_uml_anchors[0].anchor_id).toBe("C3-PP1-ADAPTER-ANCHOR-001");
   });
 });
 
@@ -198,7 +255,7 @@ describe("Code generation", () => {
     render(<App />);
     await openPage(user, /Code Generation/);
 
-    await user.click(screen.getByRole("button", { name: "Generate with TEMPLATE_ONLY" }));
+    await user.click(screen.getByRole("button", { name: "Generate with Local Ollama" }));
 
     const panel = await screen.findByTestId("error-panel");
     expect(panel).toHaveTextContent("GENERATOR_NOT_IMPLEMENTED");
@@ -229,9 +286,9 @@ describe("Code generation", () => {
     render(<App />);
     await openPage(user, /Code Generation/);
 
-    await user.click(screen.getByLabelText(/LOCAL_LLM/));
-    await user.click(screen.getByRole("button", { name: "Generate with LOCAL_LLM" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Generating (LOCAL_LLM)");
+    await user.click(screen.getByLabelText(/Local Ollama/));
+    await user.click(screen.getByRole("button", { name: "Generate with Local Ollama" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Generating (Local Ollama)");
     release();
 
     expect(await screen.findByText("run-llm")).toBeInTheDocument();
@@ -248,6 +305,27 @@ describe("Code generation", () => {
     expect(block.querySelector("script")).toBeNull();
     expect(screen.getByText("display only · never executed")).toBeInTheDocument();
     expect(called("POST /api/v1/demo/code-preview")[0].body.relative_path).toBe("backend/src/services/taskService.js");
+  });
+
+  it("uses the dedicated endpoint for an explicit external LLM experiment", async () => {
+    const user = userEvent.setup();
+    seedSession(approvedSession());
+    const run = makeRun({ mode: "EXPERIMENTAL_CLAUDE", runId: "run-external" });
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "POST /api/v1/experiments/claude-generation": () => jsonResponse(run, 201),
+    });
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    expect(screen.queryByLabelText(/TEMPLATE_ONLY/)).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText(/External LLM API/));
+    await user.click(screen.getByRole("button", { name: "Generate with External LLM API" }));
+
+    expect(await screen.findByText("run-external")).toBeInTheDocument();
+    expect(called("POST /api/v1/experiments/claude-generation")[0].body.mode).toBe("EXPERIMENTAL_CLAUDE");
+    expect(screen.getByText("teamsoclo-claude")).toBeInTheDocument();
+    expect(screen.getAllByText("claude-haiku-4-5")).toHaveLength(2);
   });
 
   it("builds and starts a dynamic generated UI with one action and shows the new local port", async () => {
@@ -506,3 +584,24 @@ describe("Readiness", () => {
     expect(screen.queryByText(/approved for deployment/i)).not.toBeInTheDocument();
   });
 });
+
+describe("URL routing and navigation", () => {
+  it("renders C1/C2 inputs directly when URL path is /inputs", async () => {
+    installFetch(baseRoutes());
+    window.history.pushState({}, "", "/inputs");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "C1/C2 Inputs" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /1 C1\/C2 Inputs/ })).toHaveClass("nav-active");
+  });
+
+  it("renders Design & Stack directly when URL path is /dashboard/designstack", async () => {
+    installFetch(baseRoutes());
+    window.history.pushState({}, "", "/dashboard/designstack");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Design & Stack" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /2 Design & Stack/ })).toHaveClass("nav-active");
+  });
+});
+

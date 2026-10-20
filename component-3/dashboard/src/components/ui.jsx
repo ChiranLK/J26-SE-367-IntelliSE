@@ -26,6 +26,7 @@ const STATUS_TONE = {
   // provenance
   TEMPLATE: "info",
   LOCAL_LLM: "llm",
+  EXPERIMENTAL_CLAUDE: "warn",
   SIMULATED: "sim",
   MOCK: "sim",
   MOCKED_TEST_DOUBLE: "sim",
@@ -65,9 +66,9 @@ export function PageHeader({ title, subtitle, badges }) {
   );
 }
 
-export function Card({ title, subtitle, actions, children, tone }) {
+export function Card({ title, subtitle, actions, children, tone, className = "" }) {
   return (
-    <section className={`card${tone ? ` card-${tone}` : ""}`}>
+    <section className={`card${tone ? ` card-${tone}` : ""}${className ? ` ${className}` : ""}`}>
       {title || actions ? (
         <div className="card-head">
           <div>
@@ -79,6 +80,15 @@ export function Card({ title, subtitle, actions, children, tone }) {
       ) : null}
       {children}
     </section>
+  );
+}
+
+export function TechnicalDetails({ summary = "Technical evidence", children }) {
+  return (
+    <details className="technical-details">
+      <summary>{summary}</summary>
+      <div className="technical-details-body">{children}</div>
+    </details>
   );
 }
 
@@ -279,5 +289,9 @@ export function ModeBadge({ mode }) {
 }
 
 export function OriginBadge({ origin }) {
-  return origin === "LOCAL_LLM" ? <Badge tone="llm">LOCAL_LLM</Badge> : <Badge tone="info">TEMPLATE</Badge>;
+  if (origin === "LOCAL_LLM") return <Badge tone="llm">LOCAL_LLM</Badge>;
+  if (origin === "EXPERIMENTAL_CLAUDE") {
+    return <Badge tone="warn">EXTERNAL LLM</Badge>;
+  }
+  return <Badge tone="info">TEMPLATE</Badge>;
 }

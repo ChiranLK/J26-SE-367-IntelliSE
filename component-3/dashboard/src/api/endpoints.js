@@ -30,6 +30,8 @@ export const api = {
 
   generate: (request) =>
     apiRequest("/generation-runs", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
+  generateExperimental: (request) =>
+    apiRequest("/experiments/claude-generation", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
   codePreview: (request) =>
     apiRequest("/demo/code-preview", { method: "POST", body: request }),
   workspaceRun: (workspaceRelativePath) =>

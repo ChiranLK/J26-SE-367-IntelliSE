@@ -12,7 +12,10 @@ export const emptySession = () => ({
   inputContractVersion: "1.0",
   c1InputText: "",
   c2InputText: "",
+  c2ValidationReportRef: "",
+  sourceDocuments: { c1Name: "", c1Text: "", c2Name: "", c2Text: "" },
   inputSources: { c1: "NONE", c2: "NONE" },
+  uploading: false, // Track if files are being uploaded
   validation: null, // { ok, at, generationContext?, error? }
   designContext: null,
   applicationProfile: "SCHEMA_DRIVEN_CRUD",
