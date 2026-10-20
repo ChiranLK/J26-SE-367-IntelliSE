@@ -1,9 +1,11 @@
 """Provisional, versioned C4-style defect input for scoped regeneration.
 
-Component 4 is not integrated. Until it is, the only accepted classification is
-``SIMULATED_C4_FIXTURE``. Every free-text field here is untrusted data: it may
-be wrong, stale, or contain instructions, and is never privileged input for an
-LLM or for patch authorization.
+``source_classification`` is a closed set: ``SIMULATED_C4_FIXTURE`` for
+implementer-authored fixtures and ``C4_AGENT_OUTPUT`` for a report submitted by
+Component 4. The label is provenance only; it never relaxes any validation.
+Every free-text field here is untrusted data: it may be wrong, stale, or
+contain instructions, and is never privileged input for an LLM or for patch
+authorization.
 """
 
 from enum import StrEnum
@@ -24,6 +26,13 @@ Identifier = Annotated[
 Sha256Hex = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 _SAFE_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+class DefectSourceClassification(StrEnum):
+    """Closed provenance labels for a defect report."""
+
+    SIMULATED_C4_FIXTURE = "SIMULATED_C4_FIXTURE"
+    C4_AGENT_OUTPUT = "C4_AGENT_OUTPUT"
 
 
 class DefectCategory(StrEnum):
@@ -60,16 +69,18 @@ class FailingTestReference(DomainModel):
 
 
 class DefectLocation(DomainModel):
-    """Optional C4 location claim. It can only corroborate, never authorize."""
+    """Required C4 location claim. It can only corroborate, never authorize.
 
-    relative_path: Annotated[str, Field(min_length=1, max_length=240)] | None = None
+    ``relative_path`` is mandatory because defect-context retrieval (RAG A)
+    resolves the module from it; ``symbol`` stays optional.
+    """
+
+    relative_path: Annotated[str, Field(min_length=1, max_length=240)]
     symbol: Annotated[str, Field(min_length=1, max_length=120)] | None = None
 
     @field_validator("relative_path")
     @classmethod
-    def require_safe_relative_path(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
+    def require_safe_relative_path(cls, value: str) -> str:
         path = PurePosixPath(value)
         if (
             "\\" in value
@@ -95,15 +106,22 @@ class DefectItem(DomainModel):
     affected_requirement_ids: Annotated[tuple[Identifier, ...], Field(min_length=1, max_length=10)]
     failing_tests: Annotated[tuple[FailingTestReference, ...], Field(min_length=1, max_length=10)]
     api_operation_ids: Annotated[tuple[Identifier, ...], Field(max_length=4)] = ()
-    location: DefectLocation | None = None
+    location: DefectLocation
     evidence: DefectEvidence
-    explanation: Annotated[str, Field(min_length=1, max_length=1200)] | None = None
+    explanation: Annotated[str, Field(min_length=1, max_length=1200)]
 
     @field_validator("title")
     @classmethod
     def reject_control_characters(cls, value: str) -> str:
         if _SAFE_CONTROL.search(value):
             raise ValueError("Defect text must not contain control characters.")
+        return value
+
+    @field_validator("explanation")
+    @classmethod
+    def require_non_blank_explanation(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Defect explanation must not be blank.")
         return value
 
     @model_validator(mode="after")
@@ -123,7 +141,7 @@ class DefectReport(DomainModel):
 
     schema_id: Literal["C4_DEFECT_REPORT_PROVISIONAL_V1"] = DEFECT_REPORT_SCHEMA_ID
     report_version: Literal["1.0"] = "1.0"
-    source_classification: Literal["SIMULATED_C4_FIXTURE"]
+    source_classification: DefectSourceClassification
     defect_report_id: Identifier
     reported_at_utc: Annotated[str, Field(min_length=10, max_length=40)]
     source_generation_run_id: Identifier

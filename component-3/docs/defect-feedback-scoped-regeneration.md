@@ -33,9 +33,38 @@ by Component 3.
 | `POST /api/v1/impact-selections` | No | Nothing. |
 | `POST /api/v1/scoped-regenerations` | Only when scope is `SELECTED` | A new workspace and a new graph version, only after full verification. |
 
-Both accept a `ScopedRegenerationRequest`: the simulated `DefectReport`, the
-source `GenerationManifest`, its workspace path, and the `DesignContext` used
-for that run.
+Both accept a `ScopedRegenerationRequest`: the `DefectReport`, the source
+`GenerationManifest`, its workspace path, and the `DesignContext` used for that
+run.
+
+### C4 intake by run ID
+
+`POST /api/v1/c4/defect-reports` takes only `{generation_run_id, defect_report}`
+(`contracts/c4_intake.py`), because Component 4 does not hold C3's manifest or
+`DesignContext`. C3 then:
+
+1. rejects a request whose `generation_run_id` differs from
+   `defect_report.source_generation_run_id` (409 `DEFECT_REPORT_RUN_MISMATCH`);
+2. loads the newest stored manifest for that run from the traceability store
+   (404 `GENERATION_RUN_NOT_FOUND` if no graph exists for the run);
+3. locates the run workspace under the workspace root (404
+   `GENERATION_WORKSPACE_NOT_FOUND`, 409 `GENERATION_WORKSPACE_AMBIGUOUS`);
+4. loads the persisted `DesignContext` by the manifest's
+   `design_context_sha256`, recomputing the digest on load (409
+   `DESIGN_CONTEXT_NOT_PERSISTED` for runs generated before persistence existed,
+   409 `DESIGN_CONTEXT_DIGEST_MISMATCH` for a tampered file);
+5. calls the unchanged `ScopedRegenerationService`, so every check on this page
+   (digest, graph version, graph verification, impact scope, patch policy,
+   preservation) still applies.
+
+On success the response is the existing `C4RetestHandoff` (`retest_status`
+`PENDING`). `REVIEW_REQUIRED` and `FAILED` outcomes have no handoff, so they
+return 409 with `REGENERATION_REVIEW_REQUIRED` / `REGENERATION_FAILED` and one
+entry per reason code carrying the escalation's required action.
+
+`DesignContextStore` (`services/design_context_store.py`) is written by the
+generation routes and the demo baseline, content-addressed under
+`<traceability store directory>/design-contexts/<sha256>.json`.
 
 ## Defect-report contract
 
@@ -44,7 +73,9 @@ must be re-aligned when Component 4 publishes a real contract. Unknown fields
 are rejected.
 
 Required report fields: `defect_report_id`, `reported_at_utc`,
-`source_classification` (the only accepted value is `SIMULATED_C4_FIXTURE`),
+`source_classification` (closed enum: `SIMULATED_C4_FIXTURE` for
+implementer-authored fixtures, `C4_AGENT_OUTPUT` for a report submitted by
+Component 4; any other value is a 422 and the label never relaxes a check),
 `source_generation_run_id`, `source_artifact_digest_sha256` (64 hex),
 **`source_graph_version`**, and 1 to 3 defects.
 
@@ -58,8 +89,12 @@ earlier optional behavior (an absent version skipped the check) is removed.
 
 Each defect carries `defect_id`, `category`, `severity`, `title`, 1 to 10
 `affected_requirement_ids`, 1 to 10 `failing_tests` (a `TEST_FILE` path or a
-`TEST_SEAM` id), optional `api_operation_ids`, optional `location`, optional
-`evidence`, and an optional `explanation` (at most 1200 characters).
+`TEST_SEAM` id), optional `api_operation_ids`, **required** `evidence`,
+**required** `location` with a **required** safe `relative_path` (`symbol`
+stays optional), and a **required** non-blank `explanation` (at most 1200
+characters). Defect-context retrieval (RAG A) resolves the module from
+`location.relative_path` and queries by `explanation`, so a report without
+them is rejected at the schema (422) instead of failing later.
 
 Supported categories are `BUSINESS_LOGIC`, `API_CONTRACT`, `DATA_ACCESS`, and
 `UI_BEHAVIOR`. `SECURITY`, `PERFORMANCE`, `CONFIGURATION`, and `OTHER` are
@@ -372,7 +407,8 @@ byte-identical check covers only files outside the selected scope.
 
 The scenario set has eight cases: four `SELECTED` (service, controller with
 location, repository seam, misleading location) and four `REVIEW_REQUIRED`
-(controller without location is too broad, UI has no resolved evidence,
+(controller whose location does not resolve to a manifest module is too broad,
+UI has no resolved evidence,
 unsupported category, non-patchable OpenAPI module).
 
 ## C3 structural verification versus C4 retesting
@@ -439,8 +475,7 @@ The deterministic demo endpoint does **not** use RAG and is labelled
 AI/RAG-driven repair. Test coverage that exercises the RAG orchestration with a
 model double is separately labelled `SIMULATED_RAG_TEST_DOUBLE`.
 
-The provisional C4 contract still has no `module_id`, no per-module digest,
-and makes `explanation` optional. As an interim adapter, C3 validates the
+The provisional C4 contract still has no `module_id` and no per-module digest. As an interim adapter, C3 validates the
 whole-application digest against the graph, resolves the module from the
 location path, and uses the verified manifest file SHA-256 for stale chunk
 filtering. Missing or stale RAG A context stops automatic patching with

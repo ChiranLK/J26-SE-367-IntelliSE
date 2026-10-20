@@ -242,7 +242,7 @@ def test_impact_selection_matches_reviewed_scenario_expectations(
 @pytest.mark.parametrize(
     ("scenario_id", "reason"),
     [
-        ("SIM-SCN-003-controller-without-location", ImpactReasonCode.SCOPE_TOO_BROAD),
+        ("SIM-SCN-003-controller-unresolvable-location", ImpactReasonCode.SCOPE_TOO_BROAD),
         ("SIM-SCN-005-ui-has-no-resolved-evidence", ImpactReasonCode.INSUFFICIENT_EVIDENCE),
         ("SIM-SCN-006-unsupported-category", ImpactReasonCode.UNSUPPORTED_DEFECT_CATEGORY),
         ("SIM-SCN-007-non-patchable-module", ImpactReasonCode.SELECTED_MODULE_NOT_PATCHABLE),
@@ -575,7 +575,7 @@ def test_review_required_selection_never_calls_the_model_or_writes(tmp_path: Pat
     env = Env(tmp_path)
     before = env.run_directories()
 
-    result = env.regenerate(FailingClient(), env.request("SIM-SCN-003-controller-without-location"))
+    result = env.regenerate(FailingClient(), env.request("SIM-SCN-003-controller-unresolvable-location"))
 
     assert result.status is RegenerationStatus.REVIEW_REQUIRED
     assert result.reason_codes == (RegenerationReasonCode.IMPACT_SELECTION_REVIEW_REQUIRED,)

@@ -271,19 +271,15 @@ def test_missing_or_blank_xai_from_gpa_report_is_rejected(
     explanation: str | None,
 ) -> None:
     graph, service_node, requirement_id = gpa_environment
-    # The report is built from the generated real GPA fixture; no fallback or
-    # synthetic XAI text is inserted when the explanation is absent/blank.
-    report = _report(
-        graph,
-        str(service_node.attributes["relative_path"]),
-        requirement_id,
-        explanation=explanation,
-    )
-
-    with pytest.raises(ApplicationError) as captured:
-        get_defect_context(report, graph)
-
-    assert _error_code(captured) == "DEFECT_CONTEXT_XAI_REQUIRED"
+    # The contract now requires a non-blank explanation, so the report cannot even
+    # be constructed; no fallback or synthetic XAI text is ever inserted.
+    with pytest.raises(ValidationError):
+        _report(
+            graph,
+            str(service_node.attributes["relative_path"]),
+            requirement_id,
+            explanation=explanation,
+        )
 
 
 def test_schema_rejects_empty_xai_string_in_gpa_report(gpa_environment) -> None:

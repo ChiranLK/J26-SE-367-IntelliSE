@@ -9,6 +9,7 @@ remains ``PENDING``.
 from enum import StrEnum
 from typing import Literal
 
+from intelise_c3.contracts.defect_report import DefectSourceClassification
 from intelise_c3.domain.generation import GeneratedArtifactType, TraceRelationType
 from intelise_c3.domain.generation_context import DomainModel
 from intelise_c3.domain.structural_verification import StructuralVerificationReport
@@ -108,7 +109,7 @@ class ImpactSelectionReport(DomainModel):
     algorithm_version: Literal["C3_IMPACT_SELECTION_V1"] = IMPACT_ALGORITHM_VERSION
     defect_report_id: str
     defect_report_sha256: str
-    defect_source_classification: Literal["SIMULATED_C4_FIXTURE"]
+    defect_source_classification: DefectSourceClassification
     graph_id: str
     graph_version: int
     graph_content_digest_sha256: str
