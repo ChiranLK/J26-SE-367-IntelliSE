@@ -8,6 +8,7 @@ from intelise_c3.domain.generation import GenerationRunResult
 from intelise_c3.llm.ollama import OllamaLLMClient
 from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.code_generation import CodeGenerationService
+from intelise_c3.services.design_context_store import DesignContextStore
 
 router = APIRouter(tags=["code-generation"])
 
@@ -55,5 +56,6 @@ async def create_generation_run(
         workspace_root=settings.generated_workspace_root,
         llm_client=llm_client,
         rag_runtime=RagRuntime.from_settings(settings),
+        design_context_store=DesignContextStore.from_settings(settings),
     )
     return await service.generate(generation_request)

@@ -87,6 +87,7 @@ from intelise_c3.prompts.code_generation import (
     build_task_service_prompt,
 )
 from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
+from intelise_c3.services.design_context_store import DesignContextStore
 from intelise_c3.rag.runtime import RagRuntime
 
 _REQUIRED_SERVICE_PATTERNS = {
@@ -169,9 +170,11 @@ class CodeGenerationService:
         workspace_root: Path,
         llm_client: LLMClient | None,
         rag_runtime: RagRuntime | None = None,
+        design_context_store: DesignContextStore | None = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._llm_client = llm_client
+        self._design_context_store = design_context_store
         self._rag_runtime = rag_runtime or RagRuntime.disabled()
 
     async def generate(self, request: CodeGenerationRequest) -> GenerationRunResult:
@@ -286,6 +289,8 @@ class CodeGenerationService:
         )
         relative_workspace = PurePosixPath(request.workspace_name) / run_id
         self._write_workspace(relative_workspace, artifacts, manifest)
+        if self._design_context_store is not None:
+            self._design_context_store.save(request.design_context)
         return GenerationRunResult(
             workspace_relative_path=relative_workspace.as_posix(),
             manifest_relative_path=(

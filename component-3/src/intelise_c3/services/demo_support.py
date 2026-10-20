@@ -42,6 +42,7 @@ from intelise_c3.scripts.scoped_regeneration_experiment import (
     model_output,
 )
 from intelise_c3.services.code_generation import CodeGenerationService
+from intelise_c3.services.design_context_store import DesignContextStore
 from intelise_c3.services.traceability import TraceabilityService
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
 from intelise_c3.traceability.store import SQLiteTraceabilityStore
@@ -352,6 +353,7 @@ async def create_defective_baseline(settings: Settings) -> DefectiveBaseline:
         settings.generated_workspace_root,
         client,
         RagRuntime.from_settings(settings),
+        DesignContextStore.from_settings(settings),
     ).generate(request)
     traceability = TraceabilityService(
         verifier=ManifestVerificationService(settings.generated_workspace_root),
