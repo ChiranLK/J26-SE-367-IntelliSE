@@ -84,6 +84,14 @@ from app.schemas.research_reports import (
     UnitTestReport,
 )
 
+from app.schemas.llm_defect_reasoning import (
+    AIContributionTelemetry,
+    InferenceStatus,
+    LLMDefectHypothesis,
+    LLMReasoningInput,
+    SupportedDefectCategory,
+)
+
 __all__ = [
     "ProgrammingLanguage",
     "VerificationStatus",
@@ -149,5 +157,10 @@ __all__ = [
     "ReadinessGatingCheck",
     "DeploymentReadinessReport",
     "TraceabilityScopedXaiPayload",
+    "LLMDefectHypothesis",
+    "LLMReasoningInput",
+    "AIContributionTelemetry",
+    "SupportedDefectCategory",
+    "InferenceStatus",
 ]
 

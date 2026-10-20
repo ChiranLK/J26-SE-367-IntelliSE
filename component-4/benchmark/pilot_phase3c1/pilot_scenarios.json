@@ -1,0 +1,646 @@
+[
+  {
+    "scenario_id": "PILOT-SC-01",
+    "scenario_group": "clean_control",
+    "name": "Safe String Truncation and Normalization",
+    "input_data": {
+      "scenario_id": "PILOT-SC-01",
+      "name": "Safe String Truncation and Normalization",
+      "filename": "solution.py",
+      "module_code": "def truncate_and_normalize(text: str, max_len: int = 50) -> str:\n    if not isinstance(text, str):\n        raise TypeError(\"Input text must be a string\")\n    cleaned = \" \".join(text.split()).strip()\n    if len(cleaned) <= max_len:\n        return cleaned\n    return cleaned[:max_len]\n",
+      "test_code": "import solution\n\ndef test_truncate_normal():\n    assert solution.truncate_and_normalize(\"  hello   world  \", 20) == \"hello world\"\n\ndef test_truncate_length():\n    assert len(solution.truncate_and_normalize(\"a\" * 100, 10)) == 10\n\ndef test_truncate_type_error():\n    try:\n        solution.truncate_and_normalize(123)\n        assert False, \"Should have raised TypeError\"\n    except TypeError:\n        pass\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-01",
+      "defect_id": null,
+      "has_defect": false,
+      "expected_category": "clean_control",
+      "expected_cwe_id": null,
+      "expected_line_number": null,
+      "mutation_operator": null,
+      "original_clean_source": null,
+      "mutated_source": null,
+      "expected_behavioral_failure": "Clean functional code passes all assertions",
+      "ground_truth_rationale": "Clean control verifying whitespace normalization and length truncation",
+      "test_oracle": "pytest assertions on string output and TypeError guard",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "3f236592f14460dc3c7246bc3a186dbec8f00f57752b7c2017496af9c2aa28d2"
+  },
+  {
+    "scenario_id": "PILOT-SC-02",
+    "scenario_group": "clean_control",
+    "name": "Bounded LRU Cache Eviction",
+    "input_data": {
+      "scenario_id": "PILOT-SC-02",
+      "name": "Bounded LRU Cache Eviction",
+      "filename": "solution.py",
+      "module_code": "from collections import OrderedDict\n\nclass SimpleLRUCache:\n    def __init__(self, capacity: int = 2):\n        self.capacity = capacity\n        self.cache = OrderedDict()\n\n    def get(self, key: str):\n        if key not in self.cache:\n            return None\n        self.cache.move_to_end(key)\n        return self.cache[key]\n\n    def put(self, key: str, value: int):\n        if key in self.cache:\n            self.cache.move_to_end(key)\n        self.cache[key] = value\n        if len(self.cache) > self.capacity:\n            self.cache.popitem(last=False)\n",
+      "test_code": "import solution\n\ndef test_lru_basic():\n    c = solution.SimpleLRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") == 1\n    c.put(\"c\", 3)\n    assert c.get(\"b\") is None\n    assert c.get(\"a\") == 1\n    assert c.get(\"c\") == 3\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-02",
+      "defect_id": null,
+      "has_defect": false,
+      "expected_category": "clean_control",
+      "expected_cwe_id": null,
+      "expected_line_number": null,
+      "mutation_operator": null,
+      "original_clean_source": null,
+      "mutated_source": null,
+      "expected_behavioral_failure": "Clean stateful LRU cache operates correctly",
+      "ground_truth_rationale": "Clean control verifying eviction order and hit updates",
+      "test_oracle": "pytest assertions verifying correct cache eviction of least recently used key",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "21ac4ef659af8adc841b9bc93f8d13809dcfd2e99ed66676d01dbd8b349c3970"
+  },
+  {
+    "scenario_id": "PILOT-SC-03",
+    "scenario_group": "clean_control",
+    "name": "Parameterized SQL Query Constructor (Security Negative Control)",
+    "input_data": {
+      "scenario_id": "PILOT-SC-03",
+      "name": "Parameterized SQL Query Constructor (Security Negative Control)",
+      "filename": "solution.py",
+      "module_code": "def build_user_query(user_id: int) -> dict:\n    return {\n        \"query\": \"SELECT id, username, email FROM users WHERE id = :user_id\",\n        \"params\": {\"user_id\": int(user_id)},\n    }\n",
+      "test_code": "import solution\n\ndef test_safe_query():\n    res = solution.build_user_query(42)\n    assert \":user_id\" in res[\"query\"]\n    assert res[\"params\"][\"user_id\"] == 42\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-03",
+      "defect_id": null,
+      "has_defect": false,
+      "expected_category": "clean_control",
+      "expected_cwe_id": null,
+      "expected_line_number": null,
+      "mutation_operator": null,
+      "original_clean_source": null,
+      "mutated_source": null,
+      "expected_behavioral_failure": "Clean parameterized query passes tests with 0 AST security alerts",
+      "ground_truth_rationale": "Negative security control ensuring safe parameterized query patterns are not falsely flagged",
+      "test_oracle": "pytest assertion on query dictionary structure",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "ee4d42da981aaabae0dce74d00b131c51ded2a0a00dd652722b081145d1b0e83"
+  },
+  {
+    "scenario_id": "PILOT-SC-04",
+    "scenario_group": "clean_control",
+    "name": "Linear Time Set-Based Deduplication (Performance Control)",
+    "input_data": {
+      "scenario_id": "PILOT-SC-04",
+      "name": "Linear Time Set-Based Deduplication (Performance Control)",
+      "filename": "solution.py",
+      "module_code": "def deduplicate_fast(items: list) -> list:\n    seen = set()\n    out = []\n    for x in items:\n        if x not in seen:\n            seen.add(x)\n            out.append(x)\n    return out\n",
+      "test_code": "import solution\n\ndef test_dedup_correctness():\n    assert solution.deduplicate_fast([1, 2, 2, 3, 1]) == [1, 2, 3]\n\ndef test_dedup_latency():\n    items = list(range(1000)) + list(range(1000))\n    res = solution.deduplicate_fast(items)\n    assert len(res) == 1000\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-04",
+      "defect_id": null,
+      "has_defect": false,
+      "expected_category": "clean_control",
+      "expected_cwe_id": null,
+      "expected_line_number": null,
+      "mutation_operator": null,
+      "original_clean_source": null,
+      "mutated_source": null,
+      "expected_behavioral_failure": "Clean O(N) deduplication operates well below latency SLA (<10ms)",
+      "ground_truth_rationale": "Clean performance control verifying sub-threshold execution time",
+      "test_oracle": "pytest assertions on length and element order preservation",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "82d0db58a27d7b180c401df34e1f45a07223b2b96cb6d7015e8765696e017baa"
+  },
+  {
+    "scenario_id": "PILOT-SC-05",
+    "scenario_group": "functional_bug",
+    "name": "Off-by-One Pagination Indexing",
+    "input_data": {
+      "scenario_id": "PILOT-SC-05",
+      "name": "Off-by-One Pagination Indexing",
+      "filename": "solution.py",
+      "module_code": "def paginate_items(items: list, page: int, page_size: int) -> list:\n    if page < 1 or page_size < 1:\n        return []\n    start = page * page_size\n    return items[start : start + page_size]\n",
+      "test_code": "import solution\n\ndef test_paginate_page_1():\n    items = [1, 2, 3, 4, 5, 6]\n    page1 = solution.paginate_items(items, page=1, page_size=2)\n    assert page1 == [1, 2], f\"Expected [1, 2], got {page1}\"\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-05",
+      "defect_id": "PILOT-DEF-01",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "expected_cwe_id": null,
+      "expected_line_number": 4,
+      "mutation_operator": "Off-by-one arithmetic deletion (- 1 removed from page start)",
+      "original_clean_source": "start = (page - 1) * page_size",
+      "mutated_source": "start = page * page_size",
+      "expected_behavioral_failure": "AssertionError: Expected [1, 2], got [3, 4]",
+      "ground_truth_rationale": "1-based page index improperly computed as 0-offset, skipping initial page",
+      "test_oracle": "pytest assertion on items in first page",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "012d00e6f7b0c928a178843a0ca41f0f623b488798f299d5b9c7273b943e9764"
+  },
+  {
+    "scenario_id": "PILOT-SC-06",
+    "scenario_group": "functional_bug",
+    "name": "Inverted Relational Operator in Tiered Pricing",
+    "input_data": {
+      "scenario_id": "PILOT-SC-06",
+      "name": "Inverted Relational Operator in Tiered Pricing",
+      "filename": "solution.py",
+      "module_code": "def calculate_discount(price: float, loyalty_years: int) -> float:\n    if loyalty_years <= 5:\n        return round(price * 0.80, 2)\n    return price\n",
+      "test_code": "import solution\n\ndef test_high_loyalty_discount():\n    res = solution.calculate_discount(100.0, loyalty_years=7)\n    assert res == 80.0, f\"Expected 80.0 for 7 years loyalty, got {res}\"\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-06",
+      "defect_id": "PILOT-DEF-02",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "expected_cwe_id": null,
+      "expected_line_number": 2,
+      "mutation_operator": "Relational operator inversion (>= mutated to <=)",
+      "original_clean_source": "if loyalty_years >= 5:",
+      "mutated_source": "if loyalty_years <= 5:",
+      "expected_behavioral_failure": "AssertionError: Expected 80.0 for 7 years loyalty, got 100.0",
+      "ground_truth_rationale": "Inverted relational operator denies discount to senior loyalty customers",
+      "test_oracle": "pytest assertion on discounted price",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "bdf5a70055f096256f5b22376231bf38ed82e60911ffd08981d7a74a97cd4cff"
+  },
+  {
+    "scenario_id": "PILOT-SC-07",
+    "scenario_group": "functional_bug",
+    "name": "Missing Divisor Zero-Check Guard",
+    "input_data": {
+      "scenario_id": "PILOT-SC-07",
+      "name": "Missing Divisor Zero-Check Guard",
+      "filename": "solution.py",
+      "module_code": "def weighted_average(values: list, weights: list) -> float:\n    total_weight = sum(weights)\n    return sum(v * w for v, w in zip(values, weights)) / total_weight\n",
+      "test_code": "import solution\n\ndef test_zero_weights_safe_return():\n    res = solution.weighted_average([10.0, 20.0], [0.0, 0.0])\n    assert res == 0.0\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-07",
+      "defect_id": "PILOT-DEF-03",
+      "has_defect": true,
+      "expected_category": "functional_bug",
+      "expected_cwe_id": null,
+      "expected_line_number": 3,
+      "mutation_operator": "Guard condition deletion (total_weight == 0 check removed)",
+      "original_clean_source": "if total_weight == 0: return 0.0",
+      "mutated_source": "# guard omitted",
+      "expected_behavioral_failure": "ZeroDivisionError: float division by zero",
+      "ground_truth_rationale": "Division by zero crash when all input weights are zero",
+      "test_oracle": "pytest call with zero weights vector expecting default 0.0",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "e7a80f4c53f2bc601624efdf98bf88a8da2f63fbd25825c913e3879944f5855d"
+  },
+  {
+    "scenario_id": "PILOT-SC-08",
+    "scenario_group": "security_vulnerability",
+    "name": "Command Injection CWE-78 via os.system",
+    "input_data": {
+      "scenario_id": "PILOT-SC-08",
+      "name": "Command Injection CWE-78 via os.system",
+      "filename": "solution.py",
+      "module_code": "import os\n\ndef run_diagnostics(target: str) -> int:\n    return os.system(\"echo check: \" + target)\n",
+      "test_code": "import solution\n\ndef test_diag_basic():\n    # Functional test executes without asserting security sanitization\n    res = solution.run_diagnostics(\"node-01\")\n    assert isinstance(res, int)\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-08",
+      "defect_id": "PILOT-DEF-04",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "expected_cwe_id": "CWE-78",
+      "expected_line_number": 4,
+      "mutation_operator": "Unsafe shell execution replacement (subprocess list changed to os.system string concat)",
+      "original_clean_source": "subprocess.run([\"echo\", \"check:\", target], check=False)",
+      "mutated_source": "os.system(\"echo check: \" + target)",
+      "expected_behavioral_failure": "CWE-78: Improper Neutralization of Special Elements used in an OS Command",
+      "ground_truth_rationale": "Static AST analysis detects unsafe os.system invocation with concatenated input",
+      "test_oracle": "AST security inspection flagging CWE-78 pattern",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "5274f664b8e98ebe443a2731558999e49064a726f32f8e45b518fb0bb92445f8"
+  },
+  {
+    "scenario_id": "PILOT-SC-09",
+    "scenario_group": "security_vulnerability",
+    "name": "Dynamic Code Execution CWE-95 via eval",
+    "input_data": {
+      "scenario_id": "PILOT-SC-09",
+      "name": "Dynamic Code Execution CWE-95 via eval",
+      "filename": "solution.py",
+      "module_code": "def evaluate_arithmetic(expr: str) -> int:\n    return eval(expr)\n",
+      "test_code": "import solution\n\ndef test_eval_simple():\n    assert solution.evaluate_arithmetic(\"2 + 2\") == 4\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-09",
+      "defect_id": "PILOT-DEF-05",
+      "has_defect": true,
+      "expected_category": "security_vulnerability",
+      "expected_cwe_id": "CWE-95",
+      "expected_line_number": 2,
+      "mutation_operator": "Unrestricted eval injection",
+      "original_clean_source": "ast.literal_eval(expr)",
+      "mutated_source": "eval(expr)",
+      "expected_behavioral_failure": "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code",
+      "ground_truth_rationale": "Static AST analysis detects raw eval() invocation allowing arbitrary Python execution",
+      "test_oracle": "AST security inspection flagging CWE-95 pattern",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "d166a232f19147a71ab561e9fab1b4b3de1ab02dc8ee3e66c0cf2f493f9f78e1"
+  },
+  {
+    "scenario_id": "PILOT-SC-10",
+    "scenario_group": "performance_bottleneck",
+    "name": "Quadratic Pairwise Search SLA Breach",
+    "input_data": {
+      "scenario_id": "PILOT-SC-10",
+      "name": "Quadratic Pairwise Search SLA Breach",
+      "filename": "solution.py",
+      "module_code": "def find_duplicates(items: list) -> list:\n    dups = []\n    for i in range(len(items)):\n        for j in range(i + 1, len(items)):\n            if items[i] == items[j] and items[i] not in dups:\n                dups.append(items[i])\n    return sorted(dups)\n",
+      "test_code": "import solution\n\ndef test_find_dups_correctness():\n    assert solution.find_duplicates([1, 2, 3, 2, 4, 1]) == [1, 2]\n\ndef test_find_dups_performance_sla():\n    large_list = list(range(2500)) + list(range(2500))\n    res = solution.find_duplicates(large_list)\n    assert len(res) == 2500\n",
+      "requested_test_types": [
+        "performance"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-10",
+      "defect_id": "PILOT-DEF-06",
+      "has_defect": true,
+      "expected_category": "performance_bottleneck",
+      "expected_cwe_id": null,
+      "expected_line_number": 3,
+      "mutation_operator": "Algorithmic complexity degradation (O(N) hash set replaced with O(N^2) nested loop)",
+      "original_clean_source": "seen = set(); [x for x in items if x in seen or seen.add(x)]",
+      "mutated_source": "for i in range(len(items)): for j in range(i+1, len(items)): ...",
+      "expected_behavioral_failure": "Latency SLA breach: took >200ms under 5,000 item workload",
+      "ground_truth_rationale": "O(N^2) pairwise comparison violates production 200ms latency threshold",
+      "test_oracle": "Performance test agent latency measurement against 200ms threshold",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "53a12b6d54ae31ac009016d45635f89c823f758b7285258d5c9041e73b7a8794"
+  },
+  {
+    "scenario_id": "PILOT-SC-11",
+    "scenario_group": "performance_bottleneck",
+    "name": "Unmemoized Exponential Fibonacci Recursion",
+    "input_data": {
+      "scenario_id": "PILOT-SC-11",
+      "name": "Unmemoized Exponential Fibonacci Recursion",
+      "filename": "solution.py",
+      "module_code": "def fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1\n    return fibonacci(n - 1) + fibonacci(n - 2)\n",
+      "test_code": "import solution\n\ndef test_fib_correctness():\n    assert solution.fibonacci(7) == 13\n\ndef test_fib_performance_sla():\n    assert solution.fibonacci(32) == 2178309\n",
+      "requested_test_types": [
+        "performance"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-11",
+      "defect_id": "PILOT-DEF-07",
+      "has_defect": true,
+      "expected_category": "performance_bottleneck",
+      "expected_cwe_id": null,
+      "expected_line_number": 6,
+      "mutation_operator": "Iterative loop replaced with unmemoized exponential recursion O(2^N)",
+      "original_clean_source": "a, b = 0, 1; for _ in range(n): a, b = b, a + b",
+      "mutated_source": "return fibonacci(n - 1) + fibonacci(n - 2)",
+      "expected_behavioral_failure": "Latency SLA breach: n=32 takes >300ms under recursive evaluation",
+      "ground_truth_rationale": "Exponential branching without memoization causes computational latency breach",
+      "test_oracle": "Performance test agent latency measurement against 200ms threshold",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "1998e71eadde42505b0d9e18020de05cf6682c204ece16fddbd1b7cc95751f50"
+  },
+  {
+    "scenario_id": "PILOT-SC-12",
+    "scenario_group": "integration_defect",
+    "name": "API Client Keyword Parameter Renaming Seam Defect",
+    "input_data": {
+      "scenario_id": "PILOT-SC-12",
+      "name": "API Client Keyword Parameter Renaming Seam Defect",
+      "filename": "solution.py",
+      "module_code": "def authenticate_request(token_str: str, payload: dict) -> dict:\n    return {\"authorized\": bool(token_str), \"payload\": payload}\n",
+      "test_code": "import solution\n\ndef test_caller_integration():\n    res = solution.authenticate_request(api_key=\"secret123\", payload={\"action\": \"read\"})\n    assert res[\"authorized\"] is True\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-12",
+      "defect_id": "PILOT-DEF-08",
+      "has_defect": true,
+      "expected_category": "integration_defect",
+      "expected_cwe_id": null,
+      "expected_line_number": 1,
+      "mutation_operator": "API parameter keyword renaming (api_key mutated to token_str)",
+      "original_clean_source": "def authenticate_request(api_key: str, payload: dict):",
+      "mutated_source": "def authenticate_request(token_str: str, payload: dict):",
+      "expected_behavioral_failure": "TypeError: authenticate_request() got an unexpected keyword argument 'api_key'",
+      "ground_truth_rationale": "Interface seam contract broken by renaming expected keyword argument",
+      "test_oracle": "pytest integration test calling method with keyword argument",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "7067ef7c342090c77b3f052ca0af5cb08069e95cc92847b41bdebaa9fc4dcb28"
+  },
+  {
+    "scenario_id": "PILOT-SC-13",
+    "scenario_group": "regression",
+    "name": "Legacy Schema Format V1 Support Deletion",
+    "input_data": {
+      "scenario_id": "PILOT-SC-13",
+      "name": "Legacy Schema Format V1 Support Deletion",
+      "filename": "solution.py",
+      "module_code": "def parse_envelope(data: dict) -> str:\n    if \"data\" in data and \"message\" in data[\"data\"]:\n        return data[\"data\"][\"message\"]\n    raise ValueError(\"Invalid envelope format\")\n",
+      "test_code": "import solution\n\ndef test_v2_envelope():\n    assert solution.parse_envelope({\"data\": {\"message\": \"hello\"}}) == \"hello\"\n\ndef test_legacy_v1_regression():\n    assert solution.parse_envelope({\"msg\": \"legacy_hello\"}) == \"legacy_hello\"\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-13",
+      "defect_id": "PILOT-DEF-09",
+      "has_defect": true,
+      "expected_category": "regression",
+      "expected_cwe_id": null,
+      "expected_line_number": 4,
+      "mutation_operator": "Backward-compatibility parser branch deletion (msg field omitted)",
+      "original_clean_source": "if \"msg\" in data: return data[\"msg\"]",
+      "mutated_source": "# legacy branch omitted",
+      "expected_behavioral_failure": "ValueError: Invalid envelope format on legacy v1 payload",
+      "ground_truth_rationale": "Deleting backward-compatible parsing logic causes regressions on existing clients",
+      "test_oracle": "pytest regression test validating legacy v1 envelope payload",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": false
+    },
+    "checksum": "fa1ec960ce5fdecc362a8f002fbff458dfd66af48d0680ef30b64648f8587c7f"
+  },
+  {
+    "scenario_id": "PILOT-SC-14",
+    "scenario_group": "semantic_drift",
+    "name": "Assertion Weakening Test Suite Drift",
+    "input_data": {
+      "scenario_id": "PILOT-SC-14",
+      "name": "Assertion Weakening Test Suite Drift",
+      "filename": "solution.py",
+      "module_code": "def calculate_tax(amount: float, rate: float) -> float:\n    return round(amount + rate, 2)\n",
+      "test_code": "import solution\n\ndef test_calculate_tax():\n    res = solution.calculate_tax(100.0, 0.15)\n    assert res is not None\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": "import solution\n\ndef test_calculate_tax():\n    res = solution.calculate_tax(100.0, 0.15)\n    assert res == 15.0, f\"Expected 15.0, got {res}\"\n    assert isinstance(res, float)\n",
+      "candidate_test_code": "import solution\n\ndef test_calculate_tax():\n    res = solution.calculate_tax(100.0, 0.15)\n    assert res is not None\n",
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-14",
+      "defect_id": "PILOT-DEF-10",
+      "has_defect": true,
+      "expected_category": "semantic_drift",
+      "expected_cwe_id": null,
+      "expected_line_number": 2,
+      "mutation_operator": "Test assertion weakening (assert res == 15.0 weakened to assert res is not None)",
+      "original_clean_source": "return round(amount * rate, 2)",
+      "mutated_source": "return round(amount + rate, 2)",
+      "expected_behavioral_failure": "Semantic test suite drift: exact equality assertion replaced with trivial existence check",
+      "ground_truth_rationale": "Weakened test assertion allows defective addition logic to pass conventional CI",
+      "test_oracle": "AST semantic drift diff detector comparing original vs candidate test suite",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": true
+    },
+    "checksum": "c94c901e56b9166094aae9ef968970675013d1eb9a45ed5571edd7ed450e9e92"
+  },
+  {
+    "scenario_id": "PILOT-SC-15",
+    "scenario_group": "semantic_drift",
+    "name": "Critical Edge Case Test Deletion Drift",
+    "input_data": {
+      "scenario_id": "PILOT-SC-15",
+      "name": "Critical Edge Case Test Deletion Drift",
+      "filename": "solution.py",
+      "module_code": "def parse_percentage(val_str: str) -> float:\n    return float(val_str.rstrip(\"%\")) / 100.0\n",
+      "test_code": "import solution\n\ndef test_parse_valid():\n    assert solution.parse_percentage(\"25%\") == 0.25\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": "import solution\n\ndef test_parse_valid():\n    assert solution.parse_percentage(\"25%\") == 0.25\n\ndef test_parse_empty_boundary():\n    try:\n        solution.parse_percentage(\"\")\n        assert False, \"Expected ValueError\"\n    except (ValueError, IndexError):\n        pass\n",
+      "candidate_test_code": "import solution\n\ndef test_parse_valid():\n    assert solution.parse_percentage(\"25%\") == 0.25\n",
+      "repair_candidate_patches": null,
+      "is_repair_loop_scenario": false,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-15",
+      "defect_id": "PILOT-DEF-11",
+      "has_defect": true,
+      "expected_category": "semantic_drift",
+      "expected_cwe_id": null,
+      "expected_line_number": 2,
+      "mutation_operator": "Test function deletion (test_parse_empty_boundary deleted from suite)",
+      "original_clean_source": "if not val_str: raise ValueError('Empty string'); return float(val_str.rstrip('%')) / 100.0",
+      "mutated_source": "return float(val_str.rstrip('%')) / 100.0",
+      "expected_behavioral_failure": "Semantic test suite drift: boundary test deleted to conceal missing input validation",
+      "ground_truth_rationale": "Deleting boundary tests conceals defects from raw pytest runners",
+      "test_oracle": "AST semantic drift diff detector flagging deleted test function",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": false,
+      "has_semantic_drift": true
+    },
+    "checksum": "bb4d987909fbbc54783bc20cce34c1a152fc032807d91379aa25a623a9e1de21"
+  },
+  {
+    "scenario_id": "PILOT-SC-16",
+    "scenario_group": "non_convergent_by_design",
+    "name": "Contradictory Specification Multi-Turn Repair Oscillation",
+    "input_data": {
+      "scenario_id": "PILOT-SC-16",
+      "name": "Contradictory Specification Multi-Turn Repair Oscillation",
+      "filename": "solution.py",
+      "module_code": "def process_flag(mode: str) -> str:\n    return \"MODE_A\"\n",
+      "test_code": "import solution\n\ndef test_rule_alpha():\n    assert solution.process_flag(\"auto\") == \"MODE_ALPHA\"\n\ndef test_rule_beta():\n    assert solution.process_flag(\"auto\") == \"MODE_BETA\"\n",
+      "requested_test_types": [
+        "unit"
+      ],
+      "original_test_code": null,
+      "candidate_test_code": null,
+      "repair_candidate_patches": [
+        "def process_flag(mode: str) -> str:\n    return \"MODE_ALPHA\"\n",
+        "def process_flag(mode: str) -> str:\n    return \"MODE_BETA\"\n",
+        "def process_flag(mode: str) -> str:\n    return \"MODE_ALPHA\"\n"
+      ],
+      "is_repair_loop_scenario": true,
+      "requirement_ids": [
+        "REQ-PILOT-01"
+      ]
+    },
+    "ground_truth": {
+      "scenario_id": "PILOT-SC-16",
+      "defect_id": "PILOT-DEF-12",
+      "has_defect": true,
+      "expected_category": "non_convergent_by_design",
+      "expected_cwe_id": null,
+      "expected_line_number": 2,
+      "mutation_operator": "Mutually exclusive contradictory assertion injection",
+      "original_clean_source": "def process_flag(mode: str) -> str: return \"MODE_ALPHA\"",
+      "mutated_source": "def process_flag(mode: str) -> str: return \"MODE_A\"",
+      "expected_behavioral_failure": "Non-convergent repair oscillation: alternating patches cannot satisfy mutually exclusive assertions",
+      "ground_truth_rationale": "Repair harness detects infinite cycling or contradictory test failures and triggers governance escalation",
+      "test_oracle": "Controlled repair loop harness detecting repeated patch cycles and non-convergence",
+      "fixture_version": "1.0.0",
+      "is_non_convergent_by_design": true,
+      "has_semantic_drift": false
+    },
+    "checksum": "eaa133ba0f367138ab05e426aba494b723eb2a915546e55ab16dc3671abd99f2"
+  }
+]

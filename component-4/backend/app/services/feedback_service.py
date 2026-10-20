@@ -270,6 +270,29 @@ class TechnicalFeedbackService:
             if (t.status.value if hasattr(t.status, "value") else str(t.status)) in ("FAILED", "ERROR", "TIMEOUT")
         ]
 
+        # Defect categories, source locations, and machine repair guidance
+        defect_categories = sorted(list({d.defect_category for d in defect_reports if d.defect_category}))
+        source_locations = [
+            {
+                "defect_id": d.defect_id,
+                "file": d.file_path or "solution.py",
+                "line": d.line_number,
+                "confidence": d.confidence or "HIGH",
+                "provenance": d.provenance or "TRACEBACK",
+            }
+            for d in defect_reports
+        ]
+        machine_repair_guidance = [
+            {
+                "defect_id": d.defect_id,
+                "suggested_fix": d.suggested_fix,
+                "defect_category": d.defect_category,
+                "line_number": d.line_number,
+            }
+            for d in defect_reports
+            if d.suggested_fix
+        ]
+
         payload = TechnicalFeedbackPayload(
             feedback_id=feedback_id,
             verification_run_id=run.id,
@@ -283,6 +306,9 @@ class TechnicalFeedbackService:
             test_failure_details=test_failure_details,
             defect_ids=defect_ids,
             evidence_references=evidence_references,
+            defect_categories=defect_categories,
+            source_locations=source_locations,
+            machine_repair_guidance=machine_repair_guidance,
             generated_at=datetime.now(timezone.utc),
             schema_version=self.SCHEMA_VERSION,
         )

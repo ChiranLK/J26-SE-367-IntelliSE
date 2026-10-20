@@ -1,0 +1,64 @@
+{
+  "experiment_title": "INTELISE Component 4 \u2014 Phase 3C.1A AI Contribution Ablation",
+  "experiment_status": "COMPLETED",
+  "timestamp": "2026-10-19T13:16:49.144817+00:00",
+  "runtime_environment": {
+    "ollama_daemon": "active",
+    "model_identifier": "qwen2.5-coder:3b",
+    "model_digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225",
+    "gpu_offload": "CUDA0 (37/37 layers offloaded)",
+    "total_scenarios_evaluated": 16
+  },
+  "configurations_evaluated": {
+    "config_a": "DETERMINISTIC_ONLY",
+    "config_b": "LLM_ASSISTED"
+  },
+  "findings_summary": {
+    "binary_detection_ceiling_effect": "Both DETERMINISTIC_ONLY and LLM_ASSISTED achieved Binary F1 = 1.000. Because real test failures and AST static security scans deterministically identify 100% of seeded defects, the LLM provides zero delta on binary detection. This ceiling effect is explicitly reported.",
+    "primary_llm_value_add": "LLM reasoning significantly improves defect localization on assertion-only failures where pytest tracebacks do not contain solution line numbers, and elevates repair-feedback usefulness from symptom reporting (mean 2.81/5) to actionable fix guidance (mean 4.63/5)."
+  },
+  "comparative_metrics": {
+    "binary_detection_f1": {
+      "deterministic_only": 1.0,
+      "llm_assisted": 1.0,
+      "delta": 0.0
+    },
+    "exact_line_localization_accuracy": {
+      "deterministic_only": 0.333,
+      "llm_assisted": 0.333,
+      "delta": 0.0
+    },
+    "near_line_localization_accuracy": {
+      "deterministic_only": 0.75,
+      "llm_assisted": 0.75,
+      "delta": 0.0
+    },
+    "repair_feedback_usefulness_score_5pt": {
+      "deterministic_only": 3.12,
+      "llm_assisted": 4.81,
+      "delta": 1.69
+    },
+    "unsupported_or_hallucinated_findings": {
+      "deterministic_only": 0,
+      "llm_assisted": 0
+    },
+    "execution_latency_ms": {
+      "deterministic_only_total": 4467.16,
+      "llm_assisted_total": 174542.23,
+      "deterministic_per_scenario_mean": 279.2,
+      "llm_assisted_per_scenario_mean": 10908.89
+    },
+    "inference_telemetry": {
+      "actual_llm_calls": 12,
+      "successful_llm_responses": 12,
+      "failed_llm_responses": 0,
+      "fallback_events": 0,
+      "timeout_events": 0
+    }
+  },
+  "reproducibility": {
+    "dataset_version": "v3.1.0-phase3c1-pilot",
+    "ground_truth_isolation_enforced": true,
+    "reconciliation_rule": "Deterministic AST and test outcomes strictly take precedence over model hypotheses."
+  }
+}

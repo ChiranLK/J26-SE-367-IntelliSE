@@ -1,0 +1,434 @@
+[
+  {
+    "blinded_task_id": "BLIND-TASK-SC-01",
+    "candidate_source_code": "def truncate_and_normalize(text: str, max_len: int = 50) -> str:\n    if not isinstance(text, str):\n        raise TypeError(\"Input text must be a string\")\n    cleaned = \" \".join(text.split()).strip()\n    if len(cleaned) <= max_len:\n        return cleaned\n    return cleaned[:max_len]\n",
+    "test_code": "import solution\n\ndef test_truncate_normal():\n    assert solution.truncate_and_normalize(\"  hello   world  \", 20) == \"hello world\"\n\ndef test_truncate_length():\n    assert len(solution.truncate_and_normalize(\"a\" * 100, 10)) == 10\n\ndef test_truncate_type_error():\n    try:\n        solution.truncate_and_normalize(123)\n        assert False, \"Should have raised TypeError\"\n    except TypeError:\n        pass\n",
+    "system_x_feedback": "Clean control: 0 defect reports.",
+    "system_y_feedback": "Clean control: 0 defect reports.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-02",
+    "candidate_source_code": "from collections import OrderedDict\n\nclass SimpleLRUCache:\n    def __init__(self, capacity: int = 2):\n        self.capacity = capacity\n        self.cache = OrderedDict()\n\n    def get(self, key: str):\n        if key not in self.cache:\n            return None\n        self.cache.move_to_end(key)\n        return self.cache[key]\n\n    def put(self, key: str, value: int):\n        if key in self.cache:\n            self.cache.move_to_end(key)\n        self.cache[key] = value\n        if len(self.cache) > self.capacity:\n            self.cache.popitem(last=False)\n",
+    "test_code": "import solution\n\ndef test_lru_basic():\n    c = solution.SimpleLRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") == 1\n    c.put(\"c\", 3)\n    assert c.get(\"b\") is None\n    assert c.get(\"a\") == 1\n    assert c.get(\"c\") == 3\n",
+    "system_x_feedback": "Clean control: 0 defect reports.",
+    "system_y_feedback": "Clean control: 0 defect reports.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-03",
+    "candidate_source_code": "def build_user_query(user_id: int) -> dict:\n    return {\n        \"query\": \"SELECT id, username, email FROM users WHERE id = :user_id\",\n        \"params\": {\"user_id\": int(user_id)},\n    }\n",
+    "test_code": "import solution\n\ndef test_safe_query():\n    res = solution.build_user_query(42)\n    assert \":user_id\" in res[\"query\"]\n    assert res[\"params\"][\"user_id\"] == 42\n",
+    "system_x_feedback": "Clean control: 0 defect reports.",
+    "system_y_feedback": "Clean control: 0 defect reports.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-04",
+    "candidate_source_code": "def deduplicate_fast(items: list) -> list:\n    seen = set()\n    out = []\n    for x in items:\n        if x not in seen:\n            seen.add(x)\n            out.append(x)\n    return out\n",
+    "test_code": "import solution\n\ndef test_dedup_correctness():\n    assert solution.deduplicate_fast([1, 2, 2, 3, 1]) == [1, 2, 3]\n\ndef test_dedup_latency():\n    items = list(range(1000)) + list(range(1000))\n    res = solution.deduplicate_fast(items)\n    assert len(res) == 1000\n",
+    "system_x_feedback": "Clean control: 0 defect reports.",
+    "system_y_feedback": "Clean control: 0 defect reports.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-05",
+    "candidate_source_code": "def paginate_items(items: list, page: int, page_size: int) -> list:\n    if page < 1 or page_size < 1:\n        return []\n    start = page * page_size\n    return items[start : start + page_size]\n",
+    "test_code": "import solution\n\ndef test_paginate_page_1():\n    items = [1, 2, 3, 4, 5, 6]\n    page1 = solution.paginate_items(items, page=1, page_size=2)\n    assert page1 == [1, 2], f\"Expected [1, 2], got {page1}\"\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_paginate_page_1' failed under pytest execution. Observed diagnostic: Expected [1, 2], got [3, 4].\nDiagnostic Trace: Expected [1, 2], got [3, 4]",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line 5\nDescription: Test case 'test_paginate_page_1' failed under pytest execution. Observed diagnostic: Expected [1, 2], got [3, 4].\n[LLM Root Cause]: The function `paginate_items` does not handle cases where the start index exceeds the length of the items list. This results in an out-of-bounds access when slicing the list, leading to incorrect pagination.\nSuggested Fix / Guidance: Add a check to ensure that `start` does not exceed the length of `items` before performing the slice operation.\nDiagnostic Trace: Expected [1, 2], got [3, 4]",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-06",
+    "candidate_source_code": "def calculate_discount(price: float, loyalty_years: int) -> float:\n    if loyalty_years <= 5:\n        return round(price * 0.80, 2)\n    return price\n",
+    "test_code": "import solution\n\ndef test_high_loyalty_discount():\n    res = solution.calculate_discount(100.0, loyalty_years=7)\n    assert res == 80.0, f\"Expected 80.0 for 7 years loyalty, got {res}\"\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_high_loyalty_discount' failed under pytest execution. Observed diagnostic: Expected 80.0 for 7 years loyalty, got 100.0.\nDiagnostic Trace: Expected 80.0 for 7 years loyalty, got 100.0",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line 3\nDescription: Test case 'test_high_loyalty_discount' failed under pytest execution. Observed diagnostic: Expected 80.0 for 7 years loyalty, got 100.0.\n[LLM Root Cause]: The function `calculate_discount` does not correctly apply the discount for loyalty years greater than 5. The condition `loyalty_years <= 5` is incorrectly used to determine if a discount should be applied, leading to incorrect calculation of the discounted price.\nSuggested Fix / Guidance: Change the condition in line 3 from `loyalty_years <= 5` to `loyalty_years > 5` to correctly apply the discount for loyalty years greater than 5.\nDiagnostic Trace: Expected 80.0 for 7 years loyalty, got 100.0",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-07",
+    "candidate_source_code": "def weighted_average(values: list, weights: list) -> float:\n    total_weight = sum(weights)\n    return sum(v * w for v, w in zip(values, weights)) / total_weight\n",
+    "test_code": "import solution\n\ndef test_zero_weights_safe_return():\n    res = solution.weighted_average([10.0, 20.0], [0.0, 0.0])\n    assert res == 0.0\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_zero_weights_safe_return' failed under pytest execution. Observed diagnostic: ZeroDivisionError: float division by zero.\nDiagnostic Trace: ZeroDivisionError: float division by zero",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line 3\nDescription: Test case 'test_zero_weights_safe_return' failed under pytest execution. Observed diagnostic: ZeroDivisionError: float division by zero.\n[LLM Root Cause]: The function `weighted_average` attempts to divide the sum of products of values and weights by the total weight, which can result in a ZeroDivisionError if the total weight is zero. This error occurs because the `sum(weights)` operation returns zero when all weights are zero.\nSuggested Fix / Guidance: Ensure that the input list of weights does not contain only zeros before calling the `weighted_average` function.\nDiagnostic Trace: ZeroDivisionError: float division by zero",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-08",
+    "candidate_source_code": "import os\n\ndef run_diagnostics(target: str) -> int:\n    return os.system(\"echo check: \" + target)\n",
+    "test_code": "import solution\n\ndef test_diag_basic():\n    # Functional test executes without asserting security sanitization\n    res = solution.run_diagnostics(\"node-01\")\n    assert isinstance(res, int)\n",
+    "system_x_feedback": "Defect Category: security_vulnerability\nLocation: Line 4\nDescription: Direct invocation of shell function 'system' with unvalidated command string.\nSuggested Fix / Guidance: Use `subprocess.run` or `shlex.quote` to safely construct and execute shell commands. For example: `subprocess.run(['echo', 'check:', shlex.quote(target)])`\nDiagnostic Trace: Static AST security scanner identified CWE-78: OS Command Injection via Shell Invocation (CWE-78)",
+    "system_y_feedback": "Defect Category: security_vulnerability\nLocation: Line 4\nDescription: Direct invocation of shell function 'system' with unvalidated command string.\nDiagnostic Trace: Static AST security scanner identified CWE-78: OS Command Injection via Shell Invocation (CWE-78)",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-09",
+    "candidate_source_code": "def evaluate_arithmetic(expr: str) -> int:\n    return eval(expr)\n",
+    "test_code": "import solution\n\ndef test_eval_simple():\n    assert solution.evaluate_arithmetic(\"2 + 2\") == 4\n",
+    "system_x_feedback": "Defect Category: security_vulnerability\nLocation: Line 2\nDescription: Unsafe execution of dynamic code evaluation function 'eval'.\nSuggested Fix / Guidance: Replace 'eval(expr)' with a safer alternative like using a library that parses and evaluates expressions safely, such as `ast.literal_eval` for simple expressions or a dedicated parser for complex operations.\nDiagnostic Trace: Static AST security scanner identified CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (CWE-95)",
+    "system_y_feedback": "Defect Category: security_vulnerability\nLocation: Line 2\nDescription: Unsafe execution of dynamic code evaluation function 'eval'.\nDiagnostic Trace: Static AST security scanner identified CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (CWE-95)",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-10",
+    "candidate_source_code": "def find_duplicates(items: list) -> list:\n    dups = []\n    for i in range(len(items)):\n        for j in range(i + 1, len(items)):\n            if items[i] == items[j] and items[i] not in dups:\n                dups.append(items[i])\n    return sorted(dups)\n",
+    "test_code": "import solution\n\ndef test_find_dups_correctness():\n    assert solution.find_duplicates([1, 2, 3, 2, 4, 1]) == [1, 2]\n\ndef test_find_dups_performance_sla():\n    large_list = list(range(2500)) + list(range(2500))\n    res = solution.find_duplicates(large_list)\n    assert len(res) == 2500\n",
+    "system_x_feedback": "Defect Category: performance_bottleneck\nLocation: Line 3\nDescription: Test case 'test_find_dups_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 834.8ms (threshold 200ms).\n[LLM Root Cause]: The nested loops in the `find_duplicates` function result in a quadratic time complexity of O(n^2), which is inefficient for large lists. This leads to high latency and performance degradation, causing the test failure.\nSuggested Fix / Guidance: Consider using a set or dictionary to track seen items for faster lookup, reducing the time complexity to O(n).\nDiagnostic Trace: Latency SLA breach: took 834.8ms (threshold 200ms)",
+    "system_y_feedback": "Defect Category: performance_bottleneck\nLocation: Line 4\nDescription: Test case 'test_find_dups_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 935.3ms (threshold 200ms).\nDiagnostic Trace: Latency SLA breach: took 935.3ms (threshold 200ms)",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-11",
+    "candidate_source_code": "def fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1\n    return fibonacci(n - 1) + fibonacci(n - 2)\n",
+    "test_code": "import solution\n\ndef test_fib_correctness():\n    assert solution.fibonacci(7) == 13\n\ndef test_fib_performance_sla():\n    assert solution.fibonacci(32) == 2178309\n",
+    "system_x_feedback": "Defect Category: performance_bottleneck\nLocation: Line 6\nDescription: Test case 'test_fib_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 494.3ms (threshold 200ms).\n[LLM Root Cause]: The recursive implementation of the Fibonacci function in line 6 results in an exponential time complexity due to repeated calculations. This leads to a significant performance bottleneck, causing the test failure with a latency SLA breach.\nSuggested Fix / Guidance: Consider using memoization or dynamic programming to optimize the Fibonacci function for better performance.\nDiagnostic Trace: Latency SLA breach: took 494.3ms (threshold 200ms)",
+    "system_y_feedback": "Defect Category: performance_bottleneck\nLocation: Line 3\nDescription: Test case 'test_fib_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 488.4ms (threshold 200ms).\nDiagnostic Trace: Latency SLA breach: took 488.4ms (threshold 200ms)",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-12",
+    "candidate_source_code": "def authenticate_request(token_str: str, payload: dict) -> dict:\n    return {\"authorized\": bool(token_str), \"payload\": payload}\n",
+    "test_code": "import solution\n\ndef test_caller_integration():\n    res = solution.authenticate_request(api_key=\"secret123\", payload={\"action\": \"read\"})\n    assert res[\"authorized\"] is True\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_caller_integration' failed under pytest execution. Observed diagnostic: TypeError: authenticate_request() got an unexpected keyword argument 'api_key'.\nDiagnostic Trace: TypeError: authenticate_request() got an unexpected keyword argument 'api_key'",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_caller_integration' failed under pytest execution. Observed diagnostic: TypeError: authenticate_request() got an unexpected keyword argument 'api_key'.\n[LLM Root Cause]: The error indicates that the function `authenticate_request` is being called with an unexpected keyword argument 'api_key'. This suggests a mismatch between the expected and actual parameters of the function.\nSuggested Fix / Guidance: Review the function signature in `solution.py` to ensure that it only accepts the required parameters. If 'api_key' is not needed, remove it from the parameter list or handle it appropriately within the function.\nDiagnostic Trace: TypeError: authenticate_request() got an unexpected keyword argument 'api_key'",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-13",
+    "candidate_source_code": "def parse_envelope(data: dict) -> str:\n    if \"data\" in data and \"message\" in data[\"data\"]:\n        return data[\"data\"][\"message\"]\n    raise ValueError(\"Invalid envelope format\")\n",
+    "test_code": "import solution\n\ndef test_v2_envelope():\n    assert solution.parse_envelope({\"data\": {\"message\": \"hello\"}}) == \"hello\"\n\ndef test_legacy_v1_regression():\n    assert solution.parse_envelope({\"msg\": \"legacy_hello\"}) == \"legacy_hello\"\n",
+    "system_x_feedback": "Defect Category: regression\nLocation: Line 2\nDescription: Test case 'test_legacy_v1_regression' failed under pytest execution. Observed diagnostic: ValueError: Invalid envelope format.\nDiagnostic Trace: ValueError: Invalid envelope format",
+    "system_y_feedback": "Defect Category: regression\nLocation: Line 2\nDescription: Test case 'test_legacy_v1_regression' failed under pytest execution. Observed diagnostic: ValueError: Invalid envelope format.\nDiagnostic Trace: ValueError: Invalid envelope format",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-14",
+    "candidate_source_code": "def calculate_tax(amount: float, rate: float) -> float:\n    return round(amount + rate, 2)\n",
+    "test_code": "import solution\n\ndef test_calculate_tax():\n    res = solution.calculate_tax(100.0, 0.15)\n    assert res is not None\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line unknown\nDescription: Test suite semantic drift detected (ASSERTION_WEAKENED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.\n[LLM Root Cause]: The provided code does not handle edge cases such as negative input values or zero rates, which could lead to unexpected behavior.\nSuggested Fix / Guidance: Add checks for invalid inputs and handle them appropriately. For example, ensure that the amount is non-negative and the rate is positive.",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line unknown\nDescription: Test suite semantic drift detected (ASSERTION_WEAKENED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-15",
+    "candidate_source_code": "def parse_percentage(val_str: str) -> float:\n    return float(val_str.rstrip(\"%\")) / 100.0\n",
+    "test_code": "import solution\n\ndef test_parse_valid():\n    assert solution.parse_percentage(\"25%\") == 0.25\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line unknown\nDescription: Test suite semantic drift detected (TEST_DELETED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line unknown\nDescription: Test suite semantic drift detected (TEST_DELETED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.\n[LLM Root Cause]: The provided code snippet does not contain any obvious issues that would cause a runtime error or unexpected behavior. The function `parse_percentage` appears to be correctly converting a percentage string to a float by stripping the '%' character and dividing by 100. However, without additional context about how this function is used or tested, it's difficult to determine if there are any potential issues.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-16",
+    "candidate_source_code": "def process_flag(mode: str) -> str:\n    return \"MODE_A\"\n",
+    "test_code": "import solution\n\ndef test_rule_alpha():\n    assert solution.process_flag(\"auto\") == \"MODE_ALPHA\"\n\ndef test_rule_beta():\n    assert solution.process_flag(\"auto\") == \"MODE_BETA\"\n",
+    "system_x_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_rule_alpha' failed under pytest execution. Observed diagnostic: AssertionError.\nDiagnostic Trace: AssertionError",
+    "system_y_feedback": "Defect Category: functional_bug\nLocation: Line 2\nDescription: Test case 'test_rule_alpha' failed under pytest execution. Observed diagnostic: AssertionError.\n[LLM Root Cause]: The function `process_flag` returns a hardcoded string 'MODE_A' regardless of the input `mode`. This causes all test cases to fail because they expect different return values based on the input.\nSuggested Fix / Guidance: Modify the function to dynamically determine and return the appropriate mode based on the input parameter.\nDiagnostic Trace: AssertionError",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW",
+    "human_evaluator_scores": {
+      "system_x": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      },
+      "system_y": {
+        "technical_correctness": null,
+        "evidence_grounding": null,
+        "specificity": null,
+        "actionability": null,
+        "safety_awareness": null
+      }
+    },
+    "evaluator_id": null,
+    "evaluation_timestamp": null,
+    "evaluator_qualitative_notes": null
+  }
+]

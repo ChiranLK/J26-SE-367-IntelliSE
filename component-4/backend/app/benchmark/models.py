@@ -111,3 +111,4 @@ class BenchmarkEvaluationSummary(BaseModel):
     # Provenance and Limitations
     provenance_summary: Optional[Dict[str, Any]] = Field(default=None, description="Execution provenance and environment metadata")
     explicit_limitations: Optional[List[str]] = Field(default=None, description="Methodological boundaries and empirical limits")
+    scenarios: Optional[List[Dict[str, Any]]] = Field(default=None, description="Scenario-level observation records")

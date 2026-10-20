@@ -1,0 +1,15 @@
+{
+  "release": "Phase 3C.1 Pilot Benchmark",
+  "version": "v3.1.0-phase3c1-pilot",
+  "description": "Reproducible machine-readable pilot benchmark dataset, execution observations, and evaluation metrics",
+  "files": {
+    "pilot_scenarios.json": {
+      "sha256": "a6ed17a6cd535db3782e6d52a5b9847e1cd15052369272cd446abb1f25971dbb",
+      "size_bytes": 32483
+    },
+    "pilot_evaluation_results.json": {
+      "sha256": "952c4f231985dbe73f0d808f4f4cf9a1474431771b6bef49becb202c32279cb2",
+      "size_bytes": 36884
+    }
+  }
+}

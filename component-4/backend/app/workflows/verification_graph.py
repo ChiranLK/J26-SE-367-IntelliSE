@@ -9,8 +9,11 @@ from app.schemas.feedback import FeedbackIteration, TechnicalFeedbackPayload
 from app.schemas.test_result import TestResult
 from app.services.agent_testing_service import TestCoordinationService
 from app.services.defect_analysis_service import DefectAnalysisService
+from app.services.defect_reconciliation_service import DefectReconciliationService
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
 from app.services.feedback_service import TechnicalFeedbackService
+from app.services.llm_defect_reasoning_agent import LLMDefectReasoningAgent
+from app.schemas.llm_defect_reasoning import LLMReasoningInput
 
 
 class VerificationWorkflowState(TypedDict, total=False):
@@ -25,6 +28,11 @@ class VerificationWorkflowState(TypedDict, total=False):
     trusted_test_cases: Optional[str]
     timeout_seconds: Optional[int]
     requested_test_types: Optional[List[str]]
+
+    # Research evaluation mode: "DETERMINISTIC_ONLY" or "LLM_ASSISTED"
+    evaluation_mode: Optional[str]
+    llm_defect_hypotheses: Optional[List[Dict[str, Any]]]
+    ai_contribution: Optional[Dict[str, Any]]
 
     # Flow evaluation flags
     is_supported: bool
@@ -230,6 +238,95 @@ def analyze_defects_node(state: VerificationWorkflowState) -> Dict[str, Any]:
     return updates
 
 
+async def reason_defects_with_llm_node(state: VerificationWorkflowState) -> Dict[str, Any]:
+    """Node 4.5: Evaluates defects with LLMDefectReasoningAgent and reconciles findings."""
+    eval_mode = (state.get("evaluation_mode") or "LLM_ASSISTED").upper()
+    source_code = state.get("source_code") or ""
+    filename = state.get("filename") or "solution.py"
+    defect_reports = state.get("defect_reports") or []
+    test_results = state.get("test_results") or []
+    telemetry = state.get("telemetry") or {}
+    status_str = state.get("status", "")
+
+    reconciliation_svc = DefectReconciliationService()
+
+    # If verification PASSED or ERROR due to infrastructure, or DETERMINISTIC_ONLY mode requested
+    if eval_mode == "DETERMINISTIC_ONLY" or status_str in (VerificationStatus.PASSED.value, VerificationStatus.ERROR.value):
+        reconciled, ai_telemetry, guidance = reconciliation_svc.reconcile(
+            deterministic_defects=defect_reports,
+            llm_hypothesis=None,
+            candidate_code=source_code,
+            evaluation_mode=eval_mode,
+            telemetry=telemetry,
+        )
+        return {
+            "defect_reports": reconciled,
+            "telemetry": {**telemetry, "ai_contribution": ai_telemetry.model_dump()},
+            "ai_contribution": ai_telemetry.model_dump(),
+        }
+
+    # Gather permitted evidence only
+    failure_msgs = []
+    stack_traces = []
+    catalog = {}
+    ev_idx = 0
+
+    for tr in test_results:
+        status_val = tr.status.value if hasattr(tr.status, "value") else str(tr.status)
+        if status_val in ("FAILED", "ERROR", "TIMEOUT"):
+            ev_id = f"ev_test_{ev_idx}"
+            ev_idx += 1
+            msg = tr.error_message or f"Test {tr.name} failed"
+            failure_msgs.append(f"{tr.name}: {msg}")
+            catalog[ev_id] = f"Test failure in {tr.name}: {msg}"
+            if tr.stack_trace:
+                stack_traces.append(tr.stack_trace)
+
+    sec_findings = []
+    for d in defect_reports:
+        if d.cwe_id:
+            sec_ev_id = f"ev_sec_{ev_idx}"
+            ev_idx += 1
+            sec_desc = f"{d.cwe_id} ({d.title}) line {d.line_number}"
+            catalog[sec_ev_id] = sec_desc
+            sec_findings.append({
+                "cwe_id": d.cwe_id,
+                "title": d.title,
+                "line_number": d.line_number,
+                "severity": d.severity.value if hasattr(d.severity, "value") else str(d.severity),
+            })
+
+    reasoning_input = LLMReasoningInput(
+        candidate_source_code=source_code,
+        filename=filename,
+        unit_test_failure_messages=failure_msgs,
+        integration_test_failure_messages=[],
+        performance_observations=telemetry.get("performance_metrics"),
+        ast_security_findings=sec_findings,
+        semantic_drift_evidence=telemetry.get("semantic_drift"),
+        relevant_stack_traces=stack_traces,
+        evidence_catalog=catalog,
+    )
+
+    reasoning_agent = LLMDefectReasoningAgent()
+    hypothesis = await reasoning_agent.reason_defects(reasoning_input)
+
+    reconciled, ai_telemetry, guidance = reconciliation_svc.reconcile(
+        deterministic_defects=defect_reports,
+        llm_hypothesis=hypothesis,
+        candidate_code=source_code,
+        evaluation_mode=eval_mode,
+        telemetry=telemetry,
+    )
+
+    return {
+        "defect_reports": reconciled,
+        "llm_defect_hypotheses": [hypothesis.model_dump()],
+        "telemetry": {**telemetry, "ai_contribution": ai_telemetry.model_dump()},
+        "ai_contribution": ai_telemetry.model_dump(),
+    }
+
+
 def prepare_technical_feedback_node(state: VerificationWorkflowState) -> Dict[str, Any]:
     """Node 5: Prepares structured technical feedback package for Component 3 if eligible."""
     status_str = state.get("status", "")
@@ -302,6 +399,7 @@ def build_verification_graph():
     workflow.add_node("check_docker", check_docker_node)
     workflow.add_node("execute_tests", execute_tests_node)
     workflow.add_node("analyze_defects", analyze_defects_node)
+    workflow.add_node("reason_defects_with_llm", reason_defects_with_llm_node)
     workflow.add_node("prepare_technical_feedback", prepare_technical_feedback_node)
 
     # Define edges and conditional transitions
@@ -316,7 +414,8 @@ def build_verification_graph():
         },
     )
     workflow.add_edge("execute_tests", "analyze_defects")
-    workflow.add_edge("analyze_defects", "prepare_technical_feedback")
+    workflow.add_edge("analyze_defects", "reason_defects_with_llm")
+    workflow.add_edge("reason_defects_with_llm", "prepare_technical_feedback")
     workflow.add_edge("prepare_technical_feedback", END)
 
     return workflow.compile()

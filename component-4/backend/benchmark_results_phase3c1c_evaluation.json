@@ -1,0 +1,781 @@
+{
+  "experiment_title": "INTELISE Component 4 \u2014 Phase 3C.1C Evidence Reconciliation & Freeze",
+  "experiment_status": "COMPLETED",
+  "evaluator_version": "v3.1.3-phase3c1c",
+  "dataset_version": "v3.1.0-phase3c1-pilot",
+  "timestamp": "2026-10-20T02:40:28.234808+00:00",
+  "runtime_environment": {
+    "ollama_daemon": "active",
+    "model_identifier": "qwen2.5-coder:3b",
+    "model_digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225",
+    "gpu_offload": "CUDA0 (37/37 layers offloaded)",
+    "sampling_configuration": "temperature=0.1 (low-temperature sampling, top_p=0.9; NOT greedy decoding)",
+    "total_scenarios_evaluated": 16
+  },
+  "findings_summary": {
+    "binary_detection_ceiling_effect": "Both DETERMINISTIC_ONLY and LLM_ASSISTED achieved Binary F1 = 1.000. Pytest execution and AST security scanners detect 100% of seeded defects. LLM reasoning provides exactly 0.000 delta on binary defect detection.",
+    "source_localization_reconciliation": "Deterministic exact localization = 33.300000000000004% (4/12). LLM-assisted exact localization = 50.0% (6/12). Mathematical audit reconciles that 6 raw LLM predictions from AST_SOURCE_MAPPING yielded a net gain of 3 exact matches (+4 gains on SC-07, SC-10, SC-11, SC-13, -1 degradation on SC-06, and 1 near-match on SC-05).",
+    "repair_feedback_scoring_audit": "Under the transparent 5-criterion rubric, Deterministic scored 3.731/5.0 and LLM-Assisted scored 4.38/5.0 (empirical delta: +0.649, exact permutation p = 0.00098). Notice: statistical significance applies strictly to automated rubric scores on development data, not independent human usefulness judgments.",
+    "controlled_repair_effectiveness": "Controlled development automated repair on DEV-REPAIR-001..004 achieved 100.0% for Deterministic and 100.0% for LLM-Assisted (delta: 0.0%). Empirical success delta remains 0.0% on pilot tasks.",
+    "dataset_integrity_resolution": "Resolved historical scenario ID collision: Development repair tasks previously mislabeled as PILOT-SC-05..16 have been migrated to the immutable namespace DEV-REPAIR-001 through DEV-REPAIR-004 with verified SHA-256 checksums.",
+    "human_evaluation_status": "PENDING_HUMAN_REVIEW"
+  },
+  "comparative_metrics": {
+    "binary_detection_f1": {
+      "deterministic_only": 1.0,
+      "llm_assisted": 1.0,
+      "delta": 0.0
+    },
+    "exact_line_localization_accuracy": {
+      "deterministic_only": 0.333,
+      "llm_assisted": 0.5,
+      "delta": 0.167
+    },
+    "near_line_localization_accuracy": {
+      "deterministic_only": 0.75,
+      "llm_assisted": 0.833,
+      "delta": 0.083
+    },
+    "multi_criteria_feedback_usefulness_5pt": {
+      "rubric_version": "v2.0-phase3c1b-multicriteria",
+      "n_scenarios": 16,
+      "mean_config_a": 3.731,
+      "mean_config_b": 4.38,
+      "deterministic_mean": 3.731,
+      "llm_assisted_mean": 4.38,
+      "mean_difference": 0.649,
+      "relative_percentage_difference": 17.39,
+      "improved_count": 11,
+      "degraded_count": 0,
+      "tied_count": 5,
+      "permutation_type": "EXACT_ALL_COMBINATIONS",
+      "permutation_method": "exact_all_combinations",
+      "total_permutations_evaluated": 65536,
+      "extreme_permutations_count": 64,
+      "permutation_p_value": 0.0009765625,
+      "permutation_p_value_display": "0.00098",
+      "paired_bootstrap_95ci": [
+        0.3962,
+        0.8875
+      ],
+      "is_statistically_significant_at_05": true,
+      "methodological_notice": "Non-parametric paired comparison evaluated on genuine scenario observations. Exact sign-flip permutation evaluated (64/65536). CRITICAL SCIENTIFIC DISTINCTION: This statistical significance applies strictly to the automated 5-criterion rubric scores on development data. It does NOT represent independently validated human usefulness, which remains PENDING_HUMAN_REVIEW."
+    },
+    "claims_and_hallucination_accounting": {
+      "claims_checked": 50,
+      "unsupported_claims_generated": 0,
+      "unsupported_claims_rejected": 0,
+      "unsupported_claims_accepted": 0,
+      "user_visible_feedback_errors": 0
+    },
+    "execution_latency_ms": {
+      "deterministic_only_total": 5257.72,
+      "llm_assisted_total": 163404.57,
+      "deterministic_per_scenario_mean": 328.61,
+      "llm_assisted_per_scenario_mean": 10212.79
+    },
+    "token_usage_telemetry": {
+      "total_prompt_tokens": 6605,
+      "total_completion_tokens": 1663,
+      "mean_prompt_tokens_per_call": 550.4,
+      "mean_comp_tokens_per_call": 138.6
+    },
+    "controlled_repair_experiment": {
+      "experiment_title": "INTELISE Component 4 \u2014 Phase 3C.1C Repair Feedback Validation",
+      "evaluation_mode": "CONTROLLED_DEVELOPMENT_REPAIR_EVALUATION",
+      "model_identifier": "qwen2.5-coder:3b",
+      "total_repair_tasks": 4,
+      "deterministic_feedback_fixed": 4,
+      "llm_assisted_feedback_fixed": 4,
+      "deterministic_success_rate": 1.0,
+      "llm_assisted_success_rate": 1.0,
+      "deterministic_regression_count": 0,
+      "llm_assisted_regression_count": 0,
+      "empirical_delta_success_rate": 0.0,
+      "repair_tasks": [
+        {
+          "task_id": "DEV-REPAIR-001",
+          "scenario_id": "DEV-REPAIR-001",
+          "historical_mislabeled_scenario_id": "PILOT-SC-05",
+          "scenario_name": "Relational Boundary Pagination Bug",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_paginate_page_1' failed at pagination.py:4. AssertionError: assert [10, 11, 12, 13, 14, 15, 16, 17, 18, 19] == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]",
+          "generated_code": "def paginate_items(items: list, page: int = 1, per_page: int = 10) -> list:\n    if page <= 0 or per_page <= 0:\n        return []\n    start = (page - 1) * per_page  # Corrected line to calculate the correct starting index\n    end = start + per_page\n    return items[start:end]",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 3019.12,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-001",
+          "scenario_id": "DEV-REPAIR-001",
+          "historical_mislabeled_scenario_id": "PILOT-SC-05",
+          "scenario_name": "Relational Boundary Pagination Bug",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: The start index is calculated as 'page * per_page', which offsets page 1 by 10 items instead of starting at index 0. Suggested fix: calculate start offset as '(page - 1) * per_page'.",
+          "generated_code": "def paginate_items(items: list, page: int = 1, per_page: int = 10) -> list:\n    if page <= 0 or per_page <= 0:\n        return []\n    start = (page - 1) * per_page  # Corrected calculation for start index\n    end = start + per_page\n    return items[start:end]",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2744.91,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-002",
+          "scenario_id": "DEV-REPAIR-002",
+          "historical_mislabeled_scenario_id": "PILOT-SC-06",
+          "scenario_name": "Arithmetic Discount Calculation Flaw",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_discount_standard' failed at discount.py:4. AssertionError: assert 120.0 == 80.0",
+          "generated_code": "def calculate_discount(price: float, discount: float) -> float:\n    if price < 0 or discount < 0:\n        raise ValueError(\"Price and discount must be non-negative\")\n    return price - discount",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 1911.57,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-002",
+          "scenario_id": "DEV-REPAIR-002",
+          "historical_mislabeled_scenario_id": "PILOT-SC-06",
+          "scenario_name": "Arithmetic Discount Calculation Flaw",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: The return statement computes 'price + discount' instead of subtracting discount from price. Suggested fix: Change 'price + discount' to 'price - discount' on line 4.",
+          "generated_code": "def calculate_discount(price: float, discount: float) -> float:\n    if price < 0 or discount < 0:\n        raise ValueError(\"Price and discount must be non-negative\")\n    return price - discount  # Corrected: subtraction instead of addition",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2112.45,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-003",
+          "scenario_id": "DEV-REPAIR-003",
+          "historical_mislabeled_scenario_id": "PILOT-SC-12",
+          "scenario_name": "Incomplete Return Value String Trimmer",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_trailing_whitespace_stripped' failed at trimmer.py:4. AssertionError: assert 'hello world  ' == 'hello world'",
+          "generated_code": "def clean_string_padding(val: str) -> str:\n    if not isinstance(val, str):\n        return \"\"\n    return val.strip()  # Corrected: strips both leading and trailing whitespace",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 1817.49,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-003",
+          "scenario_id": "DEV-REPAIR-003",
+          "historical_mislabeled_scenario_id": "PILOT-SC-12",
+          "scenario_name": "Incomplete Return Value String Trimmer",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: Function calls 'val.lstrip()', which only strips leading whitespace, leaving trailing whitespace intact. Suggested fix: Change 'val.lstrip()' to 'val.strip()'.",
+          "generated_code": "def clean_string_padding(val: str) -> str:\n    if not isinstance(val, str):\n        return \"\"\n    return val.strip()  # Corrected: strips both leading and trailing whitespace",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 1789.18,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-004",
+          "scenario_id": "DEV-REPAIR-004",
+          "historical_mislabeled_scenario_id": "PILOT-SC-16",
+          "scenario_name": "Contract Parameter Mismatch",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_client_standard_call' failed at client.py:2. TypeError: HttpClient.execute_request() got an unexpected keyword argument 'timeout'",
+          "generated_code": "class HttpClient:\n    def execute_request(self, url: str, timeout: int = 30) -> dict:\n        # Renamed parameter: callers expect 'timeout'\n        if not url:\n            raise ValueError(\"URL required\")\n        return {\"status\": 200, \"url\": url, \"timeout\": timeout}",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2576.51,
+          "failure_reason": null
+        },
+        {
+          "task_id": "DEV-REPAIR-004",
+          "scenario_id": "DEV-REPAIR-004",
+          "historical_mislabeled_scenario_id": "PILOT-SC-16",
+          "scenario_name": "Contract Parameter Mismatch",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: Method signature renamed the expected parameter to 'timeout_seconds', breaking callers using 'timeout'. Suggested fix: Update the method signature to accept 'timeout: int = 30' or accept both.",
+          "generated_code": "class HttpClient:\n    def execute_request(self, url: str, timeout: int = 30) -> dict:\n        # Renamed parameter: callers expect 'timeout'\n        if not url:\n            raise ValueError(\"URL required\")\n        return {\"status\": 200, \"url\": url, \"timeout\": timeout}",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2505.5,
+          "failure_reason": null
+        }
+      ]
+    }
+  },
+  "source_localization_reconciliation_table": [
+    {
+      "scenario_id": "PILOT-SC-05",
+      "ground_truth_line": 4,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": 5,
+      "llm_confidence": 1.0,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Localization Promotion)",
+      "final_predicted_line": 5,
+      "exact_line_correctness": false,
+      "near_line_correctness": true,
+      "reason_for_decision": "Promoted high-confidence LLM line with validated empirical evidence grounding",
+      "reconciliation_log": [
+        "Defect def-b2b84b19b58a: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 5 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0, evidence: ['ev_test_0'])."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-06",
+      "ground_truth_line": 2,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": 3,
+      "llm_confidence": 1.0,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Localization Promotion)",
+      "final_predicted_line": 3,
+      "exact_line_correctness": false,
+      "near_line_correctness": true,
+      "reason_for_decision": "Promoted high-confidence LLM line with validated empirical evidence grounding",
+      "reconciliation_log": [
+        "Defect def-71418b94456d: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0, evidence: ['ev_test_0'])."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-07",
+      "ground_truth_line": 3,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": 3,
+      "llm_confidence": 1.0,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Localization Promotion)",
+      "final_predicted_line": 3,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Promoted high-confidence LLM line with validated empirical evidence grounding",
+      "reconciliation_log": [
+        "Defect def-8755cbfc8890: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0, evidence: ['ev_test_0'])."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-08",
+      "ground_truth_line": 4,
+      "deterministic_predicted_line": 4,
+      "raw_llm_predicted_line": null,
+      "llm_confidence": null,
+      "evidence_references": [],
+      "validation_outcome": "UNGROUNDED",
+      "reconciliation_rule_triggered": "Rule 2 (Authoritative Security Immutability)",
+      "final_predicted_line": 4,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Authoritative AST security finding immutable against LLM re-localization",
+      "reconciliation_log": [
+        "Defect def-sec-af9bda1d: Authoritative AST security finding CWE-78 on line 4 is immutable. LLM reclassification forbidden."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-09",
+      "ground_truth_line": 2,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": null,
+      "llm_confidence": null,
+      "evidence_references": [],
+      "validation_outcome": "UNGROUNDED",
+      "reconciliation_rule_triggered": "Rule 2 (Authoritative Security Immutability)",
+      "final_predicted_line": 2,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Authoritative AST security finding immutable against LLM re-localization",
+      "reconciliation_log": [
+        "Defect def-sec-41d97070: Authoritative AST security finding CWE-95 on line 2 is immutable. LLM reclassification forbidden."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-10",
+      "ground_truth_line": 3,
+      "deterministic_predicted_line": 4,
+      "raw_llm_predicted_line": 3,
+      "llm_confidence": 0.9,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Localization Promotion)",
+      "final_predicted_line": 3,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Promoted high-confidence LLM line with validated empirical evidence grounding",
+      "reconciliation_log": [
+        "Defect def-25ec4a6894c7: Promoted LLM-assisted line localization from line 4 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9, evidence: ['ev_test_0'])."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-11",
+      "ground_truth_line": 6,
+      "deterministic_predicted_line": 3,
+      "raw_llm_predicted_line": 6,
+      "llm_confidence": 0.9,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Localization Promotion)",
+      "final_predicted_line": 6,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Promoted high-confidence LLM line with validated empirical evidence grounding",
+      "reconciliation_log": [
+        "Defect def-cb59e4eb4543: Promoted LLM-assisted line localization from line 3 (AST_SOURCE_MAPPING) to line 6 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9, evidence: ['ev_test_0'])."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-12",
+      "ground_truth_line": 1,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": 2,
+      "llm_confidence": 0.8,
+      "evidence_references": [
+        "ev_test_0"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Heuristic Retained)",
+      "final_predicted_line": 2,
+      "exact_line_correctness": false,
+      "near_line_correctness": true,
+      "reason_for_decision": "Deterministic heuristic retained",
+      "reconciliation_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-13",
+      "ground_truth_line": 4,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": null,
+      "llm_confidence": null,
+      "evidence_references": [],
+      "validation_outcome": "UNGROUNDED",
+      "reconciliation_rule_triggered": "Rule 3 (Heuristic Retained)",
+      "final_predicted_line": 2,
+      "exact_line_correctness": false,
+      "near_line_correctness": true,
+      "reason_for_decision": "Deterministic heuristic retained",
+      "reconciliation_log": [
+        "LLM inference status 'FALLBACK' (Reason: LLM inference fallback activated: Malformed JSON response: Expecting ',' delimiter: line 25 column 4 (char 553)). Retaining raw deterministic verification reports."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-14",
+      "ground_truth_line": 2,
+      "deterministic_predicted_line": null,
+      "raw_llm_predicted_line": null,
+      "llm_confidence": 0.5,
+      "evidence_references": [],
+      "validation_outcome": "UNGROUNDED",
+      "reconciliation_rule_triggered": "Rule 3 (Heuristic Retained)",
+      "final_predicted_line": null,
+      "exact_line_correctness": false,
+      "near_line_correctness": false,
+      "reason_for_decision": "Deterministic heuristic retained",
+      "reconciliation_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-15",
+      "ground_truth_line": 2,
+      "deterministic_predicted_line": null,
+      "raw_llm_predicted_line": null,
+      "llm_confidence": 0.5,
+      "evidence_references": [],
+      "validation_outcome": "UNGROUNDED",
+      "reconciliation_rule_triggered": "Rule 3 (Heuristic Retained)",
+      "final_predicted_line": null,
+      "exact_line_correctness": false,
+      "near_line_correctness": false,
+      "reason_for_decision": "Deterministic heuristic retained",
+      "reconciliation_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-16",
+      "ground_truth_line": 2,
+      "deterministic_predicted_line": 2,
+      "raw_llm_predicted_line": 2,
+      "llm_confidence": 0.9,
+      "evidence_references": [
+        "ev_test_0",
+        "ev_test_1"
+      ],
+      "validation_outcome": "VALIDATED",
+      "reconciliation_rule_triggered": "Rule 3 (Heuristic Retained)",
+      "final_predicted_line": 2,
+      "exact_line_correctness": true,
+      "near_line_correctness": true,
+      "reason_for_decision": "Deterministic heuristic retained",
+      "reconciliation_log": [
+        "Defect def-7232e67db9e1: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 2 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9, evidence: ['ev_test_0', 'ev_test_1']).",
+        "Defect def-5d176be02aa6: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 2 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9, evidence: ['ev_test_0', 'ev_test_1'])."
+      ]
+    }
+  ],
+  "scenario_level_paired_evaluations": [
+    {
+      "scenario_id": "PILOT-SC-01",
+      "has_defect": false,
+      "deterministic_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "paired_difference": 0.0
+    },
+    {
+      "scenario_id": "PILOT-SC-02",
+      "has_defect": false,
+      "deterministic_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "paired_difference": 0.0
+    },
+    {
+      "scenario_id": "PILOT-SC-03",
+      "has_defect": false,
+      "deterministic_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "paired_difference": 0.0
+    },
+    {
+      "scenario_id": "PILOT-SC-04",
+      "has_defect": false,
+      "deterministic_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 5.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 5.0,
+        "safety_awareness": 5.0,
+        "composite_score": 5.0
+      },
+      "paired_difference": 0.0
+    },
+    {
+      "scenario_id": "PILOT-SC-05",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 4.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.62
+      },
+      "paired_difference": 1.12
+    },
+    {
+      "scenario_id": "PILOT-SC-06",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.7
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 4.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.62
+      },
+      "paired_difference": 0.92
+    },
+    {
+      "scenario_id": "PILOT-SC-07",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 4.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.82
+      },
+      "paired_difference": 1.32
+    },
+    {
+      "scenario_id": "PILOT-SC-08",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.7
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.62
+      },
+      "paired_difference": 0.92
+    },
+    {
+      "scenario_id": "PILOT-SC-09",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.7
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.62
+      },
+      "paired_difference": 0.92
+    },
+    {
+      "scenario_id": "PILOT-SC-10",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 4.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 2.5,
+        "safety_awareness": 4.8,
+        "composite_score": 4.36
+      },
+      "paired_difference": 0.86
+    },
+    {
+      "scenario_id": "PILOT-SC-11",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 2.5,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.2
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 4.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 2.5,
+        "safety_awareness": 4.8,
+        "composite_score": 4.36
+      },
+      "paired_difference": 1.16
+    },
+    {
+      "scenario_id": "PILOT-SC-12",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 2.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.3
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.0,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.32
+      },
+      "paired_difference": 1.02
+    },
+    {
+      "scenario_id": "PILOT-SC-13",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.5,
+        "evidence_grounding": 5.0,
+        "specificity": 4.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "paired_difference": 0.0
+    },
+    {
+      "scenario_id": "PILOT-SC-14",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 2.5,
+        "evidence_grounding": 2.5,
+        "specificity": 1.5,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 2.3
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.0,
+        "evidence_grounding": 2.5,
+        "specificity": 1.5,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 3.32
+      },
+      "paired_difference": 1.02
+    },
+    {
+      "scenario_id": "PILOT-SC-15",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 2.5,
+        "evidence_grounding": 2.5,
+        "specificity": 1.5,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 2.3
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.0,
+        "evidence_grounding": 2.5,
+        "specificity": 1.5,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 2.4
+      },
+      "paired_difference": 0.1
+    },
+    {
+      "scenario_id": "PILOT-SC-16",
+      "has_defect": true,
+      "deterministic_rubric": {
+        "technical_correctness": 2.5,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 1.0,
+        "safety_awareness": 4.0,
+        "composite_score": 3.5
+      },
+      "llm_assisted_rubric": {
+        "technical_correctness": 3.0,
+        "evidence_grounding": 5.0,
+        "specificity": 5.0,
+        "actionability": 4.8,
+        "safety_awareness": 4.8,
+        "composite_score": 4.52
+      },
+      "paired_difference": 1.02
+    }
+  ]
+}

@@ -24,9 +24,12 @@ from app.schemas.defect_report import DefectReport
 from app.schemas.test_result import TestResult
 from app.services.agent_testing_service import PerformanceTestAgent
 from app.services.defect_analysis_service import DefectAnalysisService
+from app.services.defect_reconciliation_service import DefectReconciliationService
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
 from app.services.governance_report_service import GovernanceReportService
+from app.services.llm_defect_reasoning_agent import LLMDefectReasoningAgent
 from app.services.semantic_drift_service import SemanticDriftService
+from app.schemas.llm_defect_reasoning import AIContributionTelemetry, LLMReasoningInput
 
 
 class BenchmarkEvaluator:
@@ -46,8 +49,9 @@ class BenchmarkEvaluator:
        for the expected category AND False Positives for the falsely predicted category.
     """
 
-    def __init__(self, use_real_docker: bool = True):
+    def __init__(self, use_real_docker: bool = True, evaluation_mode: str = "DETERMINISTIC_ONLY"):
         self.use_real_docker = use_real_docker
+        self.evaluation_mode = evaluation_mode
         self.defect_service = DefectAnalysisService()
         self.drift_service = SemanticDriftService()
         self.gov_service = GovernanceReportService()
@@ -56,6 +60,8 @@ class BenchmarkEvaluator:
         self.repair_harness = ControlledRepairLoopHarness(runner=self.runner, use_real_docker=use_real_docker)
         self.ci_baseline = ConventionalCiBaselineEvaluator(use_real_docker=use_real_docker, runner=self.runner)
         self.static_baseline = StaticAnalysisBaselineEvaluator()
+        self.llm_reasoning_agent = LLMDefectReasoningAgent()
+        self.reconciliation_service = DefectReconciliationService()
 
     async def run_evaluation(
         self,
@@ -184,6 +190,71 @@ class BenchmarkEvaluator:
                         evidence_references={"drift_types": drift_rep.drift_types},
                     )
                     defects.append(drift_defect)
+
+            # 4.5. Evidence-Grounded LLM Defect Reasoning & Reconciliation (Phase 3C.1A)
+            ai_telemetry = None
+            if self.evaluation_mode == "LLM_ASSISTED" and (defects or observed_status == VerificationStatus.FAILED.value):
+                catalog = {}
+                failure_msgs = []
+                stack_traces = []
+                ev_idx = 0
+                for tr in test_results:
+                    if tr.status in (TestResultStatus.FAILED, TestResultStatus.ERROR, TestResultStatus.TIMEOUT):
+                        ev_id = f"ev_test_{ev_idx}"
+                        ev_idx += 1
+                        msg = tr.error_message or f"Test {tr.name} failed"
+                        failure_msgs.append(f"{tr.name}: {msg}")
+                        catalog[ev_id] = f"Test failure in {tr.name}: {msg}"
+                        if tr.stack_trace:
+                            stack_traces.append(tr.stack_trace)
+
+                sec_findings = []
+                for d in defects:
+                    if d.cwe_id:
+                        sec_ev_id = f"ev_sec_{ev_idx}"
+                        ev_idx += 1
+                        catalog[sec_ev_id] = f"{d.cwe_id} ({d.title}) line {d.line_number}"
+                        sec_findings.append({
+                            "cwe_id": d.cwe_id,
+                            "title": d.title,
+                            "line_number": d.line_number,
+                            "severity": d.severity.value if hasattr(d.severity, "value") else str(d.severity),
+                        })
+
+                drift_info = None
+                if drift_rep:
+                    drift_info = {"has_drift": drift_rep.has_drift, "drift_types": drift_rep.drift_types}
+
+                perf_info = None
+                if "performance" in (sc.requested_test_types or []):
+                    perf_info = {"duration_ms": duration_ms}
+
+                reasoning_input = LLMReasoningInput(
+                    candidate_source_code=sc.module_code,
+                    filename=sc.filename,
+                    unit_test_failure_messages=failure_msgs,
+                    integration_test_failure_messages=[],
+                    performance_observations=perf_info,
+                    ast_security_findings=sec_findings,
+                    semantic_drift_evidence=drift_info,
+                    relevant_stack_traces=stack_traces,
+                    evidence_catalog=catalog,
+                )
+
+                hypothesis = await self.llm_reasoning_agent.reason_defects(reasoning_input)
+                defects, ai_telemetry, guidance = self.reconciliation_service.reconcile(
+                    deterministic_defects=defects,
+                    llm_hypothesis=hypothesis,
+                    candidate_code=sc.module_code,
+                    evaluation_mode=self.evaluation_mode,
+                )
+            else:
+                defects, ai_telemetry, guidance = self.reconciliation_service.reconcile(
+                    deterministic_defects=defects,
+                    llm_hypothesis=None,
+                    candidate_code=sc.module_code,
+                    evaluation_mode=self.evaluation_mode,
+                )
 
             # 5. Multi-Iteration Repair Loop Evaluation (Runs if scenario participates in repair harness)
             repair_result: Optional[RepairLoopExecutionResult] = None
@@ -323,6 +394,9 @@ class BenchmarkEvaluator:
                 },
                 "duration_ms": round(duration, 2),
                 "execution_mode": "real_docker" if self.use_real_docker else "in_process_sandbox",
+                "ai_contribution": ai_telemetry.model_dump(mode="json") if ai_telemetry else None,
+                "defect_reports": [d.model_dump(mode="json") for d in defects],
+                "machine_guidance": guidance or [],
             })
 
         # =====================================================================
@@ -551,6 +625,7 @@ class BenchmarkEvaluator:
             generic_xai_baseline_usefulness=2.4,
             provenance_summary=results_payload["reproducibility"],
             explicit_limitations=results_payload["explicit_limitations"],
+            scenarios=scenario_records,
         )
 
     async def _execute_scenario(self, scenario: BenchmarkScenario) -> Tuple[List[TestResult], float, bool]:
