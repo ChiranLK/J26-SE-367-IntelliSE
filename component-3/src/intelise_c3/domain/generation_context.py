@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SerializerFunctionWrapHandler, model_serializer
 
 
 class DomainModel(BaseModel):
@@ -33,6 +33,15 @@ class NormalizedRequirement(DomainModel):
     requirement_id: str
     title: str
     approval_status: Literal["APPROVED"]
+    requirement_type: Literal["FR", "NFR"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_requirement_type(self, handler: SerializerFunctionWrapHandler) -> dict:
+        # Omitted while None so digests of legacy contexts are unchanged.
+        data = handler(self)
+        if self.requirement_type is None:
+            data.pop("requirement_type", None)
+        return data
 
 
 class NormalizedUmlElement(DomainModel):

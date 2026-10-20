@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import pytest
+from fastapi.testclient import TestClient
 
 from intelise_c3.contracts.provisional_input import ProvisionalInputPackage
 from intelise_c3.core.errors import ApplicationError
@@ -132,6 +133,16 @@ def test_parser_extracts_ids_text_and_category_verbatim() -> None:
     assert parsed[0].text == "User shall be able to add two numbers."
     assert parsed[7].text == "The calculator shall support 100 concurrent users."
     assert {item.review_state for item in parsed} == {"Unreviewed model prediction"}
+
+
+def test_import_emits_requirement_type_from_report_header(tmp_path: Path) -> None:
+    output = tmp_path / "c1.json"
+    assert _run(import_c1, _import_args(output)) == 0
+
+    document = json.loads(output.read_text(encoding="utf-8"))
+    assert [item["requirement_type"] for item in document["requirements"]] == (
+        ["FR"] * 5 + ["NFR"] * 3
+    )
 
 
 def test_default_import_is_draft_and_rejected_by_validation(tmp_path: Path) -> None:
@@ -291,3 +302,47 @@ def test_scripts_run_as_real_commands(tmp_path: Path) -> None:
 
     assert completed.returncode == 0, completed.stderr
     assert json.loads(output.read_text(encoding="utf-8"))["approval_status"] == "DRAFT"
+
+
+def test_calculator_design_coverage_with_real_fixtures(
+    tmp_path: Path, client: TestClient
+) -> None:
+    anchors = tmp_path / "anchors.json"
+    anchors.write_text(
+        json.dumps(
+            {
+                REAL_IDS[0]: ["Addition"],
+                REAL_IDS[1]: ["Subtraction"],
+                REAL_IDS[2]: ["Multiplication"],
+                REAL_IDS[3]: ["Division"],
+                REAL_IDS[4]: ["Calculator"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    c1_path, c2_path = tmp_path / "c1.json", tmp_path / "c2.json"
+    assert _run(import_c1, _import_args(c1_path, *APPROVE_FLAGS)) == 0
+    assert _run(build_c2, _c2_args(c2_path, anchors)) == 0
+    context = InputValidationService().validate(_package(c1_path, c2_path))
+
+    response = client.post(
+        "/api/v1/design-coverage", json=context.model_dump(mode="json")
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["totals"] == {
+        "frs_anchored": 5,
+        "frs_unanchored": 0,
+        "nfrs": 3,
+        "uml_anchored": 5,
+        "uml_extra": 4,
+    }
+    statuses = Counter(item["status"] for item in body["requirements"])
+    assert statuses == {"ANCHORED": 5, "NFR_NOT_APPLICABLE": 3}
+    extra = {i["name"] for i in body["uml_elements"] if i["status"] == "EXTRA_NO_REQUIREMENT"}
+    assert extra == {"Operation", "Calculation", "CalculationStatus", "History"}
+    anchored = {i["name"] for i in body["uml_elements"] if i["status"] == "ANCHORED"}
+    assert anchored == {"Addition", "Subtraction", "Multiplication", "Division", "Calculator"}
+    assert "UML-DIAGRAM-CLASS" not in {i["uml_id"] for i in body["uml_elements"]}
+    assert {d["code"] for d in body["diagnostics"]} == {"UML_ELEMENT_WITHOUT_REQUIREMENT"}

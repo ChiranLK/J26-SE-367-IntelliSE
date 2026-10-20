@@ -295,6 +295,7 @@ class InputValidationService:
                     requirement_id=requirement.requirement_id,
                     title=requirement.title,
                     approval_status="APPROVED",
+                    requirement_type=requirement.requirement_type,
                 )
                 for requirement in package.c1.requirements
             ),

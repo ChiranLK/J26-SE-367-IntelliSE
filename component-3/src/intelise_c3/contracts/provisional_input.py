@@ -7,7 +7,7 @@ schemas before production integration.
 """
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,6 +42,9 @@ class C1Requirement(ProvisionalContractModel):
     requirement_id: Identifier
     title: NonEmptyText
     status: C1ApprovalStatus
+    # Optional functional/non-functional classification. None keeps the legacy
+    # behaviour (every requirement needs a UML anchor).
+    requirement_type: Literal["FR", "NFR"] | None = None
 
 
 class C1ApprovedSRS(ProvisionalContractModel):

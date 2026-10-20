@@ -141,7 +141,10 @@ def build_c1_document(
         validation_report_ref=validation_report_ref or NOT_PROVIDED,
         requirements=tuple(
             C1Requirement(
-                requirement_id=item.requirement_id, title=item.text, status=state
+                requirement_id=item.requirement_id,
+                title=item.text,
+                status=state,
+                requirement_type=item.category,
             )
             for item in requirements
         ),

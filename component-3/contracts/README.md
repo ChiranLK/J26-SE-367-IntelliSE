@@ -22,6 +22,10 @@ replace them before real integration.
 - C1 may carry an optional `design_uml_version_ref`. When present, C2's `uml_version`
   must equal it, otherwise validation fails with 409 `UML_VERSION_MISMATCH`. A blank
   C2 `uml_version` is also reported as `UML_VERSION_MISMATCH`.
+- A C1 requirement may carry an optional `requirement_type` of `FR` or `NFR`.
+  `None` (absent) keeps the legacy behaviour: the requirement needs a C2 UML
+  anchor for code generation. `NFR` requirements may be unanchored; `FR` ones
+  may not. The value is passed through to `GenerationContext` unchanged.
 - Identifiers use letters, digits, dots, underscores, colons, and hyphens.
 - Reference strings are opaque and are preserved; Component 3 does not resolve
   them or establish their authenticity.

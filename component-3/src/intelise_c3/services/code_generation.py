@@ -521,7 +521,12 @@ class CodeGenerationService:
                 )
             )
 
-        requirement_ids = {item.requirement_id for item in design.requirements}
+        # NFRs may be unanchored; FR and untyped (legacy) requirements may not.
+        requirement_ids = {
+            item.requirement_id
+            for item in design.requirements
+            if item.requirement_type != "NFR"
+        }
         anchored_ids = {
             anchor.requirement_id for anchor in design.requirement_uml_anchors
         }
