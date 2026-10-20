@@ -32,6 +32,9 @@ KEEP_ALIVE = "30m"
 # Upper limit for the answer, so a model that starts repeating itself cannot run forever.
 MAX_ANSWER_TOKENS = 1500
 
+# Set the random seed for reproducible results.
+SEED = 42
+
 
 
 

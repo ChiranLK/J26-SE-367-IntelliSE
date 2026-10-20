@@ -1,0 +1,27 @@
+Simple Calculator App - Software Requirements Specification
+
+1. Introduction
+The Simple Calculator App lets a user do basic maths with two numbers
+and keeps a history of past calculations.
+
+2. User Roles
+User
+
+3. Functional Requirements
+FR-01: The system shall let a user enter two numbers.
+FR-02: The system shall let a user choose an operation (add, subtract, multiply or divide).
+FR-03: The system shall let a user calculate the result. To calculate the result,
+       the user must enter two numbers.
+FR-04: If the user divides by zero, the system shall show an error message.
+FR-05: The system shall let a user view the calculation history.
+FR-06: The system shall let a user clear the calculation history.
+
+4. Data Requirements
+DR-01: Operation is an abstract class with a symbol.
+DR-02: Addition, Subtraction, Multiplication and Division are kinds of Operation.
+DR-03: A Calculation has a first number, a second number and a result.
+DR-04: The status of a calculation is one of: SUCCESS, ERROR.
+DR-05: Each calculation uses one operation; an operation can be used in many calculations.
+DR-06: A History has a total count. A history has many calculations;
+       each calculation belongs to one history.
+DR-07: A Calculator has a display value. A calculator has one history.
