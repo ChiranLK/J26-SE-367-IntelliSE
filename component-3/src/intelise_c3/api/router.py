@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from intelise_c3.api.routes.c4_intake import router as c4_intake_router
 from intelise_c3.api.routes.demo import router as demo_router
 from intelise_c3.api.routes.design_selection import router as design_selection_router
+from intelise_c3.api.routes.experiments import router as experiments_router
 from intelise_c3.api.routes.generation import router as generation_router
 from intelise_c3.api.routes.health import router as health_router
 from intelise_c3.api.routes.input_validation import router as input_validation_router
@@ -24,3 +25,4 @@ api_router.include_router(structural_verification_router)
 api_router.include_router(scoped_regeneration_router)
 api_router.include_router(c4_intake_router)
 api_router.include_router(demo_router)
+api_router.include_router(experiments_router)

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request, status
 
 from intelise_c3.contracts.generation import CodeGenerationRequest, GenerationMode
-from intelise_c3.core.errors import ErrorResponse
+from intelise_c3.core.errors import ApplicationError, ErrorDetail, ErrorResponse
 from intelise_c3.domain.generation import GenerationRunResult
 from intelise_c3.llm.ollama import OllamaLLMClient
 from intelise_c3.rag.runtime import RagRuntime
@@ -46,6 +46,22 @@ async def create_generation_run(
     request: Request,
 ) -> GenerationRunResult:
     """Generate without running, installing, building, or deploying artifacts."""
+    if generation_request.mode is GenerationMode.EXPERIMENTAL_CLAUDE:
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="EXPERIMENTAL_MODE_REJECTED",
+                    field="mode",
+                    message=(
+                        "Experimental Claude generation is forbidden on the default "
+                        "research endpoint /api/v1/generation-runs. Use the dedicated "
+                        "experimental endpoint /api/v1/experiments/claude-generation."
+                    ),
+                )
+            ],
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     settings = request.app.state.settings
     llm_client = (
         OllamaLLMClient(settings)

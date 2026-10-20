@@ -67,6 +67,39 @@ class Settings(BaseSettings):
         min_length=1,
         description="Local sentence-transformers model used only by the Chroma backend.",
     )
+    teamsoclo_experiment_enabled: bool = Field(
+        default=False,
+        description="Explicit gate enabling the experimental TeamSocLo Claude workflow.",
+    )
+    teamsoclo_api_key: str | None = Field(
+        default=None,
+        description="TeamSocLo API key loaded securely from the environment.",
+    )
+    teamsoclo_base_url: AnyHttpUrl = Field(
+        default="https://gpt.teamsoclo.site",
+        description="Base URL of the experimental TeamSocLo gateway.",
+    )
+    teamsoclo_model: str = Field(
+        default="claude-haiku-4-5",
+        min_length=1,
+        description="Model identifier for experimental Claude inference.",
+    )
+    teamsoclo_timeout_seconds: float = Field(
+        default=120.0,
+        gt=0.0,
+        le=600.0,
+        description="Timeout for experimental TeamSocLo requests in seconds.",
+    )
+
+    @field_validator("teamsoclo_model")
+    @classmethod
+    def normalize_teamsoclo_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("TEAMSOCLO_MODEL must not be blank.")
+        if normalized.lower() in {"haiku-4.5", "claude-haiku-4.5"}:
+            return "claude-haiku-4-5"
+        return normalized
 
     @field_validator("ollama_base_url")
     @classmethod

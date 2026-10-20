@@ -39,11 +39,12 @@ class LLMInferenceRequest(DomainModel):
 
 
 class LLMGenerationParameters(DomainModel):
-    """Effective parameters recorded with each local inference result."""
+    """Effective parameters recorded with each inference result."""
 
     temperature: float
-    num_ctx: int
+    num_ctx: int | None = None
     timeout_seconds: float
+    max_tokens: int | None = None
 
 
 class OllamaResponseMetadata(DomainModel):
@@ -60,16 +61,27 @@ class OllamaResponseMetadata(DomainModel):
     eval_duration_ns: int | None = None
 
 
-class LLMInferenceMetadata(DomainModel):
-    """Reproducibility record for a local-only Ollama request."""
+class TeamSocLoResponseMetadata(DomainModel):
+    """Non-sensitive response statistics returned by TeamSocLo Claude gateway."""
 
-    provider: Literal["ollama-local"] = "ollama-local"
+    id: str | None = None
+    model: str
+    stop_reason: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+class LLMInferenceMetadata(DomainModel):
+    """Reproducibility record for an LLM inference request."""
+
+    provider: Literal["ollama-local", "teamsoclo-claude"] = "ollama-local"
     configured_model_identifier: str
     response_model_identifier: str
     prompt_template_version: str
     generation_parameters: LLMGenerationParameters
     client_inference_latency_ms: float
-    response: OllamaResponseMetadata
+    response: OllamaResponseMetadata | TeamSocLoResponseMetadata
 
 
 class LLMInferenceResponse(DomainModel):

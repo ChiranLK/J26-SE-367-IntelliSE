@@ -15,6 +15,7 @@ from intelise_c3.domain.llm import LLMInferenceMetadata
 class ArtifactOrigin(StrEnum):
     TEMPLATE = "TEMPLATE"
     LOCAL_LLM = "LOCAL_LLM"
+    EXPERIMENTAL_CLAUDE = "EXPERIMENTAL_CLAUDE"
 
 
 class GeneratedArtifactType(StrEnum):
