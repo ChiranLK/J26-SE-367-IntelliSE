@@ -85,6 +85,18 @@ class TechnicalFeedbackPayload(BaseModel):
         default_factory=dict,
         description="Deterministic references to execution telemetry (total tests, exit code, duration)",
     )
+    defect_categories: List[str] = Field(
+        default_factory=list,
+        description="Defect taxonomy categories identified across verified defects",
+    )
+    source_locations: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Source localization details: file, line, confidence, provenance",
+    )
+    machine_repair_guidance: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Machine-readable repair guidance items identified separately from confirmed execution evidence",
+    )
     generated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp when technical feedback payload was generated",

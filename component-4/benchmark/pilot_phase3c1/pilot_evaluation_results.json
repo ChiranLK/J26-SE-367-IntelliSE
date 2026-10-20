@@ -1,0 +1,992 @@
+{
+  "evaluation_title": "INTELISE Component 4 \u2014 Phase 3C.1 Pilot Benchmark Results",
+  "dataset_version": "v3.1.0-phase3c1-pilot",
+  "timestamp": "2026-10-19T12:00:58.428799+00:00",
+  "total_scenarios": 16,
+  "clean_controls_count": 4,
+  "seeded_defects_count": 12,
+  "evaluation_mode": "in_process_sandbox",
+  "llm_telemetry": {
+    "model_identifier": "qwen2.5-coder:3b",
+    "base_url": "http://127.0.0.1:11434",
+    "configured_enabled": true,
+    "daemon_connected": false,
+    "models_available": [],
+    "status_message": "Cannot connect to Ollama at http://127.0.0.1:11434: All connection attempts failed",
+    "actual_inference_invocations_in_detection": 0,
+    "detection_mechanism": "deterministic_multi_agent_ast_and_dynamic_pytest",
+    "xai_explanation_provider": "ollama_inference_v1 (with deterministic fallback)"
+  },
+  "metrics": {
+    "component4": {
+      "true_positives": 12,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    },
+    "conventional_ci": {
+      "true_positives": 6,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 6,
+      "accuracy": 0.625,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667
+    },
+    "static_analysis": {
+      "true_positives": 2,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 10,
+      "accuracy": 0.375,
+      "precision": 1.0,
+      "recall": 0.1667,
+      "f1_score": 0.2857
+    }
+  },
+  "paired_statistical_comparison": {
+    "component4_vs_conventional_ci": {
+      "is_empirical": true,
+      "table": {
+        "both_correct_a": 10,
+        "c4_only_b": 6,
+        "ci_only_c": 0,
+        "both_incorrect_d": 0,
+        "total": 16
+      },
+      "mcnemar": {
+        "discordant_pairs": 6,
+        "p_value_exact_binomial": 0.0312,
+        "is_significant_at_05": true
+      },
+      "bootstrap_95ci": {
+        "delta_f1_ci": [
+          0.12,
+          0.6667
+        ],
+        "delta_accuracy_ci": [
+          0.125,
+          0.625
+        ]
+      }
+    },
+    "component4_vs_static_analysis": {
+      "is_empirical": true,
+      "table": {
+        "both_correct_a": 6,
+        "c4_only_b": 10,
+        "static_only_c": 0,
+        "both_incorrect_d": 0,
+        "total": 16
+      },
+      "mcnemar": {
+        "discordant_pairs": 10,
+        "p_value_exact_binomial": 0.002,
+        "is_significant_at_05": true
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "PILOT-SC-01",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 1.0,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.21,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.21,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "3f236592f14460dc3c7246bc3a186dbec8f00f57752b7c2017496af9c2aa28d2",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-02",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.68,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.29,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.29,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "21ac4ef659af8adc841b9bc93f8d13809dcfd2e99ed66676d01dbd8b349c3970",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-03",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.2,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.1,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.06,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "ee4d42da981aaabae0dce74d00b131c51ded2a0a00dd652722b081145d1b0e83",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-04",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.67,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.28,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.13,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "82d0db58a27d7b180c401df34e1f45a07223b2b96cb6d7015e8765696e017baa",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-05",
+      "defect_id": "PILOT-DEF-01",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 4,
+        "mutation_operator": "Off-by-one arithmetic deletion (- 1 removed from page start)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 1.21,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.16,
+        "sanitized_evidence": "AssertionError in test_paginate_page_1: Expected [1, 2], got [3, 4]",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.11,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "012d00e6f7b0c928a178843a0ca41f0f623b488798f299d5b9c7273b943e9764",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-06",
+      "defect_id": "PILOT-DEF-02",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Relational operator inversion (>= mutated to <=)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.52,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.11,
+        "sanitized_evidence": "AssertionError in test_high_loyalty_discount: Expected 80.0 for 7 years loyalty, got 100.0",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.07,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "bdf5a70055f096256f5b22376231bf38ed82e60911ffd08981d7a74a97cd4cff",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-07",
+      "defect_id": "PILOT-DEF-03",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 3,
+        "mutation_operator": "Guard condition deletion (total_weight == 0 check removed)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.39,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.12,
+        "sanitized_evidence": "ZeroDivisionError in test_zero_weights_safe_return: float division by zero",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.1,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "e7a80f4c53f2bc601624efdf98bf88a8da2f63fbd25825c913e3879944f5855d",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-08",
+      "defect_id": "PILOT-DEF-04",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe_id": "CWE-78",
+        "expected_line_number": 4,
+        "mutation_operator": "Unsafe shell execution replacement (subprocess list changed to os.system string concat)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "localized_line": 4,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 35.75,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 13.06,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": true,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.05,
+        "sanitized_evidence": "Flagged 1 vulnerability pattern(s): ['CWE-78']",
+        "findings_count": 1,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "5274f664b8e98ebe443a2731558999e49064a726f32f8e45b518fb0bb92445f8",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-09",
+      "defect_id": "PILOT-DEF-05",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe_id": "CWE-95",
+        "expected_line_number": 2,
+        "mutation_operator": "Unrestricted eval injection",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.2,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.18,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": true,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.04,
+        "sanitized_evidence": "Flagged 1 vulnerability pattern(s): ['CWE-95']",
+        "findings_count": 1,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "d166a232f19147a71ab561e9fab1b4b3de1ab02dc8ee3e66c0cf2f493f9f78e1",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-10",
+      "defect_id": "PILOT-DEF-06",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe_id": null,
+        "expected_line_number": 3,
+        "mutation_operator": "Algorithmic complexity degradation (O(N) hash set replaced with O(N^2) nested loop)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "localized_line": 4,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 417.95,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 414.01,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.16,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "53a12b6d54ae31ac009016d45635f89c823f758b7285258d5c9041e73b7a8794",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-11",
+      "defect_id": "PILOT-DEF-07",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe_id": null,
+        "expected_line_number": 6,
+        "mutation_operator": "Iterative loop replaced with unmemoized exponential recursion O(2^N)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "localized_line": 3,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 311.17,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 312.21,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.09,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "1998e71eadde42505b0d9e18020de05cf6682c204ece16fddbd1b7cc95751f50",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-12",
+      "defect_id": "PILOT-DEF-08",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "integration_defect",
+        "expected_cwe_id": null,
+        "expected_line_number": 1,
+        "mutation_operator": "API parameter keyword renaming (api_key mutated to token_str)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.53,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.29,
+        "sanitized_evidence": "TypeError in test_caller_integration: authenticate_request() got an unexpected keyword argument 'api_key'",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.06,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "7067ef7c342090c77b3f052ca0af5cb08069e95cc92847b41bdebaa9fc4dcb28",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-13",
+      "defect_id": "PILOT-DEF-09",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe_id": null,
+        "expected_line_number": 4,
+        "mutation_operator": "Backward-compatibility parser branch deletion (msg field omitted)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "regression",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.54,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.15,
+        "sanitized_evidence": "ValueError in test_legacy_v1_regression: Invalid envelope format",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.08,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "fa1ec960ce5fdecc362a8f002fbff458dfd66af48d0680ef30b64648f8587c7f",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-14",
+      "defect_id": "PILOT-DEF-10",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "semantic_drift",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Test assertion weakening (assert res == 15.0 weakened to assert res is not None)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": true
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": null,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.19,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.09,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.05,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "c94c901e56b9166094aae9ef968970675013d1eb9a45ed5571edd7ed450e9e92",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-15",
+      "defect_id": "PILOT-DEF-11",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "semantic_drift",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Test function deletion (test_parse_empty_boundary deleted from suite)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": true
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": null,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.19,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.08,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.05,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "bb4d987909fbbc54783bc20cce34c1a152fc032807d91379aa25a623a9e1de21",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-16",
+      "defect_id": "PILOT-DEF-12",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "non_convergent_by_design",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Mutually exclusive contradictory assertion injection",
+        "is_non_convergent_by_design": true,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.72,
+        "sanitized_evidence": "Component 4 analyzed 2 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.09,
+        "sanitized_evidence": "AssertionError in test_rule_alpha:",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.03,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "eaa133ba0f367138ab05e426aba494b723eb2a915546e55ab16dc3671abd99f2",
+      "execution_timestamp": "2026-10-19T12:00:58.428799+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": false,
+        "invoked_during_detection": false
+      }
+    }
+  ]
+}

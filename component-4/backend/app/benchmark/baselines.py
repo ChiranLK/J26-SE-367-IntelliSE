@@ -164,7 +164,7 @@ class ConventionalCiBaselineEvaluator:
         return pytest_failed, exit_code, False, dur, evidence
 
     async def evaluate(self, scenarios: Optional[List[BenchmarkScenario]] = None) -> BaselineExecutionResult:
-        dataset = scenarios or PILOT_BENCHMARK_SCENARIOS
+        dataset = PILOT_BENCHMARK_SCENARIOS if scenarios is None else scenarios
 
         tp = 0
         fp = 0
@@ -288,7 +288,7 @@ class StaticAnalysisBaselineEvaluator:
         self.defect_service = DefectAnalysisService()
 
     def evaluate(self, scenarios: Optional[List[BenchmarkScenario]] = None) -> BaselineExecutionResult:
-        dataset = scenarios or PILOT_BENCHMARK_SCENARIOS
+        dataset = PILOT_BENCHMARK_SCENARIOS if scenarios is None else scenarios
 
         tp = 0
         fp = 0
@@ -317,7 +317,7 @@ class StaticAnalysisBaselineEvaluator:
             dur = (time.perf_counter() - t0) * 1000.0
             static_flagged = len(findings) > 0
             evidence = _sanitize_evidence(
-                f"Flagged {len(findings)} vulnerability pattern(s): {[f.cwe_id for f in findings if f.cwe_id]}"
+                f"Flagged {len(findings)} vulnerability pattern(s): {[f.get('cwe_id') for f in findings if f.get('cwe_id')]}"
                 if static_flagged else "No AST security patterns detected"
             )
 

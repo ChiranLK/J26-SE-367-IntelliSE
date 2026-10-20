@@ -698,10 +698,12 @@ def test_ollama_live_inference_e2e(client):
     run_id = run_res.json()["id"]
     assert run_res.json()["status"] == "FAILED"
 
-    # 3. Retrieve XAI explanation (invoking live Ollama)
-    expl_res = client.get(f"/api/v1/verifications/{run_id}/explanation")
-    assert expl_res.status_code == 200
-    expl_data = expl_res.json()
+    # 3. Retrieve internal XAI explanation (invoking live Ollama)
+    run_obj = VerificationRunResponse.model_validate(run_res.json())
+    sub_obj = SubmissionResponse.model_validate(sub_res.json())
+    provider = OllamaExplanationProvider(client=ollama_client)
+    expl = provider.generate(run_obj, sub_obj)
+    expl_data = expl.model_dump()
 
     assert "qwen2.5-coder:3b" in expl_data["provider"]
     assert "ollama_inference" in expl_data["explanation_method"]
@@ -711,3 +713,10 @@ def test_ollama_live_inference_e2e(client):
     assert expl_data["inference_provenance"]["model"] == "qwen2.5-coder:3b"
     assert expl_data["inference_provenance"]["duration_ms"] > 0
     assert "[Model Reasoning Attribution — qwen2.5-coder:3b]" in expl_data["evidence_based_interpretation"]
+
+    # 4. Confirm that user-facing endpoint preserves supervisor-approved post-delivery gate
+    gate_res = client.get(f"/api/v1/verifications/{run_id}/explanation")
+    assert gate_res.status_code == 200
+    gate_data = gate_res.json()
+    assert gate_data["eligible"] is False
+    assert gate_data["provider"] == "post_delivery_xai_v1"

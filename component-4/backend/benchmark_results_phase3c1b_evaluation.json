@@ -1,0 +1,1247 @@
+{
+  "experiment_title": "INTELISE Component 4 \u2014 Phase 3C.1B LLM Integration Hardening & Audit",
+  "experiment_status": "COMPLETED",
+  "evaluator_version": "v3.1.2-phase3c1b",
+  "dataset_version": "v3.1.0-phase3c1-pilot",
+  "timestamp": "2026-10-19T14:04:50.970616+00:00",
+  "runtime_environment": {
+    "ollama_daemon": "active",
+    "model_identifier": "qwen2.5-coder:3b",
+    "model_digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225",
+    "gpu_offload": "CUDA0 (37/37 layers offloaded)",
+    "sampling_configuration": "temperature=0.1 (low-temperature sampling, top_p=0.9; NOT greedy decoding)",
+    "total_scenarios_evaluated": 16
+  },
+  "findings_summary": {
+    "binary_detection_ceiling_effect": "Both DETERMINISTIC_ONLY and LLM_ASSISTED achieved Binary F1 = 1.000. Pytest execution and AST security scanners detect 100% of seeded defects. LLM reasoning provides exactly 0.000 delta on binary defect detection.",
+    "source_localization_findings": "Deterministic exact localization = 33.300000000000004% (4/12). LLM-assisted exact localization = 58.3% (7/12). Correcting Rule 3 in reconciliation promoted 4 exact line localizations (PILOT-SC-07, 10, 11, 13) where AST_SOURCE_MAPPING had previously locked in a heuristic line guess.",
+    "repair_feedback_scoring_audit": "The previously reported 54.2% usefulness improvement is FORMALLY RETRACTED. Forensic inspection revealed that the Phase 3C.1A score was an artifact of a hardcoded mock dictionary evaluated against a heuristic substring rubric. Under the transparent 5-criterion rubric, Deterministic scored 3.731/5.0 and LLM-Assisted scored 4.405/5.0 (empirical delta: +0.674, p = 0.0). Blinded materials are exported as PENDING_HUMAN_REVIEW; unproven claims are labeled exploratory.",
+    "controlled_repair_effectiveness": "Controlled development automated repair achieved 100.0% for Deterministic and 100.0% for LLM-Assisted (delta: 0.0%). Both conditions fixed 4/4 simple unit tasks without regression. This proves that claims of massive repair-success deltas on simple pilot functions were unsupported."
+  },
+  "comparative_metrics": {
+    "binary_detection_f1": {
+      "deterministic_only": 1.0,
+      "llm_assisted": 1.0,
+      "delta": 0.0
+    },
+    "exact_line_localization_accuracy": {
+      "deterministic_only": 0.333,
+      "llm_assisted": 0.583,
+      "delta": 0.25
+    },
+    "near_line_localization_accuracy": {
+      "deterministic_only": 0.75,
+      "llm_assisted": 0.833,
+      "delta": 0.083
+    },
+    "multi_criteria_feedback_usefulness_5pt": {
+      "rubric_version": "v2.0-phase3c1b-multicriteria",
+      "deterministic_mean": 3.731,
+      "llm_assisted_mean": 4.405,
+      "empirical_mean_delta": 0.674,
+      "paired_bootstrap_95ci": [
+        0.439,
+        0.91
+      ],
+      "permutation_p_value": 0.0,
+      "is_statistically_significant": true
+    },
+    "claims_and_hallucination_accounting": {
+      "unsupported_claims_generated": 0,
+      "unsupported_claims_rejected": 0,
+      "unsupported_claims_accepted": 0,
+      "user_visible_feedback_errors": 0
+    },
+    "execution_latency_ms": {
+      "deterministic_only_total": 4418.72,
+      "llm_assisted_total": 154901.81,
+      "deterministic_per_scenario_mean": 276.17,
+      "llm_assisted_per_scenario_mean": 9681.36
+    },
+    "token_usage_telemetry": {
+      "total_prompt_tokens": 7253,
+      "total_completion_tokens": 1916,
+      "mean_prompt_tokens_per_call": 604.4,
+      "mean_comp_tokens_per_call": 159.7
+    },
+    "controlled_repair_experiment": {
+      "experiment_title": "INTELISE Component 4 \u2014 Phase 3C.1B Repair Feedback Validation",
+      "evaluation_mode": "CONTROLLED_DEVELOPMENT_REPAIR_EVALUATION",
+      "model_identifier": "qwen2.5-coder:3b",
+      "total_repair_tasks": 4,
+      "deterministic_feedback_fixed": 4,
+      "llm_assisted_feedback_fixed": 4,
+      "deterministic_success_rate": 1.0,
+      "llm_assisted_success_rate": 1.0,
+      "deterministic_regression_count": 0,
+      "llm_assisted_regression_count": 0,
+      "empirical_delta_success_rate": 0.0,
+      "repair_tasks": [
+        {
+          "scenario_id": "PILOT-SC-05",
+          "scenario_name": "Relational Boundary Pagination Bug",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_paginate_page_1' failed at pagination.py:4. AssertionError: assert [10, 11, 12, 13, 14, 15, 16, 17, 18, 19] == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]",
+          "generated_code": "def paginate_items(items: list, page: int = 1, per_page: int = 10) -> list:\n    if page <= 0 or per_page <= 0:\n        return []\n    start = (page - 1) * per_page  # Corrected line to calculate the correct starting index\n    end = start + per_page\n    return items[start:end]",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2967.58,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-05",
+          "scenario_name": "Relational Boundary Pagination Bug",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: The start index is calculated as 'page * per_page', which offsets page 1 by 10 items instead of starting at index 0. Suggested fix: calculate start offset as '(page - 1) * per_page'.",
+          "generated_code": "def paginate_items(items: list, page: int = 1, per_page: int = 10) -> list:\n    if page <= 0 or per_page <= 0:\n        return []\n    start = (page - 1) * per_page  # Corrected calculation for start index\n    end = start + per_page\n    return items[start:end]",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2791.88,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-06",
+          "scenario_name": "Arithmetic Discount Calculation Flaw",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_discount_standard' failed at discount.py:4. AssertionError: assert 120.0 == 80.0",
+          "generated_code": "def calculate_discount(price: float, discount: float) -> float:\n    if price < 0 or discount < 0:\n        raise ValueError(\"Price and discount must be non-negative\")\n    return price - discount  # Corrected: subtraction instead of addition",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2228.73,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-06",
+          "scenario_name": "Arithmetic Discount Calculation Flaw",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: The return statement computes 'price + discount' instead of subtracting discount from price. Suggested fix: Change 'price + discount' to 'price - discount' on line 4.",
+          "generated_code": "def calculate_discount(price: float, discount: float) -> float:\n    if price < 0 or discount < 0:\n        raise ValueError(\"Price and discount must be non-negative\")\n    return price - discount",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 1957.56,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-12",
+          "scenario_name": "Incomplete Return Value String Trimmer",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_trailing_whitespace_stripped' failed at trimmer.py:4. AssertionError: assert 'hello world  ' == 'hello world'",
+          "generated_code": "def clean_string_padding(val: str) -> str:\n    if not isinstance(val, str):\n        return \"\"\n    return val.lstrip().rstrip()  # Bug: only strips leading whitespace, fails to strip trailing",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2002.99,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-12",
+          "scenario_name": "Incomplete Return Value String Trimmer",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: Function calls 'val.lstrip()', which only strips leading whitespace, leaving trailing whitespace intact. Suggested fix: Change 'val.lstrip()' to 'val.strip()'.",
+          "generated_code": "def clean_string_padding(val: str) -> str:\n    if not isinstance(val, str):\n        return \"\"\n    return val.strip()  # Corrected: strips both leading and trailing whitespace",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 1799.77,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-16",
+          "scenario_name": "Contract Parameter Mismatch",
+          "condition": "DETERMINISTIC_FEEDBACK",
+          "feedback_provided": "Test 'test_client_standard_call' failed at client.py:2. TypeError: HttpClient.execute_request() got an unexpected keyword argument 'timeout'",
+          "generated_code": "class HttpClient:\n    def execute_request(self, url: str, timeout: int = 30) -> dict:\n        # Renamed parameter: callers expect 'timeout'\n        if not url:\n            raise ValueError(\"URL required\")\n        return {\"status\": 200, \"url\": url, \"timeout\": timeout}",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2573.16,
+          "failure_reason": null
+        },
+        {
+          "scenario_id": "PILOT-SC-16",
+          "scenario_name": "Contract Parameter Mismatch",
+          "condition": "LLM_ASSISTED_FEEDBACK",
+          "feedback_provided": "[LLM Root Cause]: Method signature renamed the expected parameter to 'timeout_seconds', breaking callers using 'timeout'. Suggested fix: Update the method signature to accept 'timeout: int = 30' or accept both.",
+          "generated_code": "class HttpClient:\n    def execute_request(self, url: str, timeout: int = 30) -> dict:\n        # Renamed parameter: callers expect 'timeout'\n        if not url:\n            raise ValueError(\"URL required\")\n        return {\"status\": 200, \"url\": url, \"timeout\": timeout}",
+          "syntax_valid": true,
+          "original_tests_passed": true,
+          "acceptance_tests_passed": true,
+          "defect_fixed": true,
+          "new_defects_introduced": [],
+          "repair_duration_ms": 2540.99,
+          "failure_reason": null
+        }
+      ]
+    }
+  },
+  "source_localization_audit": [
+    {
+      "scenario_id": "PILOT-SC-05",
+      "ground_truth_line": 4,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 5,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": false,
+      "exact_match_llm": false,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-b2b84b19b58a: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 5 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-06",
+      "ground_truth_line": 2,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 3,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": true,
+      "exact_match_llm": false,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-71418b94456d: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-07",
+      "ground_truth_line": 3,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 3,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": false,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-8755cbfc8890: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-08",
+      "ground_truth_line": 4,
+      "deterministic_line": 4,
+      "deterministic_provenance": "AST_STATIC_ANALYSIS",
+      "reconciled_line": 4,
+      "reconciled_provenance": "AST_STATIC_ANALYSIS",
+      "exact_match_deterministic": true,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-sec-af9bda1d: Authoritative AST security finding CWE-78 on line 4 is immutable. LLM reclassification forbidden."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-09",
+      "ground_truth_line": 2,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_STATIC_ANALYSIS",
+      "reconciled_line": 2,
+      "reconciled_provenance": "AST_STATIC_ANALYSIS",
+      "exact_match_deterministic": true,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-sec-41d97070: Authoritative AST security finding CWE-95 on line 2 is immutable. LLM reclassification forbidden."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-10",
+      "ground_truth_line": 3,
+      "deterministic_line": 4,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 3,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": false,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-25ec4a6894c7: Promoted LLM-assisted line localization from line 4 (AST_SOURCE_MAPPING) to line 3 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-11",
+      "ground_truth_line": 6,
+      "deterministic_line": 3,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 6,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": false,
+      "exact_match_llm": true,
+      "near_match_deterministic": false,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-cb59e4eb4543: Promoted LLM-assisted line localization from line 3 (AST_SOURCE_MAPPING) to line 6 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 1.0)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-12",
+      "ground_truth_line": 1,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 2,
+      "reconciled_provenance": "AST_SOURCE_MAPPING",
+      "exact_match_deterministic": false,
+      "exact_match_llm": false,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-13",
+      "ground_truth_line": 4,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 4,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": false,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-7b3568529275: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 4 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9)."
+      ]
+    },
+    {
+      "scenario_id": "PILOT-SC-14",
+      "ground_truth_line": 2,
+      "deterministic_line": null,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": null,
+      "reconciled_provenance": "TEST_DIFF",
+      "exact_match_deterministic": false,
+      "exact_match_llm": false,
+      "near_match_deterministic": false,
+      "near_match_llm": false,
+      "telemetry_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-15",
+      "ground_truth_line": 2,
+      "deterministic_line": null,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": null,
+      "reconciled_provenance": "TEST_DIFF",
+      "exact_match_deterministic": false,
+      "exact_match_llm": false,
+      "near_match_deterministic": false,
+      "near_match_llm": false,
+      "telemetry_log": []
+    },
+    {
+      "scenario_id": "PILOT-SC-16",
+      "ground_truth_line": 2,
+      "deterministic_line": 2,
+      "deterministic_provenance": "AST_SOURCE_MAPPING",
+      "reconciled_line": 2,
+      "reconciled_provenance": "LLM_ASSISTED_LOCALIZATION",
+      "exact_match_deterministic": true,
+      "exact_match_llm": true,
+      "near_match_deterministic": true,
+      "near_match_llm": true,
+      "telemetry_log": [
+        "Defect def-7232e67db9e1: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 2 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9).",
+        "Defect def-5d176be02aa6: Promoted LLM-assisted line localization from line 2 (AST_SOURCE_MAPPING) to line 2 (provenance: LLM_ASSISTED_LOCALIZATION, confidence: 0.9)."
+      ]
+    }
+  ],
+  "scenario_feedback_scores": {
+    "config_a_deterministic": [
+      {
+        "scenario_id": "PILOT-SC-01",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-02",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-03",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-04",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-05",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'functional_bug', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 2, expected 4) with code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.5,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-06",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'functional_bug', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 2) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.7,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-07",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'functional_bug', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 2, expected 3) with code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.5,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-08",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'security_vulnerability', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_STATIC_ANALYSIS)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 4) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.7,
+        "raw_feedback_summary": "[security_vulnerability] Line: 4 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-09",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'security_vulnerability', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_STATIC_ANALYSIS)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 2) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.7,
+        "raw_feedback_summary": "[security_vulnerability] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-10",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'performance_bottleneck', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 4, expected 3) with code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.5,
+        "raw_feedback_summary": "[performance_bottleneck] Line: 4 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-11",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'performance_bottleneck', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 2.5,
+          "rationale": "Non-localized line 3 (expected 6)."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.2,
+        "raw_feedback_summary": "[performance_bottleneck] Line: 3 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-12",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 2.5,
+          "rationale": "Generic defect detection without taxonomy alignment or causal analysis."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 2, expected 1) with code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.3,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-13",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'regression', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 2, expected 4) with code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.5,
+        "raw_feedback_summary": "[regression] Line: 2 | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-14",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 2.5,
+          "rationale": "Generic defect detection without taxonomy alignment or causal analysis."
+        },
+        "evidence_grounding": {
+          "score": 2.5,
+          "rationale": "Minimal diagnostic evidence cited."
+        },
+        "specificity": {
+          "score": 1.5,
+          "rationale": "Zero source-code line localization provided."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 2.3,
+        "raw_feedback_summary": "[functional_bug] Line: None | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-15",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 2.5,
+          "rationale": "Generic defect detection without taxonomy alignment or causal analysis."
+        },
+        "evidence_grounding": {
+          "score": 2.5,
+          "rationale": "Minimal diagnostic evidence cited."
+        },
+        "specificity": {
+          "score": 1.5,
+          "rationale": "Zero source-code line localization provided."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 2.3,
+        "raw_feedback_summary": "[functional_bug] Line: None | Fix len: 0 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-16",
+        "configuration": "DETERMINISTIC_ONLY",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 2.5,
+          "rationale": "Generic defect detection without taxonomy alignment or causal analysis."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 2) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 3.5,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 0 | Root cause present: False"
+      }
+    ],
+    "config_b_llm_assisted": [
+      {
+        "scenario_id": "PILOT-SC-01",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-02",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-03",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-04",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": false,
+        "technical_correctness": {
+          "score": 5.0,
+          "rationale": "Accurately identified clean control; zero spurious defects reported."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in clean test pass; zero hallucinated failures."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Correctly identified no defect location required."
+        },
+        "actionability": {
+          "score": 5.0,
+          "rationale": "Correctly avoided prescribing unnecessary repairs."
+        },
+        "safety_awareness": {
+          "score": 5.0,
+          "rationale": "Clean invariance preserved; zero regression risk introduced."
+        },
+        "composite_score": 5.0,
+        "raw_feedback_summary": "Clean control: 0 defect reports."
+      },
+      {
+        "scenario_id": "PILOT-SC-05",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'functional_bug' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 5, expected 4) with code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.62,
+        "raw_feedback_summary": "[functional_bug] Line: 5 | Fix len: 146 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-06",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'functional_bug' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 3, expected 2) with code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.62,
+        "raw_feedback_summary": "[functional_bug] Line: 3 | Fix len: 145 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-07",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'functional_bug' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 3) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.82,
+        "raw_feedback_summary": "[functional_bug] Line: 3 | Fix len: 140 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-08",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'security_vulnerability', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_STATIC_ANALYSIS)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 4) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 2.5,
+          "rationale": "Low actionability: vague suggestion without operational instructions."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.16,
+        "raw_feedback_summary": "[security_vulnerability] Line: 4 | Fix len: 229 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-09",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.5,
+          "rationale": "Correctly categorized defect as 'security_vulnerability', but lacks deep root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_STATIC_ANALYSIS)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 2) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.62,
+        "raw_feedback_summary": "[security_vulnerability] Line: 2 | Fix len: 204 | Root cause present: False"
+      },
+      {
+        "scenario_id": "PILOT-SC-10",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'performance_bottleneck' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 3) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 2.5,
+          "rationale": "Low actionability: vague suggestion without operational instructions."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.36,
+        "raw_feedback_summary": "[performance_bottleneck] Line: 3 | Fix len: 180 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-11",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'performance_bottleneck' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 6) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 2.5,
+          "rationale": "Low actionability: vague suggestion without operational instructions."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.36,
+        "raw_feedback_summary": "[performance_bottleneck] Line: 6 | Fix len: 130 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-12",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.0,
+          "rationale": "Provided root-cause reasoning, but taxonomy category 'functional_bug' differs from 'integration_defect'."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (AST_SOURCE_MAPPING)."
+        },
+        "specificity": {
+          "score": 4.0,
+          "rationale": "Near-line localization (Line 2, expected 1) with code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.32,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 237 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-13",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 4.5,
+          "rationale": "Accurately categorized defect as 'regression' with grounded root-cause explanation."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 4) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.82,
+        "raw_feedback_summary": "[regression] Line: 4 | Fix len: 265 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-14",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.0,
+          "rationale": "Provided root-cause reasoning, but taxonomy category 'functional_bug' differs from 'semantic_drift'."
+        },
+        "evidence_grounding": {
+          "score": 2.5,
+          "rationale": "Minimal diagnostic evidence cited."
+        },
+        "specificity": {
+          "score": 1.5,
+          "rationale": "Zero source-code line localization provided."
+        },
+        "actionability": {
+          "score": 2.5,
+          "rationale": "Low actionability: vague suggestion without operational instructions."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 2.86,
+        "raw_feedback_summary": "[functional_bug] Line: None | Fix len: 85 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-15",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.0,
+          "rationale": "Provided root-cause reasoning, but taxonomy category 'functional_bug' differs from 'semantic_drift'."
+        },
+        "evidence_grounding": {
+          "score": 2.5,
+          "rationale": "Minimal diagnostic evidence cited."
+        },
+        "specificity": {
+          "score": 1.5,
+          "rationale": "Zero source-code line localization provided."
+        },
+        "actionability": {
+          "score": 1.0,
+          "rationale": "Zero repair guidance: reports execution failure symptoms without corrective suggestions."
+        },
+        "safety_awareness": {
+          "score": 4.0,
+          "rationale": "Neutral safety: reports failure without proposing unsafe bypasses."
+        },
+        "composite_score": 2.4,
+        "raw_feedback_summary": "[functional_bug] Line: None | Fix len: 0 | Root cause present: True"
+      },
+      {
+        "scenario_id": "PILOT-SC-16",
+        "configuration": "LLM_ASSISTED",
+        "has_defect_ground_truth": true,
+        "technical_correctness": {
+          "score": 3.0,
+          "rationale": "Provided root-cause reasoning, but taxonomy category 'functional_bug' differs from 'non_convergent_by_design'."
+        },
+        "evidence_grounding": {
+          "score": 5.0,
+          "rationale": "Grounded in verified test assertion diagnostics and verified execution provenance (LLM_ASSISTED_LOCALIZATION)."
+        },
+        "specificity": {
+          "score": 5.0,
+          "rationale": "Exact line localization (Line 2) with specific code symbol references."
+        },
+        "actionability": {
+          "score": 4.8,
+          "rationale": "Highly actionable: outlines concrete, specific code adjustments and operator corrections."
+        },
+        "safety_awareness": {
+          "score": 4.8,
+          "rationale": "Safe guidance: addresses implementation logic within module boundaries without weakening test suites."
+        },
+        "composite_score": 4.52,
+        "raw_feedback_summary": "[functional_bug] Line: 2 | Fix len: 120 | Root cause present: True"
+      }
+    ]
+  },
+  "reproducibility": {
+    "zero_ground_truth_leakage_verified": true,
+    "reconciliation_rule": "Deterministic AST and test outcomes strictly take precedence over model hypotheses.",
+    "blinded_human_evaluation_package": "D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\benchmark\\pilot_phase3c1\\blinded_human_evaluation_package.json"
+  }
+}

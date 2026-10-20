@@ -1,0 +1,1966 @@
+{
+  "evaluation_title": "INTELISE Component 4 \u2014 Phase 3C.1 Pilot Benchmark Results",
+  "dataset_version": "v3.1.0-phase3c1-pilot",
+  "timestamp": "2026-10-20T03:11:59.009729+00:00",
+  "total_scenarios": 16,
+  "clean_controls_count": 4,
+  "seeded_defects_count": 12,
+  "evaluation_mode": "in_process_sandbox",
+  "llm_telemetry": {
+    "evaluation_mode": "DETERMINISTIC_ONLY",
+    "model_identifier": "qwen2.5-coder:3b",
+    "model_digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225",
+    "base_url": "http://127.0.0.1:11434",
+    "configured_enabled": true,
+    "daemon_connected": true,
+    "models_available": [
+      "qwen2.5-coder:3b"
+    ],
+    "status_message": "Ollama is active with 1 model(s) installed: qwen2.5-coder:3b",
+    "actual_inference_invocations_in_detection": 0,
+    "detection_mechanism": "deterministic_multi_agent_ast_and_dynamic_pytest",
+    "xai_explanation_provider": "ollama_inference_v1 (with deterministic fallback)"
+  },
+  "metrics": {
+    "component4": {
+      "true_positives": 12,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    },
+    "conventional_ci": {
+      "true_positives": 6,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 6,
+      "accuracy": 0.625,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667
+    },
+    "static_analysis": {
+      "true_positives": 2,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 10,
+      "accuracy": 0.375,
+      "precision": 1.0,
+      "recall": 0.1667,
+      "f1_score": 0.2857
+    }
+  },
+  "paired_statistical_comparison": {
+    "component4_vs_conventional_ci": {
+      "is_empirical": true,
+      "table": {
+        "both_correct_a": 10,
+        "c4_only_b": 6,
+        "ci_only_c": 0,
+        "both_incorrect_d": 0,
+        "total": 16
+      },
+      "mcnemar": {
+        "discordant_pairs": 6,
+        "p_value_exact_binomial": 0.0312,
+        "is_significant_at_05": true
+      },
+      "bootstrap_95ci": {
+        "delta_f1_ci": [
+          0.12,
+          0.6667
+        ],
+        "delta_accuracy_ci": [
+          0.125,
+          0.625
+        ]
+      }
+    },
+    "component4_vs_static_analysis": {
+      "is_empirical": true,
+      "table": {
+        "both_correct_a": 6,
+        "c4_only_b": 10,
+        "static_only_c": 0,
+        "both_incorrect_d": 0,
+        "total": 16
+      },
+      "mcnemar": {
+        "discordant_pairs": 10,
+        "p_value_exact_binomial": 0.002,
+        "is_significant_at_05": true
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "PILOT-SC-01",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 1.47,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.33,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.29,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "3f236592f14460dc3c7246bc3a186dbec8f00f57752b7c2017496af9c2aa28d2",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-02",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 1.14,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.43,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.44,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "21ac4ef659af8adc841b9bc93f8d13809dcfd2e99ed66676d01dbd8b349c3970",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-03",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.32,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.16,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.1,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "ee4d42da981aaabae0dce74d00b131c51ded2a0a00dd652722b081145d1b0e83",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-04",
+      "defect_id": null,
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": false,
+        "expected_category": "clean_control",
+        "expected_cwe_id": null,
+        "expected_line_number": null,
+        "mutation_operator": null,
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": false,
+        "predicted_category": null,
+        "localized_line": null,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 1.06,
+        "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.42,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.17,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "82d0db58a27d7b180c401df34e1f45a07223b2b96cb6d7015e8765696e017baa",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-05",
+      "defect_id": "PILOT-DEF-01",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 4,
+        "mutation_operator": "Off-by-one arithmetic deletion (- 1 removed from page start)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 1.34,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-b2b84b19b58a",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_paginate_page_1",
+            "severity": "HIGH",
+            "description": "Test case 'test_paginate_page_1' failed under pytest execution. Observed diagnostic: Expected [1, 2], got [3, 4].",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "functional_bug",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:11:59.790129Z",
+            "verification_run_id": "run-PILOT-SC-05",
+            "submission_id": "sub-PILOT-SC-05",
+            "failed_test": "test_paginate_page_1",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "Expected [1, 2], got [3, 4]",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 6, in test_paginate_page_1\nAssertionError: Expected [1, 2], got [3, 4]",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-05_test_paginate_page_1",
+              "test_status": "FAILED",
+              "duration_ms": 0.01,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.24,
+        "sanitized_evidence": "AssertionError in test_paginate_page_1: Expected [1, 2], got [3, 4]",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.2,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "012d00e6f7b0c928a178843a0ca41f0f623b488798f299d5b9c7273b943e9764",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-06",
+      "defect_id": "PILOT-DEF-02",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Relational operator inversion (>= mutated to <=)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.88,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-71418b94456d",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_high_loyalty_discount",
+            "severity": "HIGH",
+            "description": "Test case 'test_high_loyalty_discount' failed under pytest execution. Observed diagnostic: Expected 80.0 for 7 years loyalty, got 100.0.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "functional_bug",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:11:59.791749Z",
+            "verification_run_id": "run-PILOT-SC-06",
+            "submission_id": "sub-PILOT-SC-06",
+            "failed_test": "test_high_loyalty_discount",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "Expected 80.0 for 7 years loyalty, got 100.0",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 5, in test_high_loyalty_discount\nAssertionError: Expected 80.0 for 7 years loyalty, got 100.0",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-06_test_high_loyalty_discount",
+              "test_status": "FAILED",
+              "duration_ms": 0.01,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.18,
+        "sanitized_evidence": "AssertionError in test_high_loyalty_discount: Expected 80.0 for 7 years loyalty, got 100.0",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.12,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "bdf5a70055f096256f5b22376231bf38ed82e60911ffd08981d7a74a97cd4cff",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-07",
+      "defect_id": "PILOT-DEF-03",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "functional_bug",
+        "expected_cwe_id": null,
+        "expected_line_number": 3,
+        "mutation_operator": "Guard condition deletion (total_weight == 0 check removed)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.77,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-8755cbfc8890",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Runtime Exception in test_zero_weights_safe_return",
+            "severity": "CRITICAL",
+            "description": "Test case 'test_zero_weights_safe_return' failed under pytest execution. Observed diagnostic: ZeroDivisionError: float division by zero.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "runtime_exception",
+              "functional_bug",
+              "severity:critical"
+            ],
+            "created_at": "2026-10-20T03:11:59.793762Z",
+            "verification_run_id": "run-PILOT-SC-07",
+            "submission_id": "sub-PILOT-SC-07",
+            "failed_test": "test_zero_weights_safe_return",
+            "failure_category": "RUNTIME_EXCEPTION",
+            "assertion_or_exception": "ZeroDivisionError: float division by zero",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 4, in test_zero_weights_safe_return\n  File \"<string>\", line 3, in weighted_average\nZeroDivisionError: float division by zero",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-07_test_zero_weights_safe_return",
+              "test_status": "FAILED",
+              "duration_ms": 0.01,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.22,
+        "sanitized_evidence": "ZeroDivisionError in test_zero_weights_safe_return: float division by zero",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.16,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "e7a80f4c53f2bc601624efdf98bf88a8da2f63fbd25825c913e3879944f5855d",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-08",
+      "defect_id": "PILOT-DEF-04",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe_id": "CWE-78",
+        "expected_line_number": 4,
+        "mutation_operator": "Unsafe shell execution replacement (subprocess list changed to os.system string concat)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "localized_line": 4,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 27.55,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-sec-af9bda1d",
+            "requirement_id": null,
+            "title": "Security Vulnerability: OS Command Injection via Shell Invocation (CWE-78)",
+            "severity": "CRITICAL",
+            "description": "Direct invocation of shell function 'system' with unvalidated command string.",
+            "file_path": "solution.py",
+            "line_number": 4,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "security",
+              "cwe-78",
+              "severity:critical"
+            ],
+            "created_at": "2026-10-20T03:11:59.821356Z",
+            "verification_run_id": "run-PILOT-SC-08",
+            "submission_id": "sub-PILOT-SC-08",
+            "failed_test": "security_ast_scan_cwe-78",
+            "failure_category": "SECURITY_VULNERABILITY",
+            "assertion_or_exception": "Static AST security scanner identified CWE-78: OS Command Injection via Shell Invocation (CWE-78)",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": null,
+            "evidence_references": {
+              "ast_node": "Direct invocation of shell function 'system' with unvalidated command string.",
+              "line": 4,
+              "confidence": "CONFIRMED"
+            },
+            "defect_category": "security_vulnerability",
+            "cwe_id": "CWE-78",
+            "owasp_category": "OWASP-A03:2021-Injection",
+            "performance_metrics": null,
+            "confidence": "CONFIRMED",
+            "provenance": "AST_STATIC_ANALYSIS"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 18.25,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": true,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.09,
+        "sanitized_evidence": "Flagged 1 vulnerability pattern(s): ['CWE-78']",
+        "findings_count": 1,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "5274f664b8e98ebe443a2731558999e49064a726f32f8e45b518fb0bb92445f8",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-09",
+      "defect_id": "PILOT-DEF-05",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "security_vulnerability",
+        "expected_cwe_id": "CWE-95",
+        "expected_line_number": 2,
+        "mutation_operator": "Unrestricted eval injection",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "security_vulnerability",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.33,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-sec-41d97070",
+            "requirement_id": null,
+            "title": "Security Vulnerability: Improper Neutralization of Directives in Dynamically Evaluated Code (CWE-95)",
+            "severity": "CRITICAL",
+            "description": "Unsafe execution of dynamic code evaluation function 'eval'.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "security",
+              "cwe-95",
+              "severity:critical"
+            ],
+            "created_at": "2026-10-20T03:11:59.822370Z",
+            "verification_run_id": "run-PILOT-SC-09",
+            "submission_id": "sub-PILOT-SC-09",
+            "failed_test": "security_ast_scan_cwe-95",
+            "failure_category": "SECURITY_VULNERABILITY",
+            "assertion_or_exception": "Static AST security scanner identified CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (CWE-95)",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": null,
+            "evidence_references": {
+              "ast_node": "Unsafe execution of dynamic code evaluation function 'eval'.",
+              "line": 2,
+              "confidence": "CONFIRMED"
+            },
+            "defect_category": "security_vulnerability",
+            "cwe_id": "CWE-95",
+            "owasp_category": "OWASP-A03:2021-Injection",
+            "performance_metrics": null,
+            "confidence": "CONFIRMED",
+            "provenance": "AST_STATIC_ANALYSIS"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.26,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": true,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.07,
+        "sanitized_evidence": "Flagged 1 vulnerability pattern(s): ['CWE-95']",
+        "findings_count": 1,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "d166a232f19147a71ab561e9fab1b4b3de1ab02dc8ee3e66c0cf2f493f9f78e1",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-10",
+      "defect_id": "PILOT-DEF-06",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe_id": null,
+        "expected_line_number": 3,
+        "mutation_operator": "Algorithmic complexity degradation (O(N) hash set replaced with O(N^2) nested loop)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "localized_line": 4,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 648.86,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-25ec4a6894c7",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_find_dups_performance_sla",
+            "severity": "HIGH",
+            "description": "Test case 'test_find_dups_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 647.1ms (threshold 200ms).",
+            "file_path": "solution.py",
+            "line_number": 4,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "performance_bottleneck",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:12:00.473087Z",
+            "verification_run_id": "run-PILOT-SC-10",
+            "submission_id": "sub-PILOT-SC-10",
+            "failed_test": "test_find_dups_performance_sla",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "Latency SLA breach: took 647.1ms (threshold 200ms)",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Latency SLA breach: took 647.1ms (threshold 200ms)",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-10_test_find_dups_performance_sla",
+              "test_status": "FAILED",
+              "duration_ms": 647.15,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "performance_bottleneck",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": {
+              "duration_ms": 647.15,
+              "threshold_breached": true,
+              "threshold_latency_ms": 200.0,
+              "complexity_patterns": [
+                "nested_loop_quadratic"
+              ]
+            },
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 1084.55,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.26,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "53a12b6d54ae31ac009016d45635f89c823f758b7285258d5c9041e73b7a8794",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-11",
+      "defect_id": "PILOT-DEF-07",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "performance_bottleneck",
+        "expected_cwe_id": null,
+        "expected_line_number": 6,
+        "mutation_operator": "Iterative loop replaced with unmemoized exponential recursion O(2^N)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "performance_bottleneck",
+        "localized_line": 3,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 496.55,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-cb59e4eb4543",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_fib_performance_sla",
+            "severity": "HIGH",
+            "description": "Test case 'test_fib_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 495.7ms (threshold 200ms).",
+            "file_path": "solution.py",
+            "line_number": 3,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "performance_bottleneck",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:12:00.970740Z",
+            "verification_run_id": "run-PILOT-SC-11",
+            "submission_id": "sub-PILOT-SC-11",
+            "failed_test": "test_fib_performance_sla",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "Latency SLA breach: took 495.7ms (threshold 200ms)",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Latency SLA breach: took 495.7ms (threshold 200ms)",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-11_test_fib_performance_sla",
+              "test_status": "FAILED",
+              "duration_ms": 495.69,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "performance_bottleneck",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": {
+              "duration_ms": 495.69,
+              "threshold_breached": true,
+              "threshold_latency_ms": 200.0,
+              "complexity_patterns": [
+                "exponential_recursion"
+              ]
+            },
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 653.86,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.14,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "1998e71eadde42505b0d9e18020de05cf6682c204ece16fddbd1b7cc95751f50",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-12",
+      "defect_id": "PILOT-DEF-08",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "integration_defect",
+        "expected_cwe_id": null,
+        "expected_line_number": 1,
+        "mutation_operator": "API parameter keyword renaming (api_key mutated to token_str)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.83,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-fb44201f96e2",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Runtime Exception in test_caller_integration",
+            "severity": "CRITICAL",
+            "description": "Test case 'test_caller_integration' failed under pytest execution. Observed diagnostic: TypeError: authenticate_request() got an unexpected keyword argument 'api_key'.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "runtime_exception",
+              "functional_bug",
+              "severity:critical"
+            ],
+            "created_at": "2026-10-20T03:12:00.972370Z",
+            "verification_run_id": "run-PILOT-SC-12",
+            "submission_id": "sub-PILOT-SC-12",
+            "failed_test": "test_caller_integration",
+            "failure_category": "RUNTIME_EXCEPTION",
+            "assertion_or_exception": "TypeError: authenticate_request() got an unexpected keyword argument 'api_key'",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 4, in test_caller_integration\nTypeError: authenticate_request() got an unexpected keyword argument 'api_key'",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-12_test_caller_integration",
+              "test_status": "FAILED",
+              "duration_ms": 0.01,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.36,
+        "sanitized_evidence": "TypeError in test_caller_integration: authenticate_request() got an unexpected keyword argument 'api_key'",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.09,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "7067ef7c342090c77b3f052ca0af5cb08069e95cc92847b41bdebaa9fc4dcb28",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-13",
+      "defect_id": "PILOT-DEF-09",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "regression",
+        "expected_cwe_id": null,
+        "expected_line_number": 4,
+        "mutation_operator": "Backward-compatibility parser branch deletion (msg field omitted)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "regression",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.87,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-7b3568529275",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Runtime Exception in test_legacy_v1_regression",
+            "severity": "CRITICAL",
+            "description": "Test case 'test_legacy_v1_regression' failed under pytest execution. Observed diagnostic: ValueError: Invalid envelope format.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "runtime_exception",
+              "regression",
+              "severity:critical"
+            ],
+            "created_at": "2026-10-20T03:12:00.974027Z",
+            "verification_run_id": "run-PILOT-SC-13",
+            "submission_id": "sub-PILOT-SC-13",
+            "failed_test": "test_legacy_v1_regression",
+            "failure_category": "RUNTIME_EXCEPTION",
+            "assertion_or_exception": "ValueError: Invalid envelope format",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 7, in test_legacy_v1_regression\n  File \"<string>\", line 4, in parse_envelope\nValueError: Invalid envelope format",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-13_test_legacy_v1_regression",
+              "test_status": "FAILED",
+              "duration_ms": 0.0,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "regression",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.22,
+        "sanitized_evidence": "ValueError in test_legacy_v1_regression: Invalid envelope format",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.13,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "fa1ec960ce5fdecc362a8f002fbff458dfd66af48d0680ef30b64648f8587c7f",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-14",
+      "defect_id": "PILOT-DEF-10",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "semantic_drift",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Test assertion weakening (assert res == 15.0 weakened to assert res is not None)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": true
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": null,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.3,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-drift-PILOT-SC-14",
+            "requirement_id": null,
+            "title": "Semantic Test Suite Drift: ASSERTION_WEAKENED, TEST_SCOPE_REDUCTION",
+            "severity": "HIGH",
+            "description": "Test suite semantic drift detected (ASSERTION_WEAKENED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.",
+            "file_path": "solution.py",
+            "line_number": null,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [],
+            "created_at": "2026-10-20T03:12:00.975263Z",
+            "verification_run_id": "run-PILOT-SC-14",
+            "submission_id": "sub-PILOT-SC-14",
+            "failed_test": null,
+            "failure_category": "SEMANTIC_DRIFT",
+            "assertion_or_exception": null,
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": null,
+            "evidence_references": {
+              "drift_types": [
+                "ASSERTION_WEAKENED",
+                "TEST_SCOPE_REDUCTION"
+              ]
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "CONFIRMED",
+            "provenance": "TEST_DIFF"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.15,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.08,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "c94c901e56b9166094aae9ef968970675013d1eb9a45ed5571edd7ed450e9e92",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-15",
+      "defect_id": "PILOT-DEF-11",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "semantic_drift",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Test function deletion (test_parse_empty_boundary deleted from suite)",
+        "is_non_convergent_by_design": false,
+        "has_semantic_drift": true
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": null,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.28,
+        "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-drift-PILOT-SC-15",
+            "requirement_id": null,
+            "title": "Semantic Test Suite Drift: TEST_DELETED, TEST_SCOPE_REDUCTION",
+            "severity": "HIGH",
+            "description": "Test suite semantic drift detected (TEST_DELETED, TEST_SCOPE_REDUCTION). Candidate test assertions were weakened or tests were deleted.",
+            "file_path": "solution.py",
+            "line_number": null,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [],
+            "created_at": "2026-10-20T03:12:00.976370Z",
+            "verification_run_id": "run-PILOT-SC-15",
+            "submission_id": "sub-PILOT-SC-15",
+            "failed_test": null,
+            "failure_category": "SEMANTIC_DRIFT",
+            "assertion_or_exception": null,
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": null,
+            "evidence_references": {
+              "drift_types": [
+                "TEST_DELETED",
+                "TEST_SCOPE_REDUCTION"
+              ]
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "CONFIRMED",
+            "provenance": "TEST_DIFF"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": false,
+        "execution_status": "PASSED",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.11,
+        "sanitized_evidence": "All tests passed",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.08,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "bb4d987909fbbc54783bc20cce34c1a152fc032807d91379aa25a623a9e1de21",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    },
+    {
+      "scenario_id": "PILOT-SC-16",
+      "defect_id": "PILOT-DEF-12",
+      "dataset_version": "v3.1.0-phase3c1-pilot",
+      "dataset_partition": "pilot",
+      "ground_truth": {
+        "has_defect": true,
+        "expected_category": "non_convergent_by_design",
+        "expected_cwe_id": null,
+        "expected_line_number": 2,
+        "mutation_operator": "Mutually exclusive contradictory assertion injection",
+        "is_non_convergent_by_design": true,
+        "has_semantic_drift": false
+      },
+      "component4": {
+        "system_name": "Component 4 Multi-Agent",
+        "detected_has_defect": true,
+        "predicted_category": "functional_bug",
+        "localized_line": 2,
+        "execution_status": "DEFECT_DETECTED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.92,
+        "sanitized_evidence": "Component 4 analyzed 2 defect report(s)",
+        "provenance": "EMPIRICAL_EXECUTION",
+        "ai_contribution": {
+          "evaluation_mode": "DETERMINISTIC_ONLY",
+          "llm_enabled": false,
+          "actual_llm_invocation_count": 0,
+          "successful_llm_response_count": 0,
+          "failed_llm_response_count": 0,
+          "model_identifier": "none",
+          "model_digest": null,
+          "inference_latency_ms": 0.0,
+          "timeout_events": 0,
+          "fallback_events": 0,
+          "validated_llm_findings": 0,
+          "rejected_llm_findings": 0,
+          "claims_checked": 0,
+          "llm_changed_classification": false,
+          "llm_changed_localization": false,
+          "llm_changed_repair_recommendation": false,
+          "unsupported_claims_generated": 0,
+          "unsupported_claims_rejected": 0,
+          "unsupported_claims_accepted": 0,
+          "user_visible_feedback_errors": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "reconciliation_log": [
+            "Evaluation mode: DETERMINISTIC_ONLY. Bypassed LLM inference."
+          ]
+        },
+        "defect_reports": [
+          {
+            "defect_id": "def-7232e67db9e1",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_rule_alpha",
+            "severity": "HIGH",
+            "description": "Test case 'test_rule_alpha' failed under pytest execution. Observed diagnostic: AssertionError.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "functional_bug",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:12:00.977489Z",
+            "verification_run_id": "run-PILOT-SC-16",
+            "submission_id": "sub-PILOT-SC-16",
+            "failed_test": "test_rule_alpha",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "AssertionError",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 4, in test_rule_alpha\nAssertionError",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-16_test_rule_alpha",
+              "test_status": "FAILED",
+              "duration_ms": 0.0,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          },
+          {
+            "defect_id": "def-5d176be02aa6",
+            "requirement_id": "REQ-PILOT-01",
+            "title": "Observed Assertion Failure in test_rule_beta",
+            "severity": "HIGH",
+            "description": "Test case 'test_rule_beta' failed under pytest execution. Observed diagnostic: AssertionError.",
+            "file_path": "solution.py",
+            "line_number": 2,
+            "suggested_fix": null,
+            "xai_explanation": null,
+            "tags": [
+              "assertion_failure",
+              "functional_bug",
+              "severity:high"
+            ],
+            "created_at": "2026-10-20T03:12:00.978043Z",
+            "verification_run_id": "run-PILOT-SC-16",
+            "submission_id": "sub-PILOT-SC-16",
+            "failed_test": "test_rule_beta",
+            "failure_category": "ASSERTION_FAILURE",
+            "assertion_or_exception": "AssertionError",
+            "expected_value": null,
+            "actual_value": null,
+            "traceback_excerpt": "Traceback (most recent call last):\n  File \"D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4\\backend\\app\\benchmark\\evaluator.py\", line 722, in _execute_scenario\n    tf()\n  File \"<string>\", line 7, in test_rule_beta\nAssertionError",
+            "evidence_references": {
+              "test_id": "t_PILOT-SC-16_test_rule_beta",
+              "test_status": "FAILED",
+              "duration_ms": 0.0,
+              "localization_confidence": "HIGH",
+              "localization_provenance": "AST_SOURCE_MAPPING"
+            },
+            "defect_category": "functional_bug",
+            "cwe_id": null,
+            "owasp_category": null,
+            "performance_metrics": null,
+            "confidence": "HIGH",
+            "provenance": "AST_SOURCE_MAPPING"
+          }
+        ],
+        "machine_guidance": []
+      },
+      "conventional_ci": {
+        "system_name": "Conventional CI (Raw Pytest)",
+        "detected_has_defect": true,
+        "execution_status": "FAILED",
+        "container_exit_code": 1,
+        "timeout": false,
+        "duration_ms": 0.13,
+        "sanitized_evidence": "AssertionError in test_rule_alpha:",
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "static_analysis": {
+        "system_name": "Static Analysis (AST Scanner)",
+        "detected_has_defect": false,
+        "execution_status": "CLEAN",
+        "container_exit_code": 0,
+        "timeout": false,
+        "duration_ms": 0.05,
+        "sanitized_evidence": "No AST security patterns detected",
+        "findings_count": 0,
+        "provenance": "EMPIRICAL_EXECUTION"
+      },
+      "artifact_checksum": "eaa133ba0f367138ab05e426aba494b723eb2a915546e55ab16dc3671abd99f2",
+      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "evaluator_version": "v3.1.0-phase3c1",
+      "provenance": "EMPIRICAL_EXECUTION",
+      "llm_telemetry": {
+        "daemon_connected": true,
+        "invoked_during_detection": false
+      }
+    }
+  ]
+}

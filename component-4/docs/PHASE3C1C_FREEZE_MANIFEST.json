@@ -1,0 +1,102 @@
+{
+  "manifest_title": "INTELISE Component 4 — Phase 3C.1C Implementation Freeze Manifest",
+  "freeze_status": "READY_FOR_FREEZE",
+  "freeze_version": "v3.1.3-phase3c1c-freeze",
+  "timestamp": "2026-10-20T08:26:00Z",
+  "git_commit": "4f956f3ff6fe398a37419710b10f91528e43447a",
+  "project_metadata": {
+    "project": "INTELISE — Intelligent Agentic Testing & Explainable Feedback Loop Assistant",
+    "component": "Component 4 (Testing, Defect Classification, Repair Feedback & Explainability)",
+    "working_directory": "D:\\GitHub Projects\\Research Project\\J26-SE-367-IntelliSE\\component-4",
+    "architecture": "LangGraph multi-agent verification pipeline with Post-Delivery XAI"
+  },
+  "runtime_environment": {
+    "python_version": "3.12.10",
+    "fastapi_version": "0.143.0",
+    "pydantic_version": "2.14.1",
+    "pytest_version": "9.1.1",
+    "httpx_version": "0.28.1",
+    "langgraph_version": "1.2.15",
+    "ollama_host": "http://127.0.0.1:11434",
+    "model_identifier": "qwen2.5-coder:3b",
+    "model_digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225",
+    "gpu_offload": "CUDA0 (37/37 layers offloaded)",
+    "sampling_configuration": "temperature=0.1, top_p=0.9"
+  },
+  "source_file_checksums": {
+    "backend/app/services/defect_reconciliation_service.py": "f511bdcb571d490bfcd3c9fc4a6349cef3e9969a25c71ad01494ea40388c23c5",
+    "backend/app/services/llm_defect_reasoning_agent.py": "faa1ca56f0c80324dc150e5557aa2d1004334efafd3b3485aa84067e1d2c06d7",
+    "backend/app/schemas/llm_defect_reasoning.py": "26625825e54215e8e7320b4514fd3505d7716eb5bc19e8cf6ef8dfed4c920a1c",
+    "backend/app/benchmark/repair_feedback_scoring.py": "c3cf6d6c2fe784a72591d4e370812e392e32d93e3a71f66e696f0b725066216a",
+    "backend/app/benchmark/repair_effectiveness_evaluator.py": "3833c1bd7e3226ea68252ffa7d330ed2682c4942abdb33cb66ce41bdcb850b5c",
+    "backend/app/benchmark/phase3c1_pilot.py": "a6ccbfd652c37077170cdc002a2cff5adef4175d2b52cba579817f3a4fa99aff",
+    "backend/app/benchmark/phase3c1c_evaluation.py": "33b7bcac84a113f46de3cb6acffddaf7549b72166390eee13d5bcea467594915",
+    "backend/tests/test_phase3c1c_freeze.py": "bcfd69bf942a265b666209f0f31790714083a2d166a7be9c5e4d10eca8f090c8"
+  },
+  "dataset_and_artifact_checksums": {
+    "benchmark/pilot_phase3c1/manifest.json": "90ddd219dc9b88b0ec8eca50440ebb8e5e70d16249b1c18f84defb8fea3f7d55",
+    "benchmark/pilot_phase3c1/pilot_scenarios.json": "a6ed17a6cd535db3782e6d52a5b9847e1cd15052369272cd446abb1f25971dbb",
+    "benchmark/pilot_phase3c1/blinded_human_evaluation_package.json": "aca470d4a5c0fe56f207c138e86ebb2059748018f78bf255ae39eb25a32a5c02",
+    "benchmark/pilot_phase3c1/blinded_evaluation_key.json": "2f5a5177ed1c365b305c6ce63c027231c892cc85435880e7b71f2ca92a142dd0",
+    "backend/benchmark_results_phase3c1c_evaluation.json": "9ea1560d8c3e08c867aa258a1a2e0d375dd33d678e311d7a2f845a84ddb6deff",
+    "docs/BLINDED_HUMAN_EVALUATION_PROTOCOL.md": "93b85e949bf6670ead5a6e794e93d263caa40fd94b90b12d8607b73058e120ec"
+  },
+  "verified_evaluation_results": {
+    "binary_defect_f1": {
+      "deterministic_only": 1.0,
+      "llm_assisted": 1.0,
+      "delta": 0.0
+    },
+    "exact_line_localization": {
+      "deterministic_only": 0.333,
+      "llm_assisted": 0.500,
+      "delta": 0.167
+    },
+    "near_line_localization": {
+      "deterministic_only": 0.750,
+      "llm_assisted": 0.833,
+      "delta": 0.083
+    },
+    "repair_feedback_usefulness_5pt": {
+      "deterministic_mean": 3.731,
+      "llm_assisted_mean": 4.380,
+      "mean_difference": 0.649,
+      "relative_percentage_difference": 17.39,
+      "permutation_p_value": 0.0009765625,
+      "permutation_p_value_display": "0.00098",
+      "paired_bootstrap_95ci": [0.3962, 0.8875],
+      "is_statistically_significant": true
+    },
+    "controlled_repair_success": {
+      "deterministic_fixed": 4,
+      "llm_assisted_fixed": 4,
+      "delta": 0.0,
+      "task_namespace": "DEV-REPAIR-001..004"
+    },
+    "claims_and_hallucination_accounting": {
+      "claims_checked": 50,
+      "unsupported_claims_generated": 0,
+      "unsupported_claims_rejected": 0,
+      "unsupported_claims_accepted": 0,
+      "user_visible_feedback_errors": 0
+    }
+  },
+  "test_execution_status": {
+    "total_tests_executed": 338,
+    "passed": 338,
+    "failed": 0,
+    "skipped": 0,
+    "test_duration_seconds": 279.55
+  },
+  "known_limitations": [
+    "Pilot benchmark size is N=16 scenarios (12 defective, 4 clean controls); conclusions are exploratory until Phase 3C.2 large benchmark (N=300-500) is executed.",
+    "Automated repair experiment is conducted on N=4 simple unit repair tasks (DEV-REPAIR-001..004); 0.0% delta indicates saturation on simple 1-line tasks.",
+    "Qwen2.5-Coder 3B local parameters are bounded; complex multi-file reasoning is out of scope.",
+    "Human review remains PENDING_HUMAN_REVIEW awaiting institutional ethics clearance."
+  ],
+  "outstanding_requirements_for_subsequent_phases": {
+    "human_review": "Institutional ethics clearance and independent recruitment of N >= 3 software engineers to score blinded_human_evaluation_package.json without unblinding key.",
+    "component_3_live_dispatch": "Activation of COMPONENT_3_ENABLED=true in production environment once Component 3 feedback ingestion endpoint is online.",
+    "phase_3c_2_scaling": "Expansion of verification benchmark from N=16 pilot to N=300-500 multi-category defects."
+  }
+}

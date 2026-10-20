@@ -182,6 +182,12 @@ class VerificationService:
         if not effective_test_cases:
             effective_test_cases = submission.test_code
 
+        eval_mode = getattr(run, "evaluation_mode", None)
+        if not eval_mode and hasattr(run, "execution_telemetry") and run.execution_telemetry:
+            eval_mode = run.execution_telemetry.get("evaluation_mode")
+        if not eval_mode:
+            eval_mode = "LLM_ASSISTED"
+
         state = {
             "submission_id": submission.id,
             "run_id": run.id,
@@ -193,6 +199,7 @@ class VerificationService:
             "timeout_seconds": timeout_seconds,
             "requested_test_types": run.requested_test_types or ["unit"],
             "feedback_iterations": list(run.feedback_iterations or []),
+            "evaluation_mode": eval_mode,
             "telemetry": {},
         }
 

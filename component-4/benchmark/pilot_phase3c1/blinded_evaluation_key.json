@@ -1,0 +1,146 @@
+[
+  {
+    "blinded_task_id": "BLIND-TASK-SC-01",
+    "scenario_id": "PILOT-SC-01",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": false,
+    "expected_category": "clean_control",
+    "expected_line_number": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-02",
+    "scenario_id": "PILOT-SC-02",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": false,
+    "expected_category": "clean_control",
+    "expected_line_number": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-03",
+    "scenario_id": "PILOT-SC-03",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": false,
+    "expected_category": "clean_control",
+    "expected_line_number": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-04",
+    "scenario_id": "PILOT-SC-04",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": false,
+    "expected_category": "clean_control",
+    "expected_line_number": null
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-05",
+    "scenario_id": "PILOT-SC-05",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "functional_bug",
+    "expected_line_number": 4
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-06",
+    "scenario_id": "PILOT-SC-06",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "functional_bug",
+    "expected_line_number": 2
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-07",
+    "scenario_id": "PILOT-SC-07",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "functional_bug",
+    "expected_line_number": 3
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-08",
+    "scenario_id": "PILOT-SC-08",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "security_vulnerability",
+    "expected_line_number": 4
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-09",
+    "scenario_id": "PILOT-SC-09",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "security_vulnerability",
+    "expected_line_number": 2
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-10",
+    "scenario_id": "PILOT-SC-10",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "performance_bottleneck",
+    "expected_line_number": 3
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-11",
+    "scenario_id": "PILOT-SC-11",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "performance_bottleneck",
+    "expected_line_number": 6
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-12",
+    "scenario_id": "PILOT-SC-12",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "integration_defect",
+    "expected_line_number": 1
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-13",
+    "scenario_id": "PILOT-SC-13",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "regression",
+    "expected_line_number": 4
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-14",
+    "scenario_id": "PILOT-SC-14",
+    "system_x_configuration": "LLM_ASSISTED",
+    "system_y_configuration": "DETERMINISTIC_ONLY",
+    "ground_truth_has_defect": true,
+    "expected_category": "semantic_drift",
+    "expected_line_number": 2
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-15",
+    "scenario_id": "PILOT-SC-15",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "semantic_drift",
+    "expected_line_number": 2
+  },
+  {
+    "blinded_task_id": "BLIND-TASK-SC-16",
+    "scenario_id": "PILOT-SC-16",
+    "system_x_configuration": "DETERMINISTIC_ONLY",
+    "system_y_configuration": "LLM_ASSISTED",
+    "ground_truth_has_defect": true,
+    "expected_category": "non_convergent_by_design",
+    "expected_line_number": 2
+  }
+]

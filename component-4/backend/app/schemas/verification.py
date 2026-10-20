@@ -27,6 +27,10 @@ class VerificationRunCreate(BaseModel):
         default=None,
         description="Explicitly authorized pytest test code or oracle for this run",
     )
+    evaluation_mode: Optional[str] = Field(
+        default="LLM_ASSISTED",
+        description="Verification mode: 'DETERMINISTIC_ONLY' or 'LLM_ASSISTED'",
+    )
 
 
 class VerificationRunExecute(BaseModel):
@@ -35,6 +39,10 @@ class VerificationRunExecute(BaseModel):
     trusted_test_cases: Optional[str] = Field(
         default=None,
         description="Optional explicit trusted pytest test code / oracle overriding or complementing submission test code",
+    )
+    evaluation_mode: Optional[str] = Field(
+        default="LLM_ASSISTED",
+        description="Verification mode: 'DETERMINISTIC_ONLY' or 'LLM_ASSISTED'",
     )
 
 
@@ -65,6 +73,10 @@ class VerificationRunResponse(BaseModel):
     requested_test_types: List[TestType] = Field(
         default_factory=list,
         description="Test types requested for this run",
+    )
+    evaluation_mode: Optional[str] = Field(
+        default="LLM_ASSISTED",
+        description="Evaluation mode: 'DETERMINISTIC_ONLY' or 'LLM_ASSISTED'",
     )
     test_results: List[TestResult] = Field(
         default_factory=list,
