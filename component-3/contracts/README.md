@@ -19,6 +19,9 @@ replace them before real integration.
   requires this source for elements labeled `CLASS` or `CLASS_DIAGRAM`; input
   validation preserves it without claiming that Component 3 validated its
   semantics.
+- C1 may carry an optional `design_uml_version_ref`. When present, C2's `uml_version`
+  must equal it, otherwise validation fails with 409 `UML_VERSION_MISMATCH`. A blank
+  C2 `uml_version` is also reported as `UML_VERSION_MISMATCH`.
 - Identifiers use letters, digits, dots, underscores, colons, and hyphens.
 - Reference strings are opaque and are preserved; Component 3 does not resolve
   them or establish their authenticity.

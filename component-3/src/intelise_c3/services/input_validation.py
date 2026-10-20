@@ -76,6 +76,30 @@ class InputValidationService:
                 )
             )
 
+        if not package.c2.uml_version.strip():
+            errors.append(
+                ErrorDetail(
+                    code="UML_VERSION_MISMATCH",
+                    field="c2.uml_version",
+                    message="C2 uml_version must be non-empty.",
+                )
+            )
+        elif (
+            package.c1.design_uml_version_ref is not None
+            and package.c1.design_uml_version_ref != package.c2.uml_version
+        ):
+            errors.append(
+                ErrorDetail(
+                    code="UML_VERSION_MISMATCH",
+                    field="c2.uml_version",
+                    message=(
+                        f"C2 uml_version '{package.c2.uml_version}' does not match the "
+                        "design UML version "
+                        f"'{package.c1.design_uml_version_ref}' referenced by C1."
+                    ),
+                )
+            )
+
         if package.c1.approval_status is not C1ApprovalStatus.APPROVED:
             errors.append(
                 ErrorDetail(

@@ -53,6 +53,9 @@ class C1ApprovedSRS(ProvisionalContractModel):
     approval_status: C1ApprovalStatus
     approval_provenance_ref: NonEmptyText
     validation_report_ref: NonEmptyText
+    # Optional pin of the C2 UML release this SRS was approved against. When
+    # present, C2's uml_version must equal it (UML_VERSION_MISMATCH).
+    design_uml_version_ref: Identifier | None = None
     requirements: Annotated[tuple[C1Requirement, ...], Field(min_length=1)]
 
 
