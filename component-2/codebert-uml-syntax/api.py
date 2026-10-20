@@ -67,7 +67,7 @@ def generate(req: GenerateRequest):
     if not is_running():
         raise HTTPException(503, "Ollama is not running. Start the Ollama app first.")
     row = run_one(validator, req.srs, req.diagram_type, req.project, OUT_DIR,
-                  DEFAULT_MODEL, req.max_rounds, 0.2)
+                  DEFAULT_MODEL, req.max_rounds, 0.0)
 
     # run_one saved every round as <project>_<type>_r<n>.puml; read them back
     errors = row["error_types"].split(";") if row["error_types"] else []
