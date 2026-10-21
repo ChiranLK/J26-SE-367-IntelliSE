@@ -1,0 +1,13 @@
+id,requirement,expected_label
+R01,The system shall allow customers to book appointments.,FR
+R02,Administrators shall be able to delete user accounts.,FR
+R03,Users shall be able to reset their passwords.,FR
+R04,Customers shall be able to search for available services.,FR
+R05,"The system shall export monthly reports, including totals, as CSV files.",FR
+R06,Users shall be able to update their profile information.,FR
+R07,Search results shall appear within two seconds.,NFR
+R08,The system shall maintain 99.9 percent availability.,NFR
+R09,Stored passwords shall be protected using a secure password hashing algorithm.,NFR
+R10,The system shall support 1000 concurrent users.,NFR
+R11,The application shall operate on Windows and Linux.,NFR
+R12,The system shall restore service within fifteen minutes after a failure.,NFR

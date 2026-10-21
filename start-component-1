@@ -1,0 +1,5 @@
+#!/bin/sh
+# Run from any working directory; do not activate copied virtual environments.
+set -eu
+C1_LAUNCH_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec node "$C1_LAUNCH_ROOT/component-1/frontend/scripts/start-component-1.mjs" "$@"

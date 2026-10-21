@@ -143,3 +143,19 @@ export function getTranscription(id, options = {}) {
   if (!validTranscriptionId(id)) throw new ApiError('Invalid transcription job ID.', { status: 422 })
   return request(`/transcriptions/${id}`, { ...options, validate: (data) => validTranscription(data, id) })
 }
+
+// Development-only Vite adapter. Deliberately independent of VITE_API_BASE_URL:
+// the project API accepts saved extractions, not arbitrary unsaved sentences.
+export function classifyRequirement(text, options = {}) {
+  if (typeof text !== 'string' || !text.trim() || Array.from(text).length > 5000) {
+    throw new ApiError('Enter one requirement, between 1 and 5,000 characters.', { status: 422 })
+  }
+  return request('/__local_model/classify', {
+    timeoutMs: 65000, ...options, baseUrl: options.baseUrl ?? window.location.origin,
+    componentPath: false, method: 'POST', body: { requirement_text: text },
+    validate: (data) => data?.requirement_text === text && ['FR', 'NFR'].includes(data.label)
+      && data.model_identifier === 'tfidf-logistic-regression' && /^[a-f0-9]{64}$/.test(data.model_version)
+      && typeof data.classified_at === 'string' && Number.isFinite(Date.parse(data.classified_at))
+      && typeof data.processing_seconds === 'number' && Number.isFinite(data.processing_seconds) && data.processing_seconds >= 0,
+  })
+}
