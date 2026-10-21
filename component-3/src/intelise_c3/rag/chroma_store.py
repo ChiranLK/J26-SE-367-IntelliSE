@@ -9,10 +9,15 @@ from typing import Callable, Optional
 import chromadb
 
 from intelise_c3.rag.best_practices import (
+    MAX_TOP_K,
     SUPPORTED_LAYERS,
     SUPPORTED_STACKS,
     BestPracticeStore,
+    RetrievalHit,
+    RetrievalQuery,
     RuleCard,
+    _metadata_allows,
+    apply_context_budget,
 )
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
@@ -105,3 +110,25 @@ class ChromaBestPracticeStore(BestPracticeStore):
             scored.append((-round(similarity, 4), -card.priority, card.id, card))
         scored.sort(key=lambda item: item[:3])
         return [item[3] for item in scored[:k]]
+
+    def search(self, query: RetrievalQuery) -> list[RetrievalHit]:
+        """Semantic retrieval with metadata filters; the score is cosine similarity."""
+        if query.stack not in SUPPORTED_STACKS or query.stack == "any":
+            raise ValueError(f"unsupported stack: {query.stack}")
+        if query.layer not in SUPPORTED_LAYERS or query.layer == "any":
+            raise ValueError(f"unsupported layer: {query.layer}")
+        result = self._col.query(
+            query_texts=[query.task or f"{query.stack} {query.layer} best practices"],
+            n_results=max(min(MAX_TOP_K * 4, self._col.count()), 1),
+            where={"$and": [{"stack": {"$in": [query.stack, "any"]}}, {"layer": {"$in": [query.layer, "any"]}}]},
+        )
+        hits = []
+        for rule_id, distance in zip(result["ids"][0], result["distances"][0]):
+            similarity = 1.0 - distance
+            if self._min_similarity is not None and similarity < self._min_similarity:
+                continue
+            card = self._cards[rule_id]
+            if _metadata_allows(card, query):
+                hits.append(RetrievalHit(card, round(similarity, 6), 0))
+        hits.sort(key=lambda hit: (-hit.score, -hit.card.priority, hit.card.id))
+        return apply_context_budget(hits, query)

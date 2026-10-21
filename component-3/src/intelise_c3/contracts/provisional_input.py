@@ -9,7 +9,7 @@ schemas before production integration.
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 
 Identifier = Annotated[
     str,
@@ -101,6 +101,14 @@ class RequirementUmlAnchor(ProvisionalContractModel):
     anchor_id: Identifier
     requirement_id: Identifier
     uml_id: Identifier
+    uml_element: NonEmptyText | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_uml_element(self, handler: SerializerFunctionWrapHandler) -> dict:
+        data = handler(self)
+        if self.uml_element is None:
+            data.pop("uml_element", None)
+        return data
 
 
 class C2DesignRelease(ProvisionalContractModel):

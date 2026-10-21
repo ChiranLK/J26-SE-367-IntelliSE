@@ -321,6 +321,7 @@ class InputValidationService:
                     anchor_id=anchor.anchor_id,
                     requirement_id=anchor.requirement_id,
                     uml_id=anchor.uml_id,
+                    uml_element=anchor.uml_element,
                 )
                 for anchor in package.c2.requirement_uml_anchors
             ),

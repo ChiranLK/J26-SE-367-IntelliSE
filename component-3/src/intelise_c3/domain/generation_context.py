@@ -67,6 +67,14 @@ class NormalizedRequirementUmlAnchor(DomainModel):
     anchor_id: str
     requirement_id: str
     uml_id: str
+    uml_element: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_uml_element(self, handler: SerializerFunctionWrapHandler) -> dict:
+        data = handler(self)
+        if self.uml_element is None:
+            data.pop("uml_element", None)
+        return data
 
 
 class GenerationContext(DomainModel):

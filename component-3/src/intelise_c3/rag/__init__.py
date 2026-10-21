@@ -1,6 +1,8 @@
 from intelise_c3.rag.best_practices import (
     BestPracticeStore,
     FilterBestPracticeStore,
+    RetrievalHit,
+    RetrievalQuery,
     RuleCard,
     RuleCardError,
     create_store,
@@ -11,6 +13,8 @@ from intelise_c3.rag.best_practices import (
 __all__ = [
     "BestPracticeStore",
     "FilterBestPracticeStore",
+    "RetrievalHit",
+    "RetrievalQuery",
     "RuleCard",
     "RuleCardError",
     "create_store",
