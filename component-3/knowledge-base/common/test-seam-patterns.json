@@ -1,0 +1,17 @@
+{
+  "file_id": "KB-COMMON-TEST-SEAM-PATTERNS",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-TEST-SEAMS",
+      "description": "Seams C3 exposes so that Component 4 can test generated code independently. C3 does not write or own C4 test truth.",
+      "seam_types": {
+        "SERVICE_INTERFACE": "Stable class + method signatures that C4 can import and call.",
+        "INJECTED_REPOSITORY": "Repository passed into the service constructor; C4 may supply a fake.",
+        "INJECTED_POLICY": "Grading policy passed into the service; C4 may supply a controlled policy.",
+        "API_CONTRACT": "OpenAPI operation with stable operationId and error schema.",
+        "FRONTEND_FORM": "Accessible labels and data-testid attributes on interactive elements."
+      }
+    }
+  ]
+}

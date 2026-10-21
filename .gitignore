@@ -2,3 +2,5 @@
 /state/friday-demo/ollama-serve.*.log
 /state/friday-demo/*.pid
 
+tmp/
+*.stackdump

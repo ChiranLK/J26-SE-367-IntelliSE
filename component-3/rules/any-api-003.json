@@ -1,0 +1,23 @@
+{
+  "id": "any-api-003",
+  "stack": "any",
+  "layer": "api",
+  "category": "api-contract",
+  "priority": 2,
+  "rule": "Give every OpenAPI operation a stable operationId, explicit request/response schemas and a shared error schema; keep IDs unchanged across regenerations.",
+  "bad_example": "paths: { /calc: { post: { responses: { 200: {} } } } }",
+  "good_example": "operationId: calculateGpa, requestBody: GpaCalculationRequest, responses: { 201: GpaCalculation, 400: ErrorResponse }",
+  "document_id": "DOC-REST-OPENAPI",
+  "artifact_types": [
+    "API"
+  ],
+  "modules": [
+    "api.openapi",
+    "be.routes"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases OpenAPI Specification 3.1"
+}

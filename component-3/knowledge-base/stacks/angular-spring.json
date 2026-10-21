@@ -1,0 +1,19 @@
+{
+  "file_id": "KB-STACK-ANGULAR-SPRING",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-STACK-ANGULAR-SPRING-BOOT",
+      "stack_id": "angular-spring-boot",
+      "frontend": "ANGULAR",
+      "backend": "SPRING_BOOT",
+      "hybrid_generator_status": "NOT_IMPLEMENTED",
+      "architecture_item": null,
+      "rag_stack_tokens": {
+        "frontend": "angular",
+        "backend": "spring"
+      },
+      "unsupported_behavior": "UNSUPPORTED: no hybrid template set exists; C3 must not substitute another stack."
+    }
+  ]
+}

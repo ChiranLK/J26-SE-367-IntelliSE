@@ -1,0 +1,10 @@
+{
+  "id": "any-api-001",
+  "stack": "any",
+  "layer": "api",
+  "category": "error-handling",
+  "priority": 2,
+  "rule": "Return consistent error bodies and correct HTTP status codes (404 for unknown id, 400 for invalid input).",
+  "bad_example": "res.status(200).json({ error: 'not found' });",
+  "good_example": "res.status(404).json({ code: 'GPA_RECORD_NOT_FOUND', message: 'gpa record not found' });"
+}

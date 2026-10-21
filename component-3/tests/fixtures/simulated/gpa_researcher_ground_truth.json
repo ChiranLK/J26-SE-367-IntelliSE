@@ -1,0 +1,29 @@
+{
+  "dataset_id": "SIMULATED-RESEARCHER-GROUND-TRUTH-GPA-PROJECT",
+  "dataset_version": "1.0",
+  "authorship": "RESEARCHER_CURATED",
+  "researcher_reference": "SIMULATED-GPA-MANUAL-ORACLE-001",
+  "in_scope_node_ids": [
+    "REQUIREMENT:REQ-GPA-001",
+    "REQUIREMENT:REQ-GPA-002",
+    "REQUIREMENT:REQ-GPA-003",
+    "UML_ELEMENT:UML-GPA-CLASS-001"
+  ],
+  "expected_links": [
+    {
+      "source_node_id": "UML_ELEMENT:UML-GPA-CLASS-001",
+      "relation_type": "DERIVED_FROM",
+      "target_node_id": "REQUIREMENT:REQ-GPA-001"
+    },
+    {
+      "source_node_id": "UML_ELEMENT:UML-GPA-CLASS-001",
+      "relation_type": "DERIVED_FROM",
+      "target_node_id": "REQUIREMENT:REQ-GPA-002"
+    },
+    {
+      "source_node_id": "UML_ELEMENT:UML-GPA-CLASS-001",
+      "relation_type": "DERIVED_FROM",
+      "target_node_id": "REQUIREMENT:REQ-GPA-003"
+    }
+  ]
+}

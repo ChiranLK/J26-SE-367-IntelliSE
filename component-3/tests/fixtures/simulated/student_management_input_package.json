@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-STUDENT-MANAGEMENT-001",
+    "srs_version": "SRS-STUDENT-1.0",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "SIMULATED-C1-STUDENT-APPROVAL-001",
+    "validation_report_ref": "SIMULATED-C1-STUDENT-VALIDATION-001",
+    "requirements": [
+      {"requirement_id": "REQ-STUDENT-001", "title": "Users can create and list students", "status": "APPROVED"},
+      {"requirement_id": "REQ-STUDENT-002", "title": "Users can update and delete students", "status": "APPROVED"},
+      {"requirement_id": "REQ-STUDENT-003", "title": "Student persistence uses a mockable repository boundary", "status": "APPROVED"}
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-STUDENT-MANAGEMENT-001",
+    "source_srs_version": "SRS-STUDENT-1.0",
+    "uml_version": "UML-STUDENT-1.0",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "SIMULATED-C2-STUDENT-VALIDATION-001",
+    "uml_elements": [
+      {
+        "uml_id": "UML-STUDENT-CLASS-001",
+        "element_type": "CLASS_DIAGRAM",
+        "name": "StudentManagementClasses",
+        "plantuml_source": "@startuml\nclass Student {\n  +id: String\n  +name: String\n  +age: Integer\n  +gpa: Number\n  +enrolled: Boolean\n  +birthDate: Date\n}\nclass StudentService {\n  +list(): Student\n  +create(name: String, age: Integer, gpa: Number, enrolled: Boolean, birthDate: Date): Student\n  +update(id: String): Student\n  +remove(id: String): void\n}\nclass StudentRepository {\n  +list(): Student\n  +findById(id: String): Student\n  +create(value: Student): Student\n  +update(id: String): Student\n  +remove(id: String): void\n}\nStudentService --> StudentRepository : uses\nStudentRepository --> Student : persists\n@enduml"
+      }
+    ],
+    "ui_artifacts": [
+      {"ui_id": "UI-STUDENT-WIREFRAME-001", "artifact_type": "WIREFRAME", "source_ref": "simulated://c2/wireframes/student-management"}
+    ],
+    "requirement_uml_anchors": [
+      {"anchor_id": "ANCHOR-STUDENT-001", "requirement_id": "REQ-STUDENT-001", "uml_id": "UML-STUDENT-CLASS-001"},
+      {"anchor_id": "ANCHOR-STUDENT-002", "requirement_id": "REQ-STUDENT-002", "uml_id": "UML-STUDENT-CLASS-001"},
+      {"anchor_id": "ANCHOR-STUDENT-003", "requirement_id": "REQ-STUDENT-003", "uml_id": "UML-STUDENT-CLASS-001"}
+    ]
+  }
+}

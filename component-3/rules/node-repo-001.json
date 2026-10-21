@@ -1,0 +1,22 @@
+{
+  "id": "node-repo-001",
+  "stack": "node",
+  "layer": "repository",
+  "category": "security",
+  "priority": 3,
+  "rule": "Only repository modules issue SQL, and every statement uses parameter placeholders; never build SQL by string concatenation.",
+  "bad_example": "pool.query(`SELECT * FROM gpa_calculations WHERE id = '${id}'`)",
+  "good_example": "pool.query('SELECT * FROM gpa_calculations WHERE id = $1', [id])",
+  "document_id": "DOC-POSTGRES",
+  "artifact_types": [
+    "REPOSITORY"
+  ],
+  "modules": [
+    "be.repository"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases node-postgres documentation on parameterized queries and OWASP SQL Injection Prevention Cheat Sheet"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "node-ctrl-002",
+  "stack": "node",
+  "layer": "controller",
+  "category": "error-handling",
+  "priority": 2,
+  "rule": "Map domain errors to HTTP responses in one place and always return the documented error schema; do not leak stack traces.",
+  "bad_example": "catch (e) { res.status(500).send(e.stack) }",
+  "good_example": "catch (e) { next(e) } // one error middleware returns { error: { code, status, message, details } }",
+  "document_id": "DOC-NODE-LAYERING",
+  "artifact_types": [
+    "CONTROLLER",
+    "COMPOSITION_ROOT"
+  ],
+  "modules": [
+    "be.controller",
+    "be.app"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases Express error-handling guide"
+}

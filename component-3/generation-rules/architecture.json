@@ -1,0 +1,38 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-ARCH-NODE-001",
+      "version": "1.0.0",
+      "category": "ARCHITECTURE",
+      "priority": 90,
+      "description": "Enforce Route -> Controller -> Service -> Repository -> Database for the Node backend.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "stack_id",
+            "equals": "react-nodejs"
+          },
+          {
+            "fact": "concern",
+            "equals": "ARCHITECTURE"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [],
+        "artifact_types": []
+      },
+      "requires_knowledge": [
+        "KB-ARCH-NODE-LAYERED"
+      ],
+      "validation_requirements": [
+        "V-ARCH-NODE-LAYERING"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "FAILED"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-INVENTORY-MANAGEMENT-001",
+    "srs_version": "SRS-INVENTORY-1.0",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "SIMULATED-C1-INVENTORY-APPROVAL-001",
+    "validation_report_ref": "SIMULATED-C1-INVENTORY-VALIDATION-001",
+    "requirements": [
+      {"requirement_id": "REQ-INVENTORY-001", "title": "Users can create and list inventory items", "status": "APPROVED"},
+      {"requirement_id": "REQ-INVENTORY-002", "title": "Users can update and delete inventory items", "status": "APPROVED"},
+      {"requirement_id": "REQ-INVENTORY-003", "title": "Inventory item persistence uses a mockable repository boundary", "status": "APPROVED"}
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-INVENTORY-MANAGEMENT-001",
+    "source_srs_version": "SRS-INVENTORY-1.0",
+    "uml_version": "UML-INVENTORY-1.0",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "SIMULATED-C2-INVENTORY-VALIDATION-001",
+    "uml_elements": [
+      {
+        "uml_id": "UML-INVENTORY-CLASS-001",
+        "element_type": "CLASS_DIAGRAM",
+        "name": "InventoryManagementClasses",
+        "plantuml_source": "@startuml\nclass InventoryItem {\n  +id: String\n  +name: String\n  +quantity: Integer\n  +unitPrice: Number\n  +active: Boolean\n  +stockDate: Date\n}\nclass InventoryItemService {\n  +list(): InventoryItem\n  +create(name: String, quantity: Integer, unitPrice: Number, active: Boolean, stockDate: Date): InventoryItem\n  +update(id: String): InventoryItem\n  +remove(id: String): void\n}\nclass InventoryItemRepository {\n  +list(): InventoryItem\n  +findById(id: String): InventoryItem\n  +create(value: InventoryItem): InventoryItem\n  +update(id: String): InventoryItem\n  +remove(id: String): void\n}\nInventoryItemService --> InventoryItemRepository : uses\nInventoryItemRepository --> InventoryItem : persists\n@enduml"
+      }
+    ],
+    "ui_artifacts": [
+      {"ui_id": "UI-INVENTORY-WIREFRAME-001", "artifact_type": "WIREFRAME", "source_ref": "simulated://c2/wireframes/inventory-management"}
+    ],
+    "requirement_uml_anchors": [
+      {"anchor_id": "ANCHOR-INVENTORY-001", "requirement_id": "REQ-INVENTORY-001", "uml_id": "UML-INVENTORY-CLASS-001"},
+      {"anchor_id": "ANCHOR-INVENTORY-002", "requirement_id": "REQ-INVENTORY-002", "uml_id": "UML-INVENTORY-CLASS-001"},
+      {"anchor_id": "ANCHOR-INVENTORY-003", "requirement_id": "REQ-INVENTORY-003", "uml_id": "UML-INVENTORY-CLASS-001"}
+    ]
+  }
+}

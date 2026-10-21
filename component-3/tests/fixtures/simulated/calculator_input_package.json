@@ -1,0 +1,79 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-CALCULATOR-001",
+    "srs_version": "SRS-CALCULATOR-1.0",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "SIMULATED-C1-CALCULATOR-APPROVAL-001",
+    "validation_report_ref": "SIMULATED-C1-CALCULATOR-VALIDATION-001",
+    "requirements": [
+      {
+        "requirement_id": "REQ-CALC-001",
+        "title": "Users can create and list arithmetic calculations for two numbers",
+        "status": "APPROVED"
+      },
+      {
+        "requirement_id": "REQ-CALC-002",
+        "title": "Users can create calculations with validation rejecting division by zero",
+        "status": "APPROVED"
+      },
+      {
+        "requirement_id": "REQ-CALC-003",
+        "title": "Users can update and remove calculations from history",
+        "status": "APPROVED"
+      },
+      {
+        "requirement_id": "REQ-CALC-004",
+        "title": "Calculation persistence uses a mockable repository boundary",
+        "status": "APPROVED"
+      }
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-CALCULATOR-001",
+    "source_srs_version": "SRS-CALCULATOR-1.0",
+    "uml_version": "UML-CALCULATOR-1.0",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "SIMULATED-C2-CALCULATOR-VALIDATION-001",
+    "uml_elements": [
+      {
+        "uml_id": "UML-CALC-CLASS-001",
+        "element_type": "CLASS_DIAGRAM",
+        "name": "CalculatorClasses",
+        "plantuml_source": "@startuml\nclass Calculation {\n  +id: String\n  +firstNumber: Number\n  +secondNumber: Number\n  +operation: String\n  +result: Number\n}\nclass CalculationService {\n  +list(): Calculation\n  +create(firstNumber: Number, secondNumber: Number, operation: String, result: Number): Calculation\n  +update(id: String): Calculation\n  +remove(id: String): void\n}\nclass CalculationRepository {\n  +list(): Calculation\n  +findById(id: String): Calculation\n  +create(value: Calculation): Calculation\n  +update(id: String): Calculation\n  +remove(id: String): void\n}\nCalculationService --> CalculationRepository : uses\nCalculationRepository --> Calculation : persists\n@enduml"
+      }
+    ],
+    "ui_artifacts": [
+      {
+        "ui_id": "UI-CALC-WIREFRAME-001",
+        "artifact_type": "WIREFRAME",
+        "source_ref": "simulated://c2/wireframes/calculator"
+      }
+    ],
+    "requirement_uml_anchors": [
+      {
+        "anchor_id": "ANCHOR-CALC-001",
+        "requirement_id": "REQ-CALC-001",
+        "uml_id": "UML-CALC-CLASS-001"
+      },
+      {
+        "anchor_id": "ANCHOR-CALC-002",
+        "requirement_id": "REQ-CALC-002",
+        "uml_id": "UML-CALC-CLASS-001"
+      },
+      {
+        "anchor_id": "ANCHOR-CALC-003",
+        "requirement_id": "REQ-CALC-003",
+        "uml_id": "UML-CALC-CLASS-001"
+      },
+      {
+        "anchor_id": "ANCHOR-CALC-004",
+        "requirement_id": "REQ-CALC-004",
+        "uml_id": "UML-CALC-CLASS-001"
+      }
+    ]
+  }
+}

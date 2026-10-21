@@ -10,6 +10,7 @@ dist/
 
 # Test and coverage artifacts
 .pytest_cache/
+.pytest-*/
 .coverage
 htmlcov/
 
@@ -20,9 +21,32 @@ htmlcov/
 # Generated application workspaces
 generated-workspaces/
 runtime/workspaces/
+runtime/traceability/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 *.temp
+
+# Demo dashboard (npm install / vite build output)
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+
+# Preserved local PP1/runtime artifacts (not tracked source)
+frontend/node_modules/
+frontend/dist/
+runtime-preview/executions/
+runtime-preview/__pycache__/
+
+# Disposable Stage 2 Docker validation workspaces
+.stage2-validation/
+
+# Disposable browser preview build contexts (orchestrated via Docker only)
+runtime/
+runtime/preview/
+runtime/dashboard-session/
+
+# Local Chroma best-practice index (rebuildable from tracked rule cards)
+rag_db/
