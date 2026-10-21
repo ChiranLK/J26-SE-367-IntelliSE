@@ -1,5 +1,5 @@
 // One function per existing Component 3 endpoint (plus the thin /demo helpers).
-import { apiRequest } from "./client.js";
+import { API_PREFIX, apiRequest } from "./client.js";
 
 const MINUTE = 60 * 1000;
 
@@ -22,14 +22,54 @@ export const api = {
     apiRequest("/demo/preview/stop", { method: "POST", body: { preview_id: previewId } }),
   previewStatus: (previewId) => apiRequest(`/demo/preview/${encodeURIComponent(previewId)}`),
 
+  // Rule-governed hybrid pipeline (KB + rules + templates + RAG + bounded model).
+  hybridOverview: () => apiRequest("/hybrid/overview", { timeoutMs: 30000 }),
+  hybridFixture: (fixtureId) => apiRequest(`/hybrid/fixtures/${encodeURIComponent(fixtureId)}`),
+  hybridValidate: (inputPackage) => apiRequest("/hybrid/contracts/validate", { method: "POST", body: inputPackage }),
+  hybridGenerate: (request) => apiRequest("/hybrid/runs", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
+  hybridLocation: (runId) => apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}/location`),
+  hybridOpenFolder: (runId) => apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}/open-folder`, { method: "POST", body: {} }),
+  hybridArchiveUrl: (runId) => `${API_PREFIX}/hybrid/runs/${encodeURIComponent(runId)}/archive`,
+  hybridRun: (runId) => apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}`),
+  hybridTrace: (projectId) => apiRequest(`/hybrid/projects/${encodeURIComponent(projectId)}/trace`),
+  hybridRequirementChange: (request) =>
+    apiRequest("/hybrid/regenerations/requirement-change", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
+  hybridInjectDefect: (runId) =>
+    apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}/simulated-defect-injection`, { method: "POST", body: {} }),
+  hybridSimulatedDefect: (runId) => apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}/simulated-c4-defect`),
+  hybridSimulatedReadiness: (runId) => apiRequest(`/hybrid/runs/${encodeURIComponent(runId)}/simulated-c4-readiness`),
+  hybridDefect: (submission) => apiRequest("/hybrid/c4/defects", { method: "POST", body: submission, timeoutMs: 6 * MINUTE }),
+  hybridGate: (request) => apiRequest("/hybrid/deployment-gate", { method: "POST", body: request }),
+  hybridLlmTrial: (runId, bypassCache) =>
+    apiRequest("/hybrid/llm-trial", { method: "POST", body: { generation_run_id: runId, bypass_cache: bypassCache }, timeoutMs: 10 * MINUTE }),
+  hybridPreviews: () => apiRequest("/hybrid/preview", { timeoutMs: 30000 }),
+  hybridPreviewStart: (runId) =>
+    apiRequest("/hybrid/preview/start", { method: "POST", body: { generation_run_id: runId }, timeoutMs: 20 * MINUTE }),
+  hybridPreviewStop: (previewId) =>
+    apiRequest("/hybrid/preview/stop", { method: "POST", body: { preview_id: previewId }, timeoutMs: 2 * MINUTE }),
+  hybridPreviewStatus: (previewId) => apiRequest(`/hybrid/preview/${encodeURIComponent(previewId)}`, { timeoutMs: 30000 }),
+  hybridPreviewGpaCheck: (previewId) =>
+    apiRequest(`/hybrid/preview/${encodeURIComponent(previewId)}/gpa-check`, { method: "POST", body: {}, timeoutMs: 30000 }),
+
   validateInput: (inputPackage) =>
     apiRequest("/validate-input", { method: "POST", body: inputPackage }),
   buildDesignContext: (generationContext) =>
     apiRequest("/design-context", { method: "POST", body: generationContext }),
+  designCoverage: (generationContext) =>
+    apiRequest("/design-coverage", { method: "POST", body: generationContext }),
   selectStack: (request) => apiRequest("/stack-selection", { method: "POST", body: request }),
 
   generate: (request) =>
     apiRequest("/generation-runs", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
+  behaviourGenerate: (request) =>
+    apiRequest("/behaviour/generation-runs", { method: "POST", body: request, timeoutMs: 30 * MINUTE }),
+  behaviourStart: (workspaceRelativePath) =>
+    apiRequest("/behaviour/apps/start", { method: "POST", body: { workspace_relative_path: workspaceRelativePath }, timeoutMs: 6 * MINUTE }),
+  behaviourArchiveUrl: (workspaceRelativePath) =>
+    `${API_PREFIX}/behaviour/workspace/archive?workspace_relative_path=${encodeURIComponent(workspaceRelativePath)}`,
+  behaviourStop: (workspaceRelativePath) =>
+    apiRequest("/behaviour/apps/stop", { method: "POST", body: { workspace_relative_path: workspaceRelativePath } }),
+    apiRequest("/experiments/openrouter-generation", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
   generateExperimental: (request) =>
     apiRequest("/experiments/claude-generation", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
   codePreview: (request) =>
@@ -52,6 +92,10 @@ export const api = {
       version == null
         ? `/traceability/graphs/${encodeURIComponent(graphId)}/rtm`
         : `/traceability/graphs/${encodeURIComponent(graphId)}/versions/${version}/rtm`,
+    ),
+  graphImpact: (graphId, version, requirementId) =>
+    apiRequest(
+      `/traceability/graphs/${encodeURIComponent(graphId)}/versions/${version}/impact/${encodeURIComponent(requirementId)}`,
     ),
   graphMetrics: (graphId, version = null) =>
     apiRequest(

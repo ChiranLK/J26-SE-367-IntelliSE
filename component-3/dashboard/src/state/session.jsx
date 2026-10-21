@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer 
 // sessionStorage so a browser refresh during a demo does not lose the run; "Reset
 // session" clears it. Nothing is ever pre-populated.
 
+import { clearCallLog } from "./callLog.js";
+
 export const STORAGE_KEY = "intelise-c3-demo-session-v1";
 
 export const emptySession = () => ({
@@ -18,14 +20,21 @@ export const emptySession = () => ({
   uploading: false, // Track if files are being uploaded
   validation: null, // { ok, at, generationContext?, error? }
   designContext: null,
+  designCoverage: null, // { contextKey, at, durationMs, report }
   applicationProfile: "SCHEMA_DRIVEN_CRUD",
   stackReport: null,
+  generationAttempted: false, // a generation was started on Code Generation (finished or not)
+  stackCompare: null, // all four options, for display; stackReport holds the buildable selection
   approval: null, // { status, approvedBy, approvalReference, acknowledgesProvisionalPolicy, at }
   generationRun: null, // { run, mode, durationMs, at }
+  behaviourRun: null, // { run, durationMs, at } from the behaviour (non-CRUD) generator
+  behaviourApp: null, // BehaviourAppSession of the app started on a fresh port
   preview: null,
   structural: null,
   graph: null, // { snapshot, versions: [snapshot...] }
   scoped: { scenarioId: null, baseline: null, impact: null, runs: [] },
+  // Hybrid rule-governed pipeline (GPA benchmark): API responses only.
+  hybrid: { contract: null, run: null, trace: null, preview: null, gpaCheck: null, change: null, defect: null, gate: null },
 });
 
 function load() {
@@ -73,7 +82,10 @@ export function SessionProvider({ children, initial }) {
 
   const set = useCallback((key, value) => dispatch({ type: "set", key, value }), []);
   const update = useCallback((key, fn) => dispatch({ type: "update", key, update: fn }), []);
-  const reset = useCallback(() => dispatch({ type: "reset" }), []);
+  const reset = useCallback(() => {
+    clearCallLog();
+    dispatch({ type: "reset" });
+  }, []);
 
   const value = useMemo(() => ({ session, set, update, reset }), [session, set, update, reset]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
