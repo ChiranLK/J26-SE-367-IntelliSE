@@ -1,0 +1,180 @@
+{
+  "provider": "ollama",
+  "model": "llama3.2:1b",
+  "prompt_version": "c1-ollama-quotes-v3",
+  "synthetic_source": "Students shall be able to add a course with a name, an integer credit value, and a grade.\n\nStudents shall be able to edit and delete an added course.\n\nThe system shall reject credit values outside the range of one to six.\n\nThe system shall map grades A, B, C, D, and F to grade points four, three, two, one, and zero respectively.\n\nThe system shall calculate semester GPA by dividing the sum of credit weighted grade points by the total course credits.\n\nThe system shall display the calculated GPA rounded to two decimal places.\n\nThe system shall display a validation message when calculation is requested without any courses.\n\nStudents shall be able to save and reopen their course list in the same browser after refreshing the page.\n\nGPA calculation shall finish within one second for a list of one hundred courses in the documented test environment.\n\nThe interface shall remain usable at viewport widths of three hundred and seventy five pixels and twelve hundred and eighty pixels without horizontal page scrolling.\n\nAll course entry and calculation controls shall be operable using a keyboard with a visible focus indicator.",
+  "fixture": "gpa",
+  "source_validation": "passed",
+  "validated_candidates": [
+    {
+      "requirement_text": "Students shall be able to add a course with a name, an integer credit value, and a grade.",
+      "evidence": [
+        {
+          "quote": "Students shall be able to add a course with a name, an integer credit value, and a grade.",
+          "start": 0,
+          "end": 89
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "0b719591-e891-4bd3-af6f-0e4737f2bcee",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The system shall reject credit values outside the range of one to six.",
+      "evidence": [
+        {
+          "quote": "The system shall reject credit values outside the range of one to six.",
+          "start": 151,
+          "end": 221
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "9b51dd65-992e-45ca-9c06-188484ba6d41",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The system shall map grades A, B, C, D, and F to grade points four, three, two, one, and zero respectively.",
+      "evidence": [
+        {
+          "quote": "The system shall map grades A, B, C, D, and F to grade points four, three, two, one, and zero respectively.",
+          "start": 223,
+          "end": 330
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "35de3bf7-b5d3-4c03-8ef7-4eb0887d3a1c",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The system shall calculate semester GPA by dividing the sum of credit weighted grade points by the total course credits.",
+      "evidence": [
+        {
+          "quote": "The system shall calculate semester GPA by dividing the sum of credit weighted grade points by the total course credits.",
+          "start": 332,
+          "end": 452
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "05180cd6-afb7-4521-9742-e3b0a1b9573b",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The system shall display the calculated GPA rounded to two decimal places.",
+      "evidence": [
+        {
+          "quote": "The system shall display the calculated GPA rounded to two decimal places.",
+          "start": 454,
+          "end": 528
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "f08b7d05-17bf-416d-8d91-c7e92061e081",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The system shall display a validation message when calculation is requested without any courses.",
+      "evidence": [
+        {
+          "quote": "The system shall display a validation message when calculation is requested without any courses.",
+          "start": 530,
+          "end": 626
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "30c8bba1-7a36-4746-a708-17f7ec2532e0",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "Students shall be able to save and reopen their course list in the same browser after refreshing the page.",
+      "evidence": [
+        {
+          "quote": "Students shall be able to save and reopen their course list in the same browser after refreshing the page.",
+          "start": 628,
+          "end": 734
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "339fb0c8-e80b-4913-8372-cbea364cdf52",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "GPA calculation shall finish within one second for a list of one hundred courses in the documented test environment.",
+      "evidence": [
+        {
+          "quote": "GPA calculation shall finish within one second for a list of one hundred courses in the documented test environment.",
+          "start": 736,
+          "end": 852
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "6a39bd9d-e6d8-451d-b46f-a57c993dcd38",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "The interface shall remain usable at viewport widths of three hundred and seventy five pixels and twelve hundred and eighty pixels without horizontal page scrolling.",
+      "evidence": [
+        {
+          "quote": "The interface shall remain usable at viewport widths of three hundred and seventy five pixels and twelve hundred and eighty pixels without horizontal page scrolling.",
+          "start": 854,
+          "end": 1019
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "4cedacea-bc20-4906-bad2-8aaa7626cfe6",
+      "review_status": "unreviewed"
+    },
+    {
+      "requirement_text": "All course entry and calculation controls shall be operable using a keyboard with a visible focus indicator.",
+      "evidence": [
+        {
+          "quote": "All course entry and calculation controls shall be operable using a keyboard with a visible focus indicator.",
+          "start": 1021,
+          "end": 1129
+        }
+      ],
+      "actor": null,
+      "action": null,
+      "requirement_id": "17cb859c-27c6-4916-a14d-d4e63d470e05",
+      "review_status": "unreviewed"
+    }
+  ],
+  "fixture_relevance_completeness_match": false,
+  "status": "quality_mismatch",
+  "elapsed_seconds": 37.55,
+  "actual_response": {
+    "model": "llama3.2:1b",
+    "created_at": "2026-10-21T19:04:45.141096Z",
+    "message": {
+      "role": "assistant",
+      "content": "{\"quotes\": [\"Students shall be able to add a course with a name, an integer credit value, and a grade.\", \"The system shall reject credit values outside the range of one to six.\", \"The system shall map grades A, B, C, D, and F to grade points four, three, two, one, and zero respectively.\", \"The system shall calculate semester GPA by dividing the sum of credit weighted grade points by the total course credits.\", \"The system shall display the calculated GPA rounded to two decimal places.\", \"The system shall display a validation message when calculation is requested without any courses.\", \"Students shall be able to save and reopen their course list in the same browser after refreshing the page.\", \"GPA calculation shall finish within one second for a list of one hundred courses in the documented test environment.\", \"The interface shall remain usable at viewport widths of three hundred and seventy five pixels and twelve hundred and eighty pixels without horizontal page scrolling.\", \"All course entry and calculation controls shall be operable using a keyboard with a visible focus indicator.\"]}"
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 37258310810,
+    "load_duration": 140767172,
+    "prompt_eval_count": 357,
+    "prompt_eval_cached_count": 139,
+    "prompt_eval_duration": 11426759000,
+    "eval_count": 215,
+    "eval_duration": 24937351000
+  },
+  "request_metrics": {
+    "options": {
+      "temperature": 0,
+      "num_ctx": 2048,
+      "num_predict": 768
+    },
+    "schema_bytes": 326,
+    "system_prompt_characters": 530,
+    "timeout_seconds": 180.0
+  }
+}

@@ -1,0 +1,934 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Component 01 \u2014 Requirement Engineering",
+    "description": "Backend foundation. Health reports application availability only.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/component-1/projects/{project_id}/srs": {
+      "get": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Read Srs",
+        "operationId": "read_srs_api_v1_component_1_projects__project_id__srs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Generate Srs",
+        "description": "Create a template draft from model labels with saved human corrections taking priority. Does not call an LLM or approve requirements.",
+        "operationId": "generate_srs_api_v1_component_1_projects__project_id__srs_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/component-1/projects/{project_id}/srs/feedback": {
+      "post": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Save Feedback",
+        "description": "Append a client decision to the latest draft. Identity is self-reported, not authenticated.",
+        "operationId": "save_feedback_api_v1_component_1_projects__project_id__srs_feedback_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/component-1/projects/{project_id}/srs/revisions": {
+      "post": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Create Revision",
+        "description": "Create a new draft with explicit authored changes. Previous versions remain intact; all client decisions reset.",
+        "operationId": "create_revision_api_v1_component_1_projects__project_id__srs_revisions_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/component-1/projects/{project_id}/srs/approval": {
+      "post": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Approve Srs",
+        "description": "Approve only the latest fully accepted version and its exact content hash. Self-reported client approval, not independent verification.",
+        "operationId": "approve_srs_api_v1_component_1_projects__project_id__srs_approval_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/component-1/projects/{project_id}/srs/accept-remaining": {
+      "post": {
+        "tags": [
+          "SRS client review"
+        ],
+        "summary": "Accept Pending",
+        "description": "Explicitly accept pending requirements in one atomic action. Existing change/clarification requests are preserved. Does not approve the SRS.",
+        "operationId": "accept_pending_api_v1_component_1_projects__project_id__srs_accept_remaining_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAcceptInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SrsState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApprovalInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "confirm": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "expected_revision",
+          "reviewer_id",
+          "version_id",
+          "confirm"
+        ],
+        "title": "ApprovalInput"
+      },
+      "BulkAcceptInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "confirm": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "expected_revision",
+          "reviewer_id",
+          "version_id",
+          "confirm"
+        ],
+        "title": "BulkAcceptInput"
+      },
+      "ClientFeedback": {
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "title": "Feedback Id"
+          },
+          "requirement_id": {
+            "type": "string",
+            "title": "Requirement Id"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "request_changes",
+              "needs_clarification"
+            ],
+            "title": "Decision"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "title": "Reviewer Id"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          },
+          "identity_status": {
+            "type": "string",
+            "const": "self_reported",
+            "title": "Identity Status",
+            "default": "self_reported"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "requirement_id",
+          "decision",
+          "comment",
+          "reviewer_id",
+          "recorded_at"
+        ],
+        "title": "ClientFeedback"
+      },
+      "DraftInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "extraction_run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Extraction Run Id"
+          },
+          "classification_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Classification Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "expected_revision",
+          "reviewer_id",
+          "extraction_run_id",
+          "classification_id"
+        ],
+        "title": "DraftInput"
+      },
+      "FeedbackInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "requirement_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requirement Id"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "request_changes",
+              "needs_clarification"
+            ],
+            "title": "Decision"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "expected_revision",
+          "reviewer_id",
+          "version_id",
+          "requirement_id",
+          "decision"
+        ],
+        "title": "FeedbackInput"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RequirementChange": {
+        "properties": {
+          "requirement_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requirement Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "FR",
+              "NFR"
+            ],
+            "title": "Label"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requirement_id",
+          "text",
+          "label",
+          "reason"
+        ],
+        "title": "RequirementChange"
+      },
+      "RevisionInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "base_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Base Version Id"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/RequirementChange"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "expected_revision",
+          "reviewer_id",
+          "base_version_id",
+          "changes"
+        ],
+        "title": "RevisionInput"
+      },
+      "SrsApproval": {
+        "properties": {
+          "reviewer_id": {
+            "type": "string",
+            "title": "Reviewer Id"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Approved At"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "identity_status": {
+            "type": "string",
+            "const": "self_reported",
+            "title": "Identity Status",
+            "default": "self_reported"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reviewer_id",
+          "approved_at",
+          "content_hash"
+        ],
+        "title": "SrsApproval"
+      },
+      "SrsRequirement": {
+        "properties": {
+          "requirement_id": {
+            "type": "string",
+            "title": "Requirement Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "FR",
+              "NFR"
+            ],
+            "title": "Label"
+          },
+          "original_text": {
+            "type": "string",
+            "title": "Original Text"
+          },
+          "label_review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Review Id"
+          },
+          "source_text_hash": {
+            "type": "string",
+            "title": "Source Text Hash"
+          },
+          "change_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Reason"
+          },
+          "authored_revision": {
+            "type": "boolean",
+            "title": "Authored Revision",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "requirement_id",
+          "text",
+          "label",
+          "original_text",
+          "label_review_id",
+          "source_text_hash"
+        ],
+        "title": "SrsRequirement"
+      },
+      "SrsState": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "c1-srs-v1",
+            "title": "Schema Version",
+            "default": "c1-srs-v1"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "default": 0
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/SrsVersion"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id"
+        ],
+        "title": "SrsState"
+      },
+      "SrsVersion": {
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "parent_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Version Id"
+          },
+          "project_title": {
+            "type": "string",
+            "title": "Project Title"
+          },
+          "project_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Description"
+          },
+          "extraction_run_id": {
+            "type": "string",
+            "title": "Extraction Run Id"
+          },
+          "classification_id": {
+            "type": "string",
+            "title": "Classification Id"
+          },
+          "source_discussion_hash": {
+            "type": "string",
+            "title": "Source Discussion Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "generation_method": {
+            "type": "string",
+            "enum": [
+              "reviewed-requirements-template-v1",
+              "classified-requirements-template-v2"
+            ],
+            "title": "Generation Method",
+            "default": "reviewed-requirements-template-v1"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved"
+            ],
+            "title": "Status",
+            "default": "draft"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/SrsRequirement"
+            },
+            "type": "array",
+            "title": "Requirements"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/ClientFeedback"
+            },
+            "type": "array",
+            "title": "Feedback"
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SrsApproval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "version_id",
+          "version_number",
+          "project_title",
+          "project_description",
+          "extraction_run_id",
+          "classification_id",
+          "source_discussion_hash",
+          "created_at",
+          "created_by",
+          "requirements",
+          "content_hash"
+        ],
+        "title": "SrsVersion"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

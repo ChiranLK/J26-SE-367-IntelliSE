@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 
 from intelise_c1.api.router import api_router
+from intelise_c1.api.transcriptions import UploadBodyLimit
 from intelise_c1.services.provider import create_provider
 from intelise_c1.services.classifier import LocalClassifier
 from intelise_c1.core.config import Settings
@@ -23,11 +24,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = settings
     application.state.extraction_provider = create_provider(settings)
     application.state.classifier = LocalClassifier(settings.classifier_model_dir)
+    application.add_middleware(UploadBodyLimit, maximum=settings.audio_max_bytes)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type"],
     )
 

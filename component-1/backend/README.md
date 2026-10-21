@@ -18,12 +18,28 @@ It confirms application availability only, not database or AI readiness.
 
 FR/NFR baseline classification requires a trusted locally trained model. The supplied
 DCAI labels now have a locally trained TF-IDF/logistic baseline; see
-[the measured evaluation report](research/dcai-baseline-report.md). Project IDs and
-independent label review remain unavailable. Quality validation,
-RAG, LangGraph, audio processing, and SRS generation remain future
-work. Measured baseline results and their limitations are documented in the report.
+[the measured evaluation report](research/dcai-baseline-report.md). Genuine source project IDs and
+project-separated evaluation remain unavailable. LLM-based quality validation,
+RAG and LangGraph remain future work. A template SRS/client-review first phase
+is now available; see the SRS section below. Measured baseline results and their limitations are documented in the report.
+
+Optional audio transcription now accepts bounded WAV/MP3/M4A uploads and retains
+Whisper originals for human review. See [audio setup and API contract](docs/audio-transcription.md)
+and [actual verification results](docs/audio-verification.md). It neither creates
+projects nor extracts/classifies requirements automatically.
+Project creation can now explicitly associate a completed transcription with the
+user's edited discussion and save backend-owned provenance. See the
+[frontend integration contract](docs/project-transcription-provenance.md) and
+[verification report](docs/project-provenance-verification.md).
 
 ## macOS setup
+
+Azure Speech is now an optional transcription provider alongside local Whisper.
+Run `.venv/bin/python scripts/configure_azure_speech.py` from this backend to enter
+KEY 1 privately and preserve existing settings. See [Azure setup and verification](docs/azure-speech.md).
+Azure uses the same upload/review/project workflow; no SDK, model training or
+classifier dependency changes are required. Cloud transcription is billed usage,
+not an automatic free student service. No cloud call runs at startup.
 
 Supported runtime: **Python 3.12** (verified with 3.12.8). Install Python 3.12
 first if `python3.12 --version` is unavailable. Dependency management uses pip
@@ -43,6 +59,25 @@ python -m pip check
 python -m pytest
 python -m intelise_c1
 ```
+
+Use the **component-1-backend** checkout for these commands. This session's durable
+backend worktree is `.worktrees/component-1-backend` under the main repository;
+from there, enter `component-1/backend`. Its dedicated `.venv` is installed against
+that source. Reinstall the editable package after changing checkouts, then verify:
+
+```sh
+python -c 'import intelise_c1; print(intelise_c1.__file__)'
+python -m intelise_c1
+```
+
+The import path must point into the backend checkout you intend to run. Normal
+startup registers project, extraction, classification **and transcription** routes
+without Whisper installed/configured. Check `/openapi.json` for
+`/api/v1/component-1/transcriptions` and `ProjectCreate.transcription_id`.
+Health alone does not establish route/model/database readiness. All source for
+these routes is in this backend checkout; startup needs no temporary source
+snapshot or custom `PYTHONPATH`. Optional ASR execution still needs the separately
+prepared model/interpreter described in the audio guide. Run one backend instance.
 
 The virtual environment isolates this backend's dependencies from other
 components. Run all commands below from `component-1/backend` with it active.
@@ -155,7 +190,9 @@ a letter, digit, or underscore. Use a database dedicated to this component.
 The database user needs read/write and index-creation permissions on it.
 
 The async PyMongo client is created in application lifespan and closed on
-shutdown. Network access is deferred until a project request. A compound
+shutdown. Audio-job recovery attempts a bounded database operation in a background
+startup task; it does not delay health startup. Project operations remain deferred
+until requests. A compound
 `created_at`/`_id` index is created lazily on the first create or list request
 per process. Writes require majority acknowledgement. There is no in-memory
 fallback. Missing/invalid URI, unavailable server, permission errors, and
@@ -180,11 +217,18 @@ log connection strings or discussion content.
 | `name` | Required string; 1–120 characters; whitespace-only rejected; leading/trailing whitespace trimmed |
 | `description` | Optional string or null; maximum 2,000 characters; omitted becomes null |
 | `discussion_text` | Required string; 1–100,000 characters; whitespace-only rejected |
+| `transcription_id` | Optional completed transcription UUID; omitted/null retains text-only creation |
 
 Limits count Unicode characters in the submitted strings, before name trimming.
 Discussion text is saved without trimming, rewriting, normalizing line breaks,
 or processing through AI. Unknown fields, including client-supplied status,
-IDs, or timestamps, are rejected. Invalid input returns HTTP 422.
+project IDs, model metadata or timestamps, are rejected. Invalid input returns HTTP 422.
+With `transcription_id`, discussion text is the user's reviewed draft; it may differ
+from the ASR original. The backend validates the stored completed speech job and
+saves a provenance snapshot atomically with the project. Missing jobs return 404;
+queued/processing/failed jobs and unusable completed results return 409. No project
+is inserted on reference-validation failure. See the exact
+[provenance request/response and errors](docs/project-transcription-provenance.md).
 
 Example request from another terminal:
 
@@ -511,3 +555,38 @@ return 503; health still works without a classifier.
 Previous classification runs and original extraction text/evidence/status are
 preserved. Predictions contain FR/NFR labels without probability scores or an
 approval claim. Nothing trains automatically on API startup.
+
+## Local baseline artifacts and persistence troubleshooting
+
+See [local model storage and reproducibility](research/local-artifacts.md),
+[aggregate DCAI run identities and metrics](research/dcai-v1-summary.json), and
+[the sanitized MongoDB diagnosis](research/mongodb-diagnosis.md). Datasets,
+row-level reports and learned binaries remain local under the existing research
+ignore rules; no redistribution permission is asserted.
+
+### Reviewed classification labels
+
+Saved FR/NFR predictions can now receive explicit, append-only human label reviews.
+The original prediction remains unchanged. Reviews retain model/run identity,
+source/text hashes, self-reported reviewer and timestamp; new extraction or
+classification runs have separate reviews. No automatic retraining or client
+approval occurs. Start the normal backend with `python -m intelise_c1` (restart
+an existing process to load routes). See [label-reviews.md](docs/label-reviews.md)
+for HTTP contracts, UI steps and isolated MongoDB verification commands.
+
+### Dashboard project deletion
+
+`DELETE /api/v1/component-1/projects/{project_id}` removes a project from listing
+and normal retrieval, retaining source/audio/run/review records for recovery.
+This is soft deletion rather than permanent data erasure. Repeated explicit
+DELETE requests are idempotent (204). Restart the normal backend to load the new
+route. See [project-deletion.md](docs/project-deletion.md) for behavior, errors,
+isolated MongoDB tests and limitations.
+
+## SRS drafts and client review (phase 1)
+
+The normal backend now includes template-based SRS drafts from classified
+saved requirements with optional human corrections, individual or bulk client decisions, explicit versioned revisions and approval
+of an exact version. MongoDB retains history separately from source records and
+FR/NFR label reviews. Client names are self-reported; no LLM/RAG generation or
+Agile artifacts are claimed. See [API, limits and verified results](docs/srs-client-review.md).

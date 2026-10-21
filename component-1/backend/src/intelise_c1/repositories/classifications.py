@@ -29,3 +29,8 @@ class ClassificationRepository:
             sort=[("classified_at", -1), ("_id", -1)],
         )
         return ClassificationRun(**{key: value for key, value in document.items() if key != "_id"}) if document else None
+
+    async def get(self, project_id: str, extraction_run_id: str, classification_id: str) -> ClassificationRun | None:
+        document = await self.collection.find_one({"project_id": project_id, "extraction_run_id": extraction_run_id,
+                                                   "classification_id": classification_id})
+        return ClassificationRun(**{key: value for key, value in document.items() if key != "_id"}) if document else None

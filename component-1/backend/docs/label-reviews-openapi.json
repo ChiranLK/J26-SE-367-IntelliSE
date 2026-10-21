@@ -1,0 +1,408 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Component 01 \u2014 Requirement Engineering",
+    "description": "Backend foundation. Health reports application availability only.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications/{classification_id}/requirements/{requirement_id}/reviews": {
+      "post": {
+        "tags": [
+          "label reviews"
+        ],
+        "summary": "Save Review",
+        "operationId": "save_review_api_v1_component_1_projects__project_id__extractions__run_id__classifications__classification_id__requirements__requirement_id__reviews_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "classification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Classification Id"
+            }
+          },
+          {
+            "name": "requirement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Requirement Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelReview"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Identical submission already saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelReview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Referenced project, extraction, classification or requirement does not exist in this scope."
+          },
+          "409": {
+            "description": "Submission ID reused with different data or inconsistent saved classification."
+          },
+          "503": {
+            "description": "Persistence unavailable or saved data invalid."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/component-1/projects/{project_id}/extractions/{run_id}/classifications/{classification_id}/reviews": {
+      "get": {
+        "tags": [
+          "label reviews"
+        ],
+        "summary": "Get Reviews",
+        "operationId": "get_reviews_api_v1_component_1_projects__project_id__extractions__run_id__classifications__classification_id__reviews_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "classification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Classification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LabelReview": {
+        "properties": {
+          "review_id": {
+            "type": "string",
+            "title": "Review Id"
+          },
+          "submission_id": {
+            "type": "string",
+            "title": "Submission Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "extraction_run_id": {
+            "type": "string",
+            "title": "Extraction Run Id"
+          },
+          "classification_id": {
+            "type": "string",
+            "title": "Classification Id"
+          },
+          "requirement_id": {
+            "type": "string",
+            "title": "Requirement Id"
+          },
+          "original_prediction": {
+            "type": "string",
+            "enum": [
+              "FR",
+              "NFR"
+            ],
+            "title": "Original Prediction"
+          },
+          "reviewed_label": {
+            "type": "string",
+            "enum": [
+              "FR",
+              "NFR"
+            ],
+            "title": "Reviewed Label"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "title": "Reviewer Id"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "model_identifier": {
+            "type": "string",
+            "title": "Model Identifier"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "source_discussion_hash": {
+            "type": "string",
+            "title": "Source Discussion Hash"
+          },
+          "requirement_text_hash": {
+            "type": "string",
+            "title": "Requirement Text Hash"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reviewed At"
+          },
+          "review_status": {
+            "type": "string",
+            "const": "user_reviewed",
+            "title": "Review Status",
+            "default": "user_reviewed"
+          },
+          "reviewer_identity_status": {
+            "type": "string",
+            "const": "self_reported",
+            "title": "Reviewer Identity Status",
+            "default": "self_reported"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "review_id",
+          "submission_id",
+          "project_id",
+          "extraction_run_id",
+          "classification_id",
+          "requirement_id",
+          "original_prediction",
+          "reviewed_label",
+          "reviewer_id",
+          "note",
+          "model_identifier",
+          "model_version",
+          "source_discussion_hash",
+          "requirement_text_hash",
+          "reviewed_at"
+        ],
+        "title": "LabelReview"
+      },
+      "ReviewInput": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submission Id",
+            "description": "Client-generated UUID for idempotent explicit save/retry."
+          },
+          "reviewed_label": {
+            "type": "string",
+            "enum": [
+              "FR",
+              "NFR"
+            ],
+            "title": "Reviewed Label"
+          },
+          "reviewer_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Reviewer Id"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission_id",
+          "reviewed_label",
+          "reviewer_id"
+        ],
+        "title": "ReviewInput"
+      },
+      "ReviewPage": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "extraction_run_id": {
+            "type": "string",
+            "title": "Extraction Run Id"
+          },
+          "classification_id": {
+            "type": "string",
+            "title": "Classification Id"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/LabelReview"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Reviews"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "extraction_run_id",
+          "classification_id",
+          "reviews"
+        ],
+        "title": "ReviewPage"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

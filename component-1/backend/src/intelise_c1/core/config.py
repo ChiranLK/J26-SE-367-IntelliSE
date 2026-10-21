@@ -2,6 +2,7 @@
 
 from urllib.parse import urlsplit
 from pathlib import Path
+import tempfile
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
@@ -58,6 +59,40 @@ class Settings(BaseSettings):
     llm_response_max_bytes: int = Field(default=262144, ge=1024, le=1048576)
     extraction_max_characters: int = Field(default=30000, ge=1, le=100000)
     classifier_model_dir: Path | None = None
+    transcription_provider: Literal["whisper", "azure"] = "whisper"
+    azure_speech_key: SecretStr | None = None
+    azure_speech_endpoint: str = "https://southeastasia.api.cognitive.microsoft.com"
+    azure_speech_api_version: Literal["2025-10-15"] = "2025-10-15"
+    azure_speech_locale: Literal["en-US", "en-GB", "en-IN", "en-AU"] = "en-US"
+    audio_ffmpeg_path: Path | None = None
+
+    @field_validator("azure_speech_endpoint")
+    @classmethod
+    def azure_endpoint(cls, value):
+        parsed = urlsplit(value)
+        host = parsed.hostname or ""
+        if (parsed.scheme != "https" or not host.endswith((".api.cognitive.microsoft.com", ".cognitiveservices.azure.com"))
+                or parsed.username or parsed.password or parsed.port not in (None, 443)
+                or parsed.path not in ("", "/") or parsed.query or parsed.fragment
+                or any(character.isspace() for character in value)):
+            raise ValueError("Use the HTTPS Azure Speech resource endpoint without credentials or a path")
+        return value.rstrip("/")
+
+    whisper_python: Path | None = None
+    whisper_model: str = Field(default="tiny.en", pattern=r"^(tiny|base|small|medium)(\.en)?$|^large(-v[123])?$|^turbo$")
+    whisper_model_dir: Path = Path("models/whisper")
+    audio_temp_dir: Path = Path(tempfile.gettempdir()) / "intellise-c1-audio"
+    audio_max_bytes: int = Field(default=10000000, ge=1024, le=100000000)
+    audio_max_seconds: float = Field(default=120, ge=1, le=600)
+    audio_queue_size: int = Field(default=2, ge=0, le=10)
+    audio_decode_timeout_seconds: float = Field(default=20, ge=1, le=120)
+    audio_processing_timeout_seconds: float = Field(default=300, ge=1, le=1800)
+    audio_silence_rms: float = Field(default=0.0001, ge=0, le=0.01)
+
+    @field_validator("whisper_python", "audio_ffmpeg_path", mode="before")
+    @classmethod
+    def optional_whisper_python(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("classifier_model_dir", mode="before")
     @classmethod

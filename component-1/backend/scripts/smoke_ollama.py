@@ -4,6 +4,8 @@ Prints the actual response and elapsed time. Never retries or downloads a model.
 Uses explicit settings rather than reading a potentially credential-bearing .env.
 """
 import asyncio
+import argparse
+from pathlib import Path
 import json
 from time import perf_counter
 
@@ -20,7 +22,19 @@ EXPECTED = ["Customers can book appointments.", "Only administrators can delete\
 
 
 async def main():
-    settings = Settings(_env_file=None, llm_provider="ollama")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--fixture', choices=['original', 'gpa'], default='original')
+    parser.add_argument('--timeout', type=float, default=60)
+    parser.add_argument('--max-tokens', type=int, default=256)
+    args = parser.parse_args()
+    source, expected = SOURCE, EXPECTED
+    if args.fixture == 'gpa':
+        fixture = Path(__file__).resolve().parents[5] / 'component-1/frontend/public/samples/gpa-calculator-viva.local/GPA-Calculator-transcript.txt'
+        if not fixture.is_file():
+            parser.error('Local synthetic GPA fixture is missing; prepare the GPA demo bundle first.')
+        source = fixture.read_text().strip()
+        expected = source.split('\n\n')
+    settings = Settings(_env_file=None, llm_provider="ollama", llm_timeout_seconds=args.timeout, ollama_max_tokens=args.max_tokens)
     provider = OllamaProvider(settings)
     actual = None
     request_metrics = {}
@@ -51,15 +65,15 @@ async def main():
     httpx.AsyncClient = lambda **kwargs: real_client(event_hooks={"request": [capture_request], "response": [capture]}, **kwargs)
     start = perf_counter()
     result = {"provider": "ollama", "model": provider.model_identifier,
-              "prompt_version": provider.prompt_version, "synthetic_source": SOURCE,
+              "prompt_version": provider.prompt_version, "synthetic_source": source, "fixture": args.fixture,
               "source_validation": "not_completed"}
     try:
-        output = await provider.extract(SOURCE)
-        run = build_run(SOURCE, output, "smoke-only-no-persistence", provider.model_identifier, "ollama", provider.prompt_version)
+        output = await provider.extract(source)
+        run = build_run(source, output, "smoke-only-no-persistence", provider.model_identifier, "ollama", provider.prompt_version)
         texts = [candidate.requirement_text for candidate in run.candidates]
         result.update(validated_candidates=run.model_dump(mode="json")["candidates"],
                       source_validation="passed",
-                      fixture_relevance_completeness_match=texts == EXPECTED, status="passed" if texts == EXPECTED else "quality_mismatch")
+                      fixture_relevance_completeness_match=texts == expected, status="passed" if texts == expected else "quality_mismatch")
     except (ProviderTimeout, ProviderUnavailable, InvalidExtraction) as error:
         result.update(source_validation="failed" if isinstance(error, InvalidExtraction) else "not_completed",
                       status=type(error).__name__, error=str(error) or ("Generation timed out; no retry attempted." if isinstance(error, ProviderTimeout) else type(error).__name__))
@@ -69,7 +83,7 @@ async def main():
     if actual is not None:
         try:
             quotes = json.loads(actual["message"]["content"])["quotes"]
-            result["fixture_relevance_completeness_match"] = quotes == EXPECTED
+            result["fixture_relevance_completeness_match"] = quotes == expected
         except (KeyError, TypeError, ValueError):
             result["fixture_relevance_completeness_match"] = None
     result.update(elapsed_seconds=round(perf_counter() - start, 3), actual_response=actual, request_metrics=request_metrics)
