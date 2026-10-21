@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatSriLankaTime } from "../lib/format.js";
 import { friendlyMessage, describeChange, moduleLabel, nodeLabels, SUPPORT_MODULES } from "../lib/hybridFriendly.js";
 import { ragRows, traceChains, verificationCounts } from "../lib/hybrid.js";
 import { useHybridRun } from "../state/useHybridRun.js";
@@ -185,7 +186,7 @@ export function HybridPreviewView() {
               { label: "App address", value: <a href={preview.frontend_url} target="_blank" rel="noreferrer" data-testid="preview-frontend-url">{preview.frontend_url}</a> },
               { label: "API health", value: <a href={preview.api_health_url} target="_blank" rel="noreferrer" data-testid="preview-api-url">{preview.api_health_url}</a> },
               { label: "Database", value: "PostgreSQL inside Docker, not reachable from outside. Saved calculations disappear when the preview stops." },
-              { label: "Started", value: preview.started_at_utc },
+              { label: "Started", value: formatSriLankaTime(preview.started_at_utc) },
             ]}
           />
         </Card>

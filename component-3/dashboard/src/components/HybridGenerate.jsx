@@ -3,25 +3,15 @@ import { acceptanceFrom } from "../lib/hybrid.js";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 import { ProjectTree } from "./ProjectTree.jsx";
-import { RunningSteps, pace } from "./RunningSteps.jsx";
+import { pace } from "./RunningSteps.jsx";
 import { Button, Card, ErrorPanel, Hash, KeyValues, Loading, Stat, StatusBadge } from "./ui.jsx";
 
 // Clicking Generate is the researcher's explicit acceptance of the sample grading policy; the run manifest records it.
 const ACCEPTED_BY = "researcher (dashboard)";
 const INPUT_FIXTURE = "gpa-input";
 
-// Demo pacing: generating the whole project stays on screen for about 200 seconds (none in tests), with its steps ticking over.
+// Demo pacing: generating the whole project stays on screen for about 200 seconds (none in tests).
 const GENERATE_PACE_MS = import.meta.env.MODE === "test" ? 0 : 200000;
-const GENERATE_STEPS = [
-  "Checking the C1/C2 inputs",
-  "Choosing the rules and the technology",
-  "Writing the backend",
-  "Writing the frontend",
-  "Writing the database scripts",
-  "Checking the code against the design",
-  "Linking every requirement to its code",
-  "Packing the project",
-];
 
 // The package the user uploaded on C1/C2 Inputs, when both files are released 2.x JSON documents; otherwise nothing.
 function uploadedPackage(sourceDocuments) {
@@ -93,12 +83,7 @@ export function HybridGenerate() {
       <div className="button-row">
         <Button onClick={() => generate.run()} loading={generate.loading}>Generate project</Button>
       </div>
-      {generate.loading ? (
-        <>
-          <Loading label="Running the generation pipeline…" startedAt={generate.startedAt} />
-          <RunningSteps startedAt={generate.startedAt} durationMs={GENERATE_PACE_MS || undefined} label="Project generation progress" steps={GENERATE_STEPS} />
-        </>
-      ) : null}
+      {generate.loading ? <Loading label="Running the generation pipeline…" startedAt={generate.startedAt} /> : null}
       <EvidenceClassHelp error={generate.error} sourceDocuments={session.sourceDocuments} />
       <ErrorPanel error={generate.error} context="GPA generation" />
       {manifest ? (

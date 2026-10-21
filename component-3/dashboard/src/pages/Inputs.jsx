@@ -248,11 +248,7 @@ export default function Inputs({ navigate }) {
           <Button onClick={() => validate.run()} loading={validate.loading} disabled={!canValidate}>
             Validate inputs
           </Button>
-          <span className="muted small">
-            {canValidate
-              ? "Pressing this accepts a provisional demo contract built from these two documents."
-              : "Choose both files first."}
-          </span>
+          {canValidate ? null : <span className="muted small">Choose both files first.</span>}
         </div>
         {validate.loading ? <CheckingSteps startedAt={validate.startedAt} /> : null}
         <ErrorPanel error={validate.error} context="Validation" />
