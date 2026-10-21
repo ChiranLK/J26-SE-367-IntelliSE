@@ -2,11 +2,14 @@ import { useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
 import { CodePreview } from "../components/CodePreview.jsx";
 import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, ModeBadge, PageHeader, SimBanner, SimulatedBadge, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
+import { EvidenceChip, FileGrid, PatchDiffPanel, RunningBoard } from "../components/visuals.jsx";
 import { formatBytes, formatDuration, formatTime } from "../lib/format.js";
 import { buildDefectReport, buildScopedRequest } from "../lib/requests.js";
 import { useBackend } from "../state/backend.jsx";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
+import { HybridChangeView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
 const reasonList = (codes) => (codes?.length ? codes.map((code) => <div key={code}><code>{code}</code></div>) : "none");
 
@@ -121,7 +124,54 @@ function PatchedView({ result }) {
   );
 }
 
-function Result({ entry }) {
+function OutcomeBoard({ result, baseline, baselineRunId }) {
+  const preservation = result.preservation;
+  const graph = result.graph_versioning;
+  const handoff = result.c4_retest_handoff;
+  const attempts = result.patch_attempts ?? [];
+  const lastAttempt = attempts[attempts.length - 1];
+  const files = preservation
+    ? preservation.entries.map((entry) => ({
+        path: entry.relative_path,
+        state: !entry.byte_identical ? (entry.selected ? "patched" : "violation") : "identical",
+      }))
+    : (baseline && baseline.generation_run.manifest.generation_run_id === baselineRunId ? baseline.generation_run.manifest.files : []).map((file) => ({
+        path: file.relative_path,
+        state: "untouched",
+      }));
+  const changed = files.filter((file) => file.state === "patched" || file.state === "violation").length;
+  const used = result.metrics.within_request_attempt_count ?? attempts.length;
+  const limit = result.metrics.within_request_attempt_limit;
+  return (
+    <Card className="outcome-board" title="Outcome" subtitle="Everything below is read from this regeneration response; nothing is inferred.">
+      <div className="outcome-headline" data-testid="outcome-headline">
+        <span className="outcome-big">{changed} of {files.length} file{files.length === 1 ? "" : "s"} changed</span>
+        <span className="outcome-graph">
+          {graph ? `graph v${graph.base_graph_version} → v${graph.new_graph_version}` : "graph unchanged"}
+        </span>
+      </div>
+      <div className="chip-row outcome-chips">
+        {lastAttempt ? (
+          lastAttempt.accepted
+            ? <Badge tone="ok">validator: ACCEPTED</Badge>
+            : <Badge tone="bad">validator: REJECTED · {lastAttempt.rejection_code ?? "unknown"}</Badge>
+        ) : <Badge tone="neutral">validator: not reached</Badge>}
+        <Badge tone="neutral">attempts used {used}/{limit ?? "?"}</Badge>
+        <StatusBadge status="PENDING" label={handoff ? `C4 retest ${handoff.retest_status}` : "C4 retest PENDING · no handoff"} />
+        <EvidenceChip kind="none" />
+        <EvidenceChip kind="simulated">SIMULATED defect</EvidenceChip>
+      </div>
+      {files.length ? (
+        <FileGrid files={files} />
+      ) : (
+        <p className="muted small">No file list is available for this run (no patched workspace). Create a baseline and run a regeneration to see the file grid.</p>
+      )}
+      <PatchDiffPanel result={result} />
+    </Card>
+  );
+}
+
+function Result({ entry, baseline }) {
   const { result } = entry;
   const versioning = result.artifact_versioning;
   const graph = result.graph_versioning;
@@ -151,6 +201,8 @@ function Result({ entry }) {
         {result.metrics.repair_success.replaceAll("_", " ")}. C3 can only claim that a scoped patch was applied and
         structurally inspected; it has not run any test. c4_testing_claim = {String(result.c4_testing_claim)}.
       </Callout>
+
+      <OutcomeBoard result={result} baseline={baseline} baselineRunId={entry.baselineRunId} />
 
       <div className="stats">
         <Stat label="Patched modules" value={result.patches.length} />
@@ -319,7 +371,7 @@ function Result({ entry }) {
   );
 }
 
-export default function ScopedRegeneration() {
+function ClassicScopedRegeneration() {
   const { session, set, update } = useSession();
   const { overview } = useBackend();
   const scoped = session.scoped;
@@ -459,7 +511,7 @@ export default function ScopedRegeneration() {
           <>
             <div className="result-head">
               <Badge tone="sim">{baseline.classification}</Badge>
-              <Badge tone="sim">{baseline.model_evidence_class}</Badge>
+              <Badge tone={baseline.model_evidence_class === "MOCKED_TEST_DOUBLE" ? "mock" : "sim"}>{baseline.model_evidence_class}</Badge>
             </div>
             <p className="small">{baseline.notice}</p>
             <KeyValues
@@ -511,7 +563,7 @@ export default function ScopedRegeneration() {
           </Callout>
         ) : null}
         {regenerate.loading ? (
-          <Loading
+          <RunningBoard
             label={`Running ${lastRunMode} regeneration`}
             startedAt={regenerate.startedAt}
             note={lastRunMode === "REAL_LOCAL_OLLAMA" ? "Synchronous call. Local inference can take from tens of seconds to several minutes." : undefined}
@@ -519,6 +571,15 @@ export default function ScopedRegeneration() {
         ) : null}
         <ErrorPanel error={regenerate.error} context={`${lastRunMode ?? ""} regeneration`} />
       </Card>
+
+      {runs.length === 0 && !regenerate.loading ? (
+        <Card title="Regeneration outcome" subtitle="Nothing has run in this session yet.">
+          <p className="muted small">
+            Next step: load the SIMULATED defect fixture (1), create the defective baseline (2), then run step 4. The outcome board
+            will show the changed file, the diff, the validator verdict and the pending C4 re-test here.
+          </p>
+        </Card>
+      ) : null}
 
       {runs.length ? (
         <>
@@ -538,9 +599,11 @@ export default function ScopedRegeneration() {
               ]}
             />
           </Card>
-          {shown ? <Result entry={shown} /> : null}
+          {shown ? <Result entry={shown} baseline={baseline} /> : null}
         </>
       ) : null}
     </div>
   );
 }
+
+export default withHybridFallback(HybridChangeView, ClassicScopedRegeneration, { crudRunExists: (session) => Boolean(session.generationRun) || (session.scoped?.runs?.length ?? 0) > 0 });

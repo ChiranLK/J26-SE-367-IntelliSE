@@ -12,9 +12,12 @@ import {
   PageHeader,
   SimulatedBadge,
 } from "../components/ui.jsx";
+import { BehaviourAppCard } from "../components/BehaviourAppCard.jsx";
 import { isDynamicCrudManifest } from "../lib/crudSummary.js";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
+import { HybridPreviewView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
 function previewTone(status) {
   if (status === "RUNNING") return "ok";
@@ -23,12 +26,13 @@ function previewTone(status) {
   return "neutral";
 }
 
-export default function BrowserPreview({ navigate }) {
+function ClassicBrowserPreview({ navigate }) {
   const { session, set } = useSession();
   const run = session.generationRun?.run;
   const manifest = run?.manifest;
   const dynamic = manifest && isDynamicCrudManifest(manifest);
   const preview = session.preview;
+  const behaviourRun = session.behaviourRun?.run;
 
   useEffect(() => {
     if (!dynamic || !manifest?.generation_run_id || preview?.preview_id === manifest.generation_run_id) {
@@ -73,7 +77,9 @@ export default function BrowserPreview({ navigate }) {
         }
       />
 
-      {!run ? (
+      {behaviourRun ? <BehaviourAppCard run={behaviourRun} /> : null}
+
+      {!run && !behaviourRun ? (
         <Callout tone="warn" title="Generate an application first">
           Complete Code Generation for a dynamic CRUD domain, then return here.{" "}
           <button type="button" className="link-button" onClick={() => navigate("generation")}>
@@ -183,3 +189,5 @@ export default function BrowserPreview({ navigate }) {
     </div>
   );
 }
+
+export default withHybridFallback(HybridPreviewView, ClassicBrowserPreview, { crudRunExists: (session) => Boolean(session.generationRun) });

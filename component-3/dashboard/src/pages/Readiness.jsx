@@ -1,8 +1,10 @@
 import { Badge, Callout, Card, PageHeader, StatusBadge, Table } from "../components/ui.jsx";
 import { deriveReadiness } from "../lib/readiness.js";
 import { useSession } from "../state/session.jsx";
+import { HybridReadinessView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
-export default function Readiness() {
+function ClassicReadiness() {
   const { session } = useSession();
   const readiness = deriveReadiness(session);
   const preview = session.preview;
@@ -64,3 +66,5 @@ export default function Readiness() {
     </div>
   );
 }
+
+export default withHybridFallback(HybridReadinessView, ClassicReadiness, { crudRunExists: (session) => Boolean(session.generationRun), title: "Readiness", emptyInsteadOfClassic: true });
