@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { api } from "../api/endpoints.js";
+import { BehaviourGeneration } from "../components/BehaviourGeneration.jsx";
 import { CodePreview } from "../components/CodePreview.jsx";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, SimulatedBadge, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
+import { HybridGenerate } from "../components/HybridGenerate.jsx";
+import { listParameters } from "../lib/behaviourFiles.js";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
 import { formatBytes, formatDuration } from "../lib/format.js";
 import { isDynamicCrudManifest, summarizeDynamicRun } from "../lib/crudSummary.js";
 import { buildGenerationRequest, buildStructuralRequest } from "../lib/requests.js";
@@ -10,14 +13,14 @@ import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 
 const MODES = [
-  { id: "LOCAL_LLM", label: "Local Ollama", help: "The business-logic module is written by the configured Ollama engine; scaffold files remain deterministic." },
-  { id: "EXPERIMENTAL_CLAUDE", label: "External LLM API", help: "Explicit experimental API call. The actual provider and model are recorded in the generation manifest." },
+  { id: "LOCAL_LLM", label: "Qwen Local", help: "Writes business logic with the configured local Qwen model through Ollama." },
+  { id: "EXPERIMENTAL_CLAUDE", label: "TeamSocLo API", help: "Writes business logic with the configured TeamSocLo model; the API key stays in the backend." },
 ];
 
 export default function Generation({ navigate }) {
   const { session, set } = useSession();
   const { overview } = useBackend();
-  const [mode, setMode] = useState("LOCAL_LLM");
+  const [modeOverride, setModeOverride] = useState(null);
   const [workspaceName, setWorkspaceName] = useState(() => {
     const project = session.validation?.generationContext?.project_id ?? "generated-application";
     return project.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "") || "generated-application";
@@ -27,26 +30,31 @@ export default function Generation({ navigate }) {
   const generationContext = session.validation?.ok ? session.validation.generationContext : null;
   const approved = session.approval?.status === "APPROVED_FOR_MVP_GENERATION";
   const profileSupported = (session.applicationProfile ?? "SCHEMA_DRIVEN_CRUD") === "SCHEMA_DRIVEN_CRUD";
-  const ready = Boolean(generationContext && session.designContext && session.stackReport && approved && profileSupported);
+  const approvedContext = Boolean(generationContext && session.designContext && session.stackReport && approved);
+  const ready = approvedContext && profileSupported;
   const stored = session.generationRun;
   const run = stored?.run;
   const ollama = overview?.ollama;
+  const mode = modeOverride ?? "LOCAL_LLM";
   const ollamaOk = ollama?.reachable && ollama?.model_installed;
 
-  const generate = useAction(async () => {
+  const generate = useAction(async (selectedMode) => {
+    const requestedMode = selectedMode ?? mode;
+    setModeOverride(requestedMode);
+    set("generationAttempted", true);
     const request = buildGenerationRequest({
       generationContext,
       designContext: session.designContext,
       stackReport: session.stackReport,
       approval: session.approval,
-      mode,
+      mode: requestedMode,
       workspaceName,
     });
     const started = Date.now();
-    const result = mode === "EXPERIMENTAL_CLAUDE"
+    const result = requestedMode === "EXPERIMENTAL_CLAUDE"
       ? await api.generateExperimental(request)
       : await api.generate(request);
-    set("generationRun", { run: result, mode, durationMs: Date.now() - started, at: new Date().toISOString() });
+    set("generationRun", { run: result, mode: requestedMode, durationMs: Date.now() - started, at: new Date().toISOString() });
     set("structural", null);
     set("graph", null);
     set("preview", null);
@@ -83,11 +91,15 @@ export default function Generation({ navigate }) {
     <div className="page">
       <PageHeader
         title="Code Generation"
-        subtitle="Generate a traceable React + Node.js workspace from the validated design context. Source remains read-only until an isolated preview is explicitly started."
-        badges={<SimulatedBadge>SIMULATED C1/C2 INPUT</SimulatedBadge>}
+        subtitle={
+          profileSupported
+            ? "Generate a traceable React + Node.js workspace from the validated design context. Source remains read-only until an isolated preview is explicitly started."
+            : "Generate a React + Node.js application from the validated design context. Source remains read-only until the app is explicitly started in Application Preview."
+        }
       />
 
-      {!ready ? (
+
+      {!approvedContext ? (
         <Callout tone="warn" title="Approved stack required">
           Generation needs validated input, a supported application profile, a design context, a stack selection, and an explicit approval.
           The backend enforces the same gate.{" "}
@@ -98,31 +110,15 @@ export default function Generation({ navigate }) {
       ) : null}
 
       {!profileSupported ? (
-        <Callout tone="warn" title="Custom / non-CRUD generation is blocked">
-          This MVP has no approved non-CRUD behavior specification or generator. It will not substitute Task,
-          Student, Library, or Inventory code for a calculator or another custom application.
-        </Callout>
-      ) : null}
-
+        <BehaviourGeneration ready={approvedContext} workspaceName={workspaceName} teamsoclo={overview?.teamsoclo} navigate={navigate} />
+      ) : (
+      <>
       <Card title="Choose the generation engine" subtitle="Every run records its actual provider, model, prompt version, file origins, and evidence digest.">
-        <div className="mode-grid">
+        <div className="grid grid-2">
           {MODES.map((item) => (
-            <label key={item.id} className={`mode-card${mode === item.id ? " mode-active" : ""}`}>
-              <input type="radio" name="mode" checked={mode === item.id} onChange={() => setMode(item.id)} />
-              <div>
-                <strong>{item.label}</strong>{" "}
-                {item.id === "LOCAL_LLM" ? (
-                  <Badge tone="llm">
-                    {ollama?.base_url?.includes("11435")
-                      ? `Colab GPU (${ollama?.configured_model || "7B"})`
-                      : `Local (${ollama?.configured_model || "3B"})`}
-                  </Badge>
-                ) : (
-                  <Badge tone="warn">Experimental API</Badge>
-                )}
-                <div className="muted small">{item.help}</div>
-              </div>
-            </label>
+            <Callout key={item.id} tone={item.id === "LOCAL_LLM" ? "info" : "warn"} title={`${item.label} · ${item.id === "LOCAL_LLM" ? (ollama?.configured_model ?? "model not reported") : (overview?.teamsoclo?.model ?? "model not reported")}`}>
+              {item.help}
+            </Callout>
           ))}
         </div>
         {mode === "LOCAL_LLM" ? (
@@ -147,9 +143,6 @@ export default function Generation({ navigate }) {
               </strong>{" "}
               (<code>{ollama?.configured_model}</code>)
             </span>
-            <Button variant="secondary" onClick={() => navigate("overview")}>
-              Switch Engine in Overview
-            </Button>
           </div>
         ) : null}
         {mode === "LOCAL_LLM" && !ollamaOk ? (
@@ -159,9 +152,9 @@ export default function Generation({ navigate }) {
           </Callout>
         ) : null}
         {mode === "EXPERIMENTAL_CLAUDE" ? (
-          <Callout tone="warn" title="Explicit external-model experiment">
-            The API credential stays in the backend environment. There is no fallback to templates or Ollama, and
-            the response manifest records the actual provider and model returned by the service.
+          <Callout tone="warn" title="TeamSocLo API generation">
+            The API credential stays in the backend environment. There is no silent fallback to Qwen Local, and the
+            response manifest records the provider and model returned by TeamSocLo.
           </Callout>
         ) : null}
         <div className="form-grid">
@@ -170,9 +163,12 @@ export default function Generation({ navigate }) {
             <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} pattern="^[a-z0-9][a-z0-9._-]*$" />
           </label>
         </div>
-        <div className="button-row">
-          <Button onClick={() => generate.run()} loading={generate.loading} disabled={!ready}>
-            Generate with {MODES.find((item) => item.id === mode)?.label}
+        <div className="button-row" aria-label="Generation methods">
+          <Button onClick={() => generate.run("LOCAL_LLM")} loading={generate.loading && mode === "LOCAL_LLM"} disabled={!ready}>
+            Generate with Ollama Local
+          </Button>
+          <Button variant="secondary" onClick={() => generate.run("EXPERIMENTAL_CLAUDE")} loading={generate.loading && mode === "EXPERIMENTAL_CLAUDE"} disabled={!ready || !overview?.teamsoclo?.enabled || !overview?.teamsoclo?.key_configured}>
+            Generate with Google Colab
           </Button>
         </div>
         {generate.loading ? (
@@ -264,7 +260,7 @@ export default function Generation({ navigate }) {
               <KeyValues
                 items={[
                   { label: "Generation run ID", value: <code>{manifest.generation_run_id}</code> },
-                  { label: "Mode", value: <Badge tone={manifest.generation_mode === "LOCAL_LLM" ? "llm" : manifest.generation_mode === "EXPERIMENTAL_CLAUDE" ? "warn" : "info"}>{manifest.generation_mode}</Badge> },
+                  { label: "Mode", value: <Badge tone={manifest.generation_mode === "LOCAL_LLM" ? "llm" : manifest.generation_mode.startsWith("EXPERIMENTAL_") ? "warn" : "info"}>{manifest.generation_mode}</Badge> },
                   { label: "Artifact digest", value: <Hash value={manifest.artifact_digest_sha256} length={24} /> },
                   { label: "Evidence digest", value: <Hash value={manifest.run_evidence.evidence_digest_sha256} length={24} /> },
                   { label: "Workspace", value: <code>{run.workspace_relative_path}</code> },
@@ -372,6 +368,11 @@ export default function Generation({ navigate }) {
           </TechnicalDetails>
         </>
       ) : null}
+      </>
+      )}
+
+      {/* The GPA project card appears once a generation has been tried (finished or not), or when its own run exists. */}
+      {listParameters(session.designContext).length || session.generationAttempted || session.behaviourRun?.run || session.generationRun?.run || session.hybrid?.run ? <HybridGenerate /> : null}
     </div>
   );
 }
