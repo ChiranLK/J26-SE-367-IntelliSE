@@ -30,6 +30,8 @@ import {
   detectLanguageFromFilename,
   isAllowedExtension,
 } from '../utils/formatters';
+import ProjectFileTree from '../components/common/ProjectFileTree';
+import CodeViewer from '../components/common/CodeViewer';
 
 export default function FileUploadPage() {
   const navigate = useNavigate();
@@ -40,6 +42,7 @@ export default function FileUploadPage() {
   const [detectedLang, setDetectedLang] = useState(null);
   const [overrideLanguage, setOverrideLanguage] = useState('');
   const [requirementIds, setRequirementIds] = useState('');
+  const [activeProjectFile, setActiveProjectFile] = useState(null);
 
   // UI state
   const [isDragOver, setIsDragOver] = useState(false);
@@ -159,6 +162,9 @@ export default function FileUploadPage() {
       });
 
       setResult(response);
+      if (response.metadata?.is_multi_file && response.metadata?.entrypoint) {
+        setActiveProjectFile(response.metadata.entrypoint);
+      }
       setUploadProgress(100);
     } catch (err) {
       setError(err.message || 'File upload failed. Please verify the file and backend status.');
@@ -172,10 +178,10 @@ export default function FileUploadPage() {
       <div className="page-header">
         <h1 className="page-title">
           <UploadCloud size={22} color="var(--primary-400)" />
-          <span>Source File Upload</span>
+          <span>Source File & Project Upload</span>
         </h1>
         <p className="page-description">
-          Upload source code files safely for automated verification. The platform verifies file encoding, size, and extensions.
+          Upload individual Python source files or complete Python project ZIP archives for autonomous verification.
         </p>
       </div>
 
@@ -208,10 +214,18 @@ export default function FileUploadPage() {
             </div>
             <div style={{ flex: 1, minWidth: '240px' }}>
               <h3 style={{ fontSize: '0.9375rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                Source File Upload Complete
+                {result.metadata?.is_multi_file ? 'Multi-File Python Project Upload Complete' : 'Source File Upload Complete'}
               </h3>
               <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.625rem' }}>
-                File <strong style={{ color: 'var(--text-primary)' }}>{result.filename}</strong> has been ingested and classified under <Badge variant="primary">{result.language}</Badge>.
+                {result.metadata?.is_multi_file ? (
+                  <>
+                    Project archive <strong style={{ color: 'var(--text-primary)' }}>{result.filename}</strong> safely unpacked in memory ({result.metadata.file_count} files, {result.metadata.python_file_count} Python modules). Discovered {result.metadata.test_files?.length || 0} test files.
+                  </>
+                ) : (
+                  <>
+                    File <strong style={{ color: 'var(--text-primary)' }}>{result.filename}</strong> has been ingested and classified under <Badge variant="primary">{result.language}</Badge>.
+                  </>
+                )}
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -238,6 +252,28 @@ export default function FileUploadPage() {
                   {idCopied ? 'Copied' : 'Copy'}
                 </Button>
               </div>
+
+              {/* Multi-file Project Tree & Source Preview */}
+              {result.metadata?.is_multi_file && result.metadata?.project_files && (
+                <div style={{ margin: '1rem 0', display: 'grid', gridTemplateColumns: 'minmax(220px, 260px) minmax(0, 1fr)', gap: '0.75rem', minWidth: 0 }}>
+                  <div style={{ minWidth: 0, minHeight: 0 }}>
+                    <ProjectFileTree
+                      files={result.metadata.project_files}
+                      selectedFile={activeProjectFile || result.metadata.entrypoint}
+                      onSelectFile={(path) => setActiveProjectFile(path)}
+                      entrypoint={result.metadata.entrypoint}
+                    />
+                  </div>
+                  <div style={{ minWidth: 0, minHeight: 0 }}>
+                    <CodeViewer
+                      code={result.metadata.project_files[activeProjectFile || result.metadata.entrypoint] || result.code}
+                      language="python"
+                      filename={activeProjectFile || result.metadata.entrypoint}
+                      maxHeight="280px"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <Button

@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import DashboardPage from '../pages/DashboardPage';
 import ManualSubmissionPage from '../pages/ManualSubmissionPage';
 import FileUploadPage from '../pages/FileUploadPage';
+import UnifiedSubmissionPage from '../pages/UnifiedSubmissionPage';
 import SubmissionHistoryPage from '../pages/SubmissionHistoryPage';
 import VerificationRunsPage from '../pages/VerificationRunsPage';
 import DefectReportsPage from '../pages/DefectReportsPage';
@@ -45,7 +46,7 @@ describe('Frontend Pages Requirements', () => {
 
   it('renders FileUploadPage with dropzone and allowed extension indicators', () => {
     renderWithRouter(<FileUploadPage />);
-    expect(screen.getByText('Source File Upload')).toBeInTheDocument();
+    expect(screen.getByText(/Source File.*Upload/i)).toBeInTheDocument();
     expect(screen.getByText(/click to select or drag and drop/i)).toBeInTheDocument();
     expect(screen.getByText(/allowed file extensions:/i)).toBeInTheDocument();
     expect(screen.getByText('.py')).toBeInTheDocument();
@@ -59,8 +60,8 @@ describe('Frontend Pages Requirements', () => {
 
   it('renders XaiExplanationsPage with engineering explanations header', () => {
     renderWithRouter(<XaiExplanationsPage />);
-    expect(screen.getByText('Human-Facing XAI Explanations')).toBeInTheDocument();
-    expect(screen.getByText(/engineering explanations/i)).toBeInTheDocument();
+    expect(screen.getByText('Post-Delivery Software Explanations')).toBeInTheDocument();
+    expect(screen.getByText(/strict post-delivery boundary/i)).toBeInTheDocument();
   });
 
   it('renders FeedbackHistoryPage with repair integration badge and workflow', () => {
@@ -68,5 +69,14 @@ describe('Frontend Pages Requirements', () => {
     expect(screen.getByText('Feedback Loop History')).toBeInTheDocument();
     expect(screen.getByText('Repair Integration')).toBeInTheDocument();
     expect(screen.getByText(/repair feedback workflow/i)).toBeInTheDocument();
+  });
+
+  it('renders UnifiedSubmissionPage with ChatGPT-style composer, attachments trigger, and sample loading', () => {
+    renderWithRouter(<UnifiedSubmissionPage />);
+    expect(screen.getByText('New Submission')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/paste your code or attach files to verify/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /load sample/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add attachments/i })).toBeInTheDocument();
+    expect(screen.getByText('Advanced Verification Options')).toBeInTheDocument();
   });
 });

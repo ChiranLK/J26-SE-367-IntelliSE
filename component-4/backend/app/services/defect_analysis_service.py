@@ -53,6 +53,7 @@ class DefectAnalysisService:
         req_id = submission.requirement_ids[0] if submission and submission.requirement_ids else None
         filename = submission.filename if submission else None
         source_code = submission.code if submission and hasattr(submission, "code") else None
+        project_files = (submission.metadata or {}).get("project_files") if submission and submission.metadata else None
         return self.analyze_test_results(
             run_id=run.id,
             submission_id=run.submission_id,
@@ -63,6 +64,7 @@ class DefectAnalysisService:
             error_message=run.error_message,
             requirement_id=req_id,
             source_code=source_code,
+            project_files=project_files,
         )
 
     def analyze_test_results(
@@ -76,6 +78,7 @@ class DefectAnalysisService:
         error_message: Optional[str] = None,
         requirement_id: Optional[str] = None,
         source_code: Optional[str] = None,
+        project_files: Optional[Dict[str, str]] = None,
     ) -> List[DefectReport]:
         """
         Analyzes test results and produces structured defect reports.
@@ -86,6 +89,7 @@ class DefectAnalysisService:
         - Idempotent: repeated analysis produces identical defect IDs without duplicates.
         - Never executes submitted code.
         - Localizes line numbers strictly when supported by traceback evidence.
+        - Supports multi-file projects with accurate relative file paths.
         """
         # Rule: PENDING verification -> do not claim a defect exists
         if status == VerificationStatus.PENDING.value:
@@ -101,7 +105,43 @@ class DefectAnalysisService:
         defect_reports: List[DefectReport] = []
 
         # 1. Static Security AST Analysis (Task 1: Detect vulnerabilities even if functional tests pass)
-        if source_code:
+        if project_files:
+            for rel_path, code in project_files.items():
+                if not rel_path.endswith(".py"):
+                    continue
+                parts = rel_path.replace("\\", "/").lower().split("/")
+                if any(p in ("test", "tests") for p in parts) or parts[-1].startswith("test_") or parts[-1].endswith("_test.py"):
+                    continue
+                sec_findings = self.inspect_static_security_vulnerabilities(code)
+                for s_idx, finding in enumerate(sec_findings):
+                    if finding.get("confidence") == "CONFIRMED":
+                        cwe = finding.get("cwe_id", "sec")
+                        line_no = finding.get("line_number", 0)
+                        seed_str = f"{run_id}:{rel_path}:{cwe}:{line_no}:{s_idx}"
+                        defect_id = f"def-sec-{uuid.uuid5(uuid.NAMESPACE_DNS, seed_str).hex[:8]}"
+                        sec_report = DefectReport(
+                            defect_id=defect_id,
+                            verification_run_id=run_id,
+                            submission_id=submission_id,
+                            title=f"Security Vulnerability in {rel_path}: {finding['title']}",
+                            description=finding["description"],
+                            severity=finding.get("severity", DefectSeverity.CRITICAL),
+                            file_path=rel_path,
+                            line_number=finding.get("line_number"),
+                            confidence="CONFIRMED",
+                            provenance="AST_STATIC_ANALYSIS",
+                            defect_category="security_vulnerability",
+                            cwe_id=finding.get("cwe_id"),
+                            owasp_category=finding.get("owasp_category"),
+                            failure_category="SECURITY_VULNERABILITY",
+                            failed_test=f"security_ast_scan_{finding.get('cwe_id', '').lower()}",
+                            assertion_or_exception=f"Static AST security scanner identified {finding.get('cwe_id')} in {rel_path}: {finding['title']}",
+                            evidence_references={"ast_node": finding.get("description"), "file": rel_path, "line": finding.get("line_number"), "confidence": "CONFIRMED"},
+                            tags=["security", finding.get("cwe_id", "").lower(), f"severity:{finding.get('severity', DefectSeverity.CRITICAL).value.lower()}"],
+                            created_at=datetime.now(timezone.utc),
+                        )
+                        defect_reports.append(sec_report)
+        elif source_code:
             sec_findings = self.inspect_static_security_vulnerabilities(source_code)
             for s_idx, finding in enumerate(sec_findings):
                 if finding.get("confidence") == "CONFIRMED":
@@ -152,10 +192,11 @@ class DefectAnalysisService:
                 affected_filename=effective_filename,
                 requirement_id=requirement_id,
                 source_code=source_code,
+                project_files=project_files,
             )
             # Avoid duplicate if a security defect with the same CWE on the same line was already generated
             duplicate = any(
-                d.cwe_id == report.cwe_id and d.line_number == report.line_number
+                d.cwe_id == report.cwe_id and d.line_number == report.line_number and d.file_path == report.file_path
                 for d in defect_reports
                 if d.cwe_id
             )
@@ -219,6 +260,7 @@ class DefectAnalysisService:
         affected_filename: str,
         requirement_id: Optional[str] = None,
         source_code: Optional[str] = None,
+        project_files: Optional[Dict[str, str]] = None,
     ) -> DefectReport:
         """Analyzes a single failed test result and extracts empirical evidence."""
         test_name = test.name or test.test_name or test.test_id
@@ -247,24 +289,56 @@ class DefectAnalysisService:
         if cwe_id:
             severity = DefectSeverity.CRITICAL
 
-        # Evidence-based localization (Task 2: distinguish test lines from implementation lines)
-        cwe_line = None
-        if source_code and cwe_id:
-            sec_findings = self.inspect_static_security_vulnerabilities(source_code)
-            for f in sec_findings:
-                if f.get("cwe_id") == cwe_id and f.get("line_number"):
-                    cwe_line = f.get("line_number")
-                    break
+        # Localization: multi-file traceback analysis takes precedence for project submissions
+        line_number = None
+        confidence = "UNCERTAIN"
+        provenance = "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+        final_filename = affected_filename
 
-        line_number, confidence, provenance = self.extract_evidence_based_localization(
-            stack_trace=stack_trace,
-            affected_filename=affected_filename,
-            source_code=source_code,
-            test_name=test_name,
-            assertion_or_exception=assertion_or_exception,
-            cwe_id=cwe_id,
-            cwe_line=cwe_line,
-        )
+        if project_files and stack_trace:
+            det_file, det_line, det_conf, det_prov = self.extract_multi_file_traceback_localization(
+                stack_trace=stack_trace,
+                project_files=project_files,
+                default_filename=affected_filename,
+            )
+            if det_line is not None:
+                final_filename = det_file
+                line_number = det_line
+                confidence = det_conf
+                provenance = det_prov
+
+        # Assertion failures normally contain only the test frame. Map the
+        # function called by that verified assertion to its project source AST.
+        if line_number is None and project_files:
+            det_file, det_line, det_conf, det_prov = self.extract_multi_file_ast_localization(
+                stack_trace=stack_trace,
+                test_name=test_name,
+                project_files=project_files,
+            )
+            if det_line is not None:
+                final_filename = det_file
+                line_number = det_line
+                confidence = det_conf
+                provenance = det_prov
+
+        if line_number is None:
+            cwe_line = None
+            if source_code and cwe_id:
+                sec_findings = self.inspect_static_security_vulnerabilities(source_code)
+                for f in sec_findings:
+                    if f.get("cwe_id") == cwe_id and f.get("line_number"):
+                        cwe_line = f.get("line_number")
+                        break
+
+            line_number, confidence, provenance = self.extract_evidence_based_localization(
+                stack_trace=stack_trace,
+                affected_filename=affected_filename,
+                source_code=source_code,
+                test_name=test_name,
+                assertion_or_exception=assertion_or_exception,
+                cwe_id=cwe_id,
+                cwe_line=cwe_line,
+            )
 
         # Title and description strictly using evidence-based phrasing
         title = f"Observed {category.replace('_', ' ').title()} in {test_name}"
@@ -283,7 +357,7 @@ class DefectAnalysisService:
             title=title,
             severity=severity,
             description=desc,
-            file_path=affected_filename,
+            file_path=final_filename,
             line_number=line_number,
             confidence=confidence,
             provenance=provenance,
@@ -303,6 +377,7 @@ class DefectAnalysisService:
                 "duration_ms": test.duration_ms,
                 "localization_confidence": confidence,
                 "localization_provenance": provenance,
+                "affected_file": final_filename,
             },
             tags=[category.lower(), defect_cat.lower(), f"severity:{severity.value.lower()}"],
             created_at=datetime.now(timezone.utc),
@@ -743,6 +818,99 @@ class DefectAnalysisService:
         return (None, None)
 
 
+    def extract_multi_file_traceback_localization(
+        self,
+        stack_trace: str,
+        project_files: Dict[str, str],
+        default_filename: str = "solution.py",
+    ) -> Tuple[str, Optional[int], str, str]:
+        """
+        Extracts affected project file and line number from pytest stack trace in multi-file projects.
+        Scans frames for non-test implementation files in project_files.
+        """
+        if not stack_trace or not project_files:
+            return default_filename, None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+
+        candidate_files: Dict[str, str] = {}
+        for p in project_files.keys():
+            norm_p = p.replace("\\", "/").lstrip("./")
+            parts = norm_p.lower().split("/")
+            # Exclude test files
+            if any(part in ("test", "tests") for part in parts) or parts[-1].startswith("test_") or parts[-1].endswith("_test.py"):
+                continue
+            if norm_p.endswith(".py"):
+                candidate_files[norm_p] = parts[-1]
+
+        if not candidate_files:
+            return default_filename, None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+
+        # Pytest traceback format 1: File ".../workspace/auth/login.py", line 18, in authenticate
+        frame_matches = list(re.finditer(r'File\s+["\']([^"\']+)["\'],\s+line\s+(\d+)', stack_trace))
+        for m in reversed(frame_matches):
+            raw_path = m.group(1).replace("\\", "/")
+            line_str = m.group(2)
+            for rel_path, base_name in candidate_files.items():
+                if raw_path.endswith(rel_path) or raw_path.endswith(f"/{base_name}") or raw_path == base_name:
+                    try:
+                        return rel_path, int(line_str), "CONFIRMED", "TRACEBACK_FRAME_ANALYSIS"
+                    except ValueError:
+                        pass
+
+        # Pytest traceback format 2: auth/login.py:18: in authenticate
+        for rel_path, base_name in candidate_files.items():
+            esc_rel = re.escape(rel_path)
+            esc_base = re.escape(base_name)
+            m_rel = list(re.finditer(rf'(?:^|\s|\/){esc_rel}:(\d+):', stack_trace))
+            if m_rel:
+                try:
+                    return rel_path, int(m_rel[-1].group(1)), "CONFIRMED", "TRACEBACK_FRAME_ANALYSIS"
+                except ValueError:
+                    pass
+            m_base = list(re.finditer(rf'(?:^|\s|\/){esc_base}:(\d+):', stack_trace))
+            if m_base:
+                try:
+                    return rel_path, int(m_base[-1].group(1)), "CONFIRMED", "TRACEBACK_FRAME_ANALYSIS"
+                except ValueError:
+                    pass
+
+        return default_filename, None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+
+    def extract_multi_file_ast_localization(
+        self,
+        stack_trace: str,
+        test_name: str,
+        project_files: Dict[str, str],
+    ) -> Tuple[str, Optional[int], str, str]:
+        """Map a function named in failed assertion evidence to project source."""
+        evidence = f"{test_name}\n{stack_trace}"
+        called_names = set(re.findall(r"\b([A-Za-z_]\w*)\s*\(", evidence))
+        ignored = {"assert", "where", "round", "len", "str", "int", "float", "list", "dict"}
+        called_names.difference_update(ignored)
+
+        candidates = []
+        for rel_path, code in project_files.items():
+            normalized = rel_path.replace("\\", "/")
+            parts = normalized.lower().split("/")
+            if not normalized.endswith(".py") or any(part in ("test", "tests") for part in parts):
+                continue
+            try:
+                tree = ast.parse(code)
+            except (SyntaxError, ValueError):
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in called_names:
+                    # Prefer the most specific implementation expression over
+                    # the signature when a return statement is available.
+                    returns = [child for child in ast.walk(node) if isinstance(child, ast.Return)]
+                    line = returns[-1].lineno if returns else node.lineno
+                    score = 2 if node.name in (test_name or "") else 1
+                    candidates.append((score, normalized, line))
+
+        if not candidates:
+            return "solution.py", None, "UNCERTAIN", "UNLOCALIZED_INSUFFICIENT_EVIDENCE"
+        _, filename, line_number = sorted(candidates, key=lambda item: (-item[0], item[1], item[2]))[0]
+        return filename, line_number, "HIGH", "AST_SOURCE_MAPPING"
+
     def extract_evidence_based_localization(
         self,
         stack_trace: str,
@@ -969,4 +1137,3 @@ class DefectAnalysisService:
             test_failure_details=test_failure_details,
             generated_at=datetime.now(timezone.utc),
         )
-

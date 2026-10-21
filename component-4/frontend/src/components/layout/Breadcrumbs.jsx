@@ -5,11 +5,11 @@ import { Home } from 'lucide-react';
 const routeNames = {
   '': 'Overview',
   'submissions': 'Submissions',
-  'new': 'Manual Entry',
-  'upload': 'File Upload',
+  'new': 'New Submission',
+  'upload': 'New Submission',
   'verifications': 'Verification Runs',
   'defects': 'Defect Analysis',
-  'xai': 'XAI Explanations',
+  'xai': 'Software Explanations',
   'feedback': 'Feedback History',
 };
 

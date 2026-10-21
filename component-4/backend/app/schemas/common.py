@@ -23,6 +23,7 @@ class VerificationStatus(str, Enum):
     RUNNING = "RUNNING"
     PASSED = "PASSED"
     FAILED = "FAILED"
+    BLOCKED = "BLOCKED"
     ERROR = "ERROR"
 
 

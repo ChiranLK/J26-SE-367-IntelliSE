@@ -147,10 +147,10 @@ class RepairResponseIngestRequest(BaseModel):
     def validate_filename_security(cls, v: Optional[str]) -> str:
         if not v or not v.strip():
             return "solution.py"
-        cleaned = v.strip()
-        # Security: reject path traversal and non-python extensions
-        if ".." in cleaned or "/" in cleaned or "\\" in cleaned:
-            raise ValueError("Filename cannot contain directory separators or path traversal sequences.")
+        cleaned = v.strip().replace("\\", "/")
+        # Security: reject path traversal, absolute paths, and null bytes
+        if ".." in cleaned or cleaned.startswith("/") or "\x00" in cleaned or (len(cleaned) > 1 and cleaned[1] == ":"):
+            raise ValueError("Filename cannot contain absolute paths or path traversal sequences.")
         if not cleaned.endswith(".py"):
             raise ValueError("Only Python source files (.py) are supported for repair ingestion.")
         return cleaned

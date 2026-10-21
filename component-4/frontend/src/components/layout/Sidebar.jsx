@@ -54,8 +54,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggle
     {
       section: 'Code Submission',
       items: [
-        { to: '/submissions/new', label: 'Manual Entry', icon: Code2 },
-        { to: '/submissions/upload', label: 'File Upload', icon: UploadCloud },
+        { to: '/submissions/new', label: 'New Submission', icon: Code2 },
         { to: '/submissions', label: 'Submissions', icon: History, end: true },
       ],
     },
@@ -64,7 +63,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggle
       items: [
         { to: '/verifications', label: 'Verification Runs', icon: PlayCircle },
         { to: '/defects', label: 'Defect Analysis', icon: AlertOctagon },
-        { to: '/xai', label: 'XAI Explanations', icon: BrainCircuit },
+        { to: '/xai', label: 'Software Explanations', icon: BrainCircuit },
         { to: '/feedback', label: 'Feedback History', icon: RefreshCw },
       ],
     },

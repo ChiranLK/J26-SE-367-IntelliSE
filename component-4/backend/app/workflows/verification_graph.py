@@ -36,6 +36,8 @@ class VerificationWorkflowState(TypedDict, total=False):
 
     # Flow evaluation flags
     is_supported: bool
+    is_multi_file: Optional[bool]
+    project_files: Optional[Dict[str, str]]
     error_message: Optional[str]
 
     # Execution outcomes
@@ -75,8 +77,8 @@ def validate_submission_node(state: VerificationWorkflowState) -> Dict[str, Any]
         )
         return {
             "is_supported": False,
-            "status": VerificationStatus.PENDING.value,
-            "error_message": f"Real containerized execution for language '{language}' is scheduled for subsequent milestones.",
+            "status": VerificationStatus.BLOCKED.value,
+            "error_message": f"Unsupported language: real containerized execution is not configured for '{language}'.",
             "test_results": [],
             "telemetry": {"stage": "validation", "unsupported_language": language},
         }
@@ -142,19 +144,21 @@ async def execute_tests_node(state: VerificationWorkflowState) -> Dict[str, Any]
         requested_test_types=normalized_agents,
     )
 
+    project_files = state.get("project_files")
     coord_result = await coordination_service.execute_coordinated_verification(
         plan=plan,
         source_code=source_code,
         test_code=trusted_test_cases or "",
         filename=filename,
         timeout_seconds=timeout,
+        project_files=project_files,
     )
 
     raw_overall = coord_result.get("overall_status", "FAILED")
     if raw_overall == "PASSED":
         final_status = VerificationStatus.PASSED.value
-    elif raw_overall == "PENDING":
-        final_status = VerificationStatus.PENDING.value
+    elif raw_overall in ("BLOCKED", "NOT_EXECUTED"):
+        final_status = VerificationStatus.BLOCKED.value
     elif raw_overall == "ERROR":
         final_status = VerificationStatus.ERROR.value
     else:
@@ -229,6 +233,7 @@ def analyze_defects_node(state: VerificationWorkflowState) -> Dict[str, Any]:
         error_message=error_msg,
         requirement_id=req_id,
         source_code=state.get("source_code"),
+        project_files=state.get("project_files"),
     )
     updates: Dict[str, Any] = {"defect_reports": reports}
     if reports and status_str == VerificationStatus.PASSED.value:
@@ -251,7 +256,7 @@ async def reason_defects_with_llm_node(state: VerificationWorkflowState) -> Dict
     reconciliation_svc = DefectReconciliationService()
 
     # If verification PASSED or ERROR due to infrastructure, or DETERMINISTIC_ONLY mode requested
-    if eval_mode == "DETERMINISTIC_ONLY" or status_str in (VerificationStatus.PASSED.value, VerificationStatus.ERROR.value):
+    if eval_mode == "DETERMINISTIC_ONLY" or status_str in (VerificationStatus.PASSED.value, VerificationStatus.BLOCKED.value, VerificationStatus.ERROR.value):
         reconciled, ai_telemetry, guidance = reconciliation_svc.reconcile(
             deterministic_defects=defect_reports,
             llm_hypothesis=None,
@@ -423,5 +428,4 @@ def build_verification_graph():
 
 # Precompiled singleton graph instance
 verification_pipeline = build_verification_graph()
-
 

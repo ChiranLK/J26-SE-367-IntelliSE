@@ -106,18 +106,18 @@ describe('Repair Feedback Integration UI', () => {
     const detailsBtn = await screen.findByRole('button', { name: /Details/i });
     fireEvent.click(detailsBtn);
 
-    // Verify Repair Integration Status
-    expect(await screen.findByText(/Repair Integration Status:/i)).toBeInTheDocument();
+    // Verify Component 3 Integration Status
+    expect(await screen.findByText(/Component 3 Integration Status:/i)).toBeInTheDocument();
     expect(screen.getByText(/Contract: UNDER_DEVELOPMENT/i)).toBeInTheDocument();
     expect(screen.getByText(/Delivery: Disabled \(Safety Lock\)/i)).toBeInTheDocument();
 
     // Verify Human Review & Dispatch Authorization header & Approve button
     expect(screen.getByText(/Human Review & Dispatch Authorization/i)).toBeInTheDocument();
-    const approveBtn = screen.getByRole('button', { name: /Approve for Repair/i });
+    const approveBtn = screen.getByRole('button', { name: /Approve Feedback for Component 3/i });
     expect(approveBtn).toBeInTheDocument();
 
     // Verify Dispatch button is disabled when dispatch_allowed is false
-    const dispatchBtn = screen.getByRole('button', { name: /Send for Repair \(Unavailable\)/i });
+    const dispatchBtn = screen.getByRole('button', { name: /Component 3 Integration Unavailable/i });
     expect(dispatchBtn).toBeDisabled();
   });
 
@@ -150,7 +150,7 @@ describe('Repair Feedback Integration UI', () => {
     const detailsBtn = await screen.findByRole('button', { name: /Details/i });
     fireEvent.click(detailsBtn);
 
-    const approveBtn = await screen.findByRole('button', { name: /Approve for Repair/i });
+    const approveBtn = await screen.findByRole('button', { name: /Approve Feedback for Component 3/i });
     fireEvent.click(approveBtn);
 
     await waitFor(() => {

@@ -1,0 +1,12 @@
+{
+  "dataset_version": "v3.2.0-phase3c2-large",
+  "generated_timestamp": "2026-10-20T04:22:38.645362+00:00",
+  "files": {
+    "evaluation_inputs.json": "2902d09e0f3d62b81f0974a5aa3e500e742ade58acabba76f9b83bdc990cd1fb",
+    "sealed_ground_truth.json": "535ea5a76e0d7959817e4f10c6dd14344df259ecf98b29cc4d3d8d8af9074ada",
+    "manifest.json": "02edbcd1ca20226d0389c6d728ffc9dbf020da13429a4bd8776fb5425c604b4c",
+    "oracle_validation_report.json": "8852a36aa631606c064fd83d20c6fe00d9841e8285ace6aa744dc7144262ff0c",
+    "partition_integrity_report.json": "cc8c5c0440b39d891e1f489d9c129007d577add6197d0e50b163de7893a627b0",
+    "diversity_report.json": "49aa203c9e6194f4b95a0fc001c7818e43b813784068a407e2ed71cf57632495"
+  }
+}

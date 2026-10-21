@@ -105,7 +105,7 @@ export async function recordFeedbackIteration(runId, notes) {
 export async function getXaiExplanation(runId) {
   const response = await apiClient.get(
     `/api/v1/verifications/${encodeURIComponent(runId)}/explanation`,
-    { timeout: 90000 }
+    { timeout: 180000 }
   );
   return response.data;
 }
@@ -143,7 +143,7 @@ export async function getDeliveryConfirmation(runId) {
 export async function getPostDeliveryExplanation(runId) {
   const response = await apiClient.get(
     `/api/v1/verifications/${encodeURIComponent(runId)}/post-delivery-explanation`,
-    { timeout: 90000 }
+    { timeout: 180000 }
   );
   return response.data;
 }

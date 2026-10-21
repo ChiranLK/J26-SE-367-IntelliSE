@@ -119,6 +119,41 @@ class DesignDecisionItem(BaseModel):
     traceability_seam: Optional[str] = Field(default=None, description="Associated requirement ID or test seam")
 
 
+class TestEvidenceItem(BaseModel):
+    """One empirical test observation included in the delivered explanation."""
+
+    test_id: str = Field(description="Persisted test-result identifier")
+    test_name: str = Field(description="Executed test name")
+    test_type: str = Field(description="unit, integration, or performance")
+    status: str = Field(description="Observed execution status")
+    duration_ms: Optional[float] = Field(default=None, description="Measured duration when recorded")
+    demonstrated_scope: str = Field(description="Conservative statement of what this passing test establishes")
+
+
+class MeasuredSlaEvidence(BaseModel):
+    """Measured performance evidence; absent values are never inferred."""
+
+    available: bool = Field(description="Whether empirical SLA measurements were recorded")
+    latency_p50_ms: Optional[float] = None
+    latency_p95_ms: Optional[float] = None
+    latency_p99_ms: Optional[float] = None
+    threshold_latency_ms: Optional[float] = None
+    sample_size: Optional[int] = None
+    verdict: str = Field(description="PASSED, FAILED, or NOT_ESTABLISHED")
+    environment_note: str = Field(description="Known execution environment and measurement limitations")
+
+
+class EvidenceManifest(BaseModel):
+    """Bounded evidence inventory used to construct this explanation."""
+
+    analyzed_source_files: List[str] = Field(default_factory=list)
+    omitted_source_files: List[str] = Field(default_factory=list)
+    project_file_count: int = 0
+    analyzed_line_count: int = 0
+    source_excerpt_char_count: int = 0
+    evidence_warnings: List[str] = Field(default_factory=list)
+
+
 class BeginnerExplanation(BaseModel):
     """Beginner-friendly explanation layer designed for users with limited technical knowledge."""
 
@@ -127,6 +162,8 @@ class BeginnerExplanation(BaseModel):
     how_to_use: str = Field(description="Step-by-step non-programmer guide to using the software")
     key_capabilities: List[str] = Field(default_factory=list, description="Bullet points of verified practical capabilities")
     safety_and_boundaries: str = Field(description="Plain-language description of verified safety boundaries and limits")
+    realistic_example: Optional[str] = Field(default=None, description="Plain-language example grounded in real functions and parameters")
+    test_confidence: Optional[str] = Field(default=None, description="What the executed tests establish and do not establish")
 
 
 class TechnicalExplanation(BaseModel):
@@ -139,6 +176,8 @@ class TechnicalExplanation(BaseModel):
     algorithms_and_design_decisions: List[DesignDecisionItem] = Field(default_factory=list, description="Algorithms and rationale")
     setup_and_usage: str = Field(description="Runtime environment prerequisites, import statements, and code snippets")
     known_limitations_and_scope: str = Field(description="Explicit verification boundaries and untested edge cases")
+    test_evidence: List[TestEvidenceItem] = Field(default_factory=list)
+    measured_sla: Optional[MeasuredSlaEvidence] = None
 
 
 class PostDeliveryExplanation(BaseModel):
@@ -159,6 +198,13 @@ class PostDeliveryExplanation(BaseModel):
     algorithms_and_design_decisions: List[DesignDecisionItem] = Field(default_factory=list, description="6. Relevant algorithms and design decisions")
     setup_and_usage: str = Field(description="7. Setup and usage instructions")
     limitations_and_verification_scope: str = Field(description="8. Known limitations and verification scope")
+    test_evidence: List[TestEvidenceItem] = Field(default_factory=list, description="Empirical evidence for dimension 5")
+    measured_sla: Optional[MeasuredSlaEvidence] = Field(default=None, description="Measured evidence for dimension 6")
+    evidence_manifest: Optional[EvidenceManifest] = Field(default=None, description="Bounded source/evidence provenance")
+    inference_provenance: Optional[InferenceProvenance] = Field(
+        default=None,
+        description="Trustworthy provenance detailing whether genuine LLM inference occurred or fallback was used",
+    )
     beginner_level: BeginnerExplanation = Field(description="Beginner-friendly explanation layer")
     technical_level: TechnicalExplanation = Field(description="Technical engineering explanation layer")
     verified_test_count: int = Field(default=0, description="Number of authorized tests verifying this software")

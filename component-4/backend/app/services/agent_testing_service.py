@@ -1,4 +1,5 @@
 import ast
+import os
 import re
 import time
 import uuid
@@ -16,6 +17,87 @@ from app.schemas.research_reports import (
 )
 from app.schemas.test_result import TestResult
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
+
+
+def _project_files_for_test_type(
+    project_files: Optional[Dict[str, str]],
+    test_type: str,
+) -> Optional[Dict[str, str]]:
+    """Select explicitly categorized tests while retaining all application files.
+
+    Projects may place trusted tests below ``tests/unit``, ``tests/integration``,
+    and ``tests/performance`` (or use a matching ``test_<type>_`` filename).
+    When that convention is present, each agent executes only its authorized
+    category. Projects without categorized tests retain the legacy behaviour.
+    """
+    if not project_files:
+        return project_files
+
+    def is_test_file(path: str) -> bool:
+        normalized = path.replace("\\", "/").lower()
+        basename = normalized.rsplit("/", 1)[-1]
+        return normalized.endswith(".py") and (
+            basename.startswith("test_") or "/tests/" in f"/{normalized}"
+        )
+
+    def category(path: str) -> Optional[str]:
+        normalized = path.replace("\\", "/").lower()
+        basename = normalized.rsplit("/", 1)[-1]
+        for candidate in ("unit", "integration", "performance"):
+            if (
+                f"/tests/{candidate}/" in f"/{normalized}"
+                or basename.startswith(f"test_{candidate}_")
+            ):
+                return candidate
+        return None
+
+    categorized_tests = {
+        path: category(path)
+        for path in project_files
+        if is_test_file(path) and category(path) is not None
+    }
+    if not categorized_tests:
+        return project_files
+
+    return {
+        path: content
+        for path, content in project_files.items()
+        if not is_test_file(path) or categorized_tests.get(path) == test_type
+    }
+
+
+def _categorized_project_tests(
+    project_files: Optional[Dict[str, str]], test_type: str
+) -> List[str]:
+    """Return trusted project test files explicitly assigned to one test category."""
+    matches: List[str] = []
+    for path in (project_files or {}):
+        normalized = path.replace("\\", "/").lower()
+        basename = normalized.rsplit("/", 1)[-1]
+        if not normalized.endswith(".py"):
+            continue
+        if f"/tests/{test_type}/" in f"/{normalized}" or basename.startswith(f"test_{test_type}_"):
+            matches.append(path)
+    return matches
+
+
+def _has_any_categorized_project_tests(project_files: Optional[Dict[str, str]]) -> bool:
+    return any(
+        _categorized_project_tests(project_files, category)
+        for category in ("unit", "integration", "performance")
+    )
+
+
+def _explicit_suite_supports(test_code: str, test_type: str) -> bool:
+    """Conservatively classify a standalone trusted suite by its declared intent."""
+    code = test_code or ""
+    if not code.strip():
+        return False
+    if test_type == "unit":
+        return bool(re.search(r"def\s+test_|\bassert\b|pytest\.", code))
+    if test_type == "integration":
+        return bool(re.search(r"integration|pytest\.mark\.integration", code, re.IGNORECASE))
+    return bool(re.search(r"performance|benchmark|latency|throughput|elapsed", code, re.IGNORECASE))
 
 
 class UnitTestAgent:
@@ -295,6 +377,7 @@ class UnitTestAgent:
         timeout_seconds: int = 15,
         specifications: Optional[Dict[str, Any]] = None,
         trust_submitted_docstrings: bool = False,
+        project_files: Optional[Dict[str, str]] = None,
     ) -> UnitTestReport:
         """Executes unit tests in the container sandbox and compiles unit test report."""
         effective_test_code = test_code
@@ -302,8 +385,19 @@ class UnitTestAgent:
         provenance = None
         meaningful_oracle = False
 
-        # If no trusted test code supplied, attempt autonomous contract test generation
-        if not (effective_test_code or "").strip():
+        categorized = _has_any_categorized_project_tests(project_files)
+        has_project_oracle = bool(_categorized_project_tests(project_files, "unit")) if categorized else bool(
+            project_files and any(
+                f.endswith(".py") and (os.path.basename(f).startswith("test_") or "/tests/" in f"/{f}")
+                for f in project_files
+            )
+        )
+
+        # Explicit specifications may generate authoritative assertions. Without them,
+        # callable/presence checks are not accepted as verification evidence.
+        if not (effective_test_code or "").strip() and not (
+            has_project_oracle
+        ) and specifications:
             generated_code, provenance = self.generate_autonomous_unit_test_suite(
                 source_code=source_code,
                 filename=filename,
@@ -313,20 +407,44 @@ class UnitTestAgent:
             effective_test_code = generated_code
             meaningful_oracle = provenance.get("meaningful_oracle_available", False)
 
+        if not has_project_oracle and not _explicit_suite_supports(effective_test_code, "unit") and not meaningful_oracle:
+            return UnitTestReport(
+                agent_id=self.AGENT_ID,
+                total_tests=0,
+                passed_tests=0,
+                failed_tests=0,
+                duration_ms=0.0,
+                test_results=[],
+                functions_covered=[],
+                generated_test_count=0,
+                generated_test_code=None,
+                meaningful_oracle_available=False,
+                specification_source="none",
+                trust_status="NOT_CONFIGURED",
+                generation_provenance={"reason": "No authorized unit-test assertions were supplied."},
+                status="NOT_EXECUTED",
+            )
+
         start_time = time.perf_counter()
-        exec_result: SandboxExecutionResult = await self.runner.execute_verification(
-            source_code=source_code,
-            trusted_test_cases=effective_test_code,
-            filename=filename,
-            timeout_seconds=timeout_seconds,
-        )
+        exec_kwargs = {
+            "source_code": source_code,
+            "trusted_test_cases": effective_test_code,
+            "filename": filename,
+            "timeout_seconds": timeout_seconds,
+        }
+        if project_files is not None:
+            exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "unit")
+        exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         # Filter and tag test results as UNIT
         unit_results = []
         functions_covered = set()
         for tr in exec_result.test_results:
+            if tr.test_id == "ast_syntax_check" or "ast_syntax_check" in tr.test_id:
+                continue
             tr.test_type = TestType.UNIT
+            tr.test_id = f"unit::{tr.test_id}"
             unit_results.append(tr)
             match = re.search(r"test_(?:gen_boundary_|gen_callable_)?([a-zA-Z0-9_]+)", tr.name or "")
             if match:
@@ -337,8 +455,8 @@ class UnitTestAgent:
 
         if exec_result.is_timeout or exec_result.status == TestResultStatus.ERROR.value:
             overall_status = "ERROR"
-        elif exec_result.no_oracle and not meaningful_oracle:
-            overall_status = "PENDING"
+        elif (exec_result.no_oracle and not meaningful_oracle) or not unit_results:
+            overall_status = "NOT_EXECUTED"
         elif failed == 0 and passed > 0:
             overall_status = "PASSED"
         else:
@@ -399,22 +517,45 @@ class IntegrationTestAgent:
         test_code: str,
         filename: str = "solution.py",
         timeout_seconds: int = 20,
+        project_files: Optional[Dict[str, str]] = None,
+        require_category_marker: bool = False,
     ) -> IntegrationTestReport:
         """Executes multi-module integration test suites against component seams."""
         start_time = time.perf_counter()
         seams = self.discover_test_seams(source_code)
 
-        exec_result: SandboxExecutionResult = await self.runner.execute_verification(
-            source_code=source_code,
-            trusted_test_cases=test_code,
-            filename=filename,
-            timeout_seconds=timeout_seconds,
-        )
+        categorized = _has_any_categorized_project_tests(project_files)
+        has_project_oracle = bool(_categorized_project_tests(project_files, "integration")) if categorized else False
+        has_explicit_oracle = _explicit_suite_supports(test_code, "integration") if require_category_marker else bool((test_code or "").strip())
+        if not has_project_oracle and not has_explicit_oracle:
+            return IntegrationTestReport(
+                agent_id=self.AGENT_ID,
+                total_interactions=0,
+                passed_interactions=0,
+                failed_interactions=0,
+                duration_ms=0.0,
+                test_results=[],
+                test_seams_verified=seams,
+                status="NOT_EXECUTED",
+            )
+
+        exec_kwargs = {
+            "source_code": source_code,
+            "trusted_test_cases": test_code,
+            "filename": filename,
+            "timeout_seconds": timeout_seconds,
+        }
+        if project_files is not None:
+            exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "integration")
+        exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         integration_results = []
         for tr in exec_result.test_results:
+            if tr.test_id == "ast_syntax_check" or "ast_syntax_check" in tr.test_id:
+                continue
             tr.test_type = TestType.INTEGRATION
+            tr.test_id = f"integration::{tr.test_id}"
             integration_results.append(tr)
 
         passed = sum(1 for t in integration_results if t.status == TestResultStatus.PASSED)
@@ -422,8 +563,8 @@ class IntegrationTestAgent:
 
         if exec_result.is_timeout or exec_result.status == TestResultStatus.ERROR.value:
             overall_status = "ERROR"
-        elif exec_result.no_oracle:
-            overall_status = "PENDING"
+        elif exec_result.no_oracle or not integration_results:
+            overall_status = "NOT_EXECUTED"
         elif failed == 0 and passed > 0:
             overall_status = "PASSED"
         else:
@@ -503,18 +644,41 @@ print("---BENCHMARK_OUTPUT_END---")
         filename: str = "solution.py",
         latency_threshold_ms: float = 200.0,
         iterations: int = 10,
+        project_files: Optional[Dict[str, str]] = None,
+        require_category_marker: bool = False,
     ) -> PerformanceTestReport:
         """
         Executes controlled workload against source code, measures latency percentiles,
         and flags threshold breaches.
         """
+        categorized = _has_any_categorized_project_tests(project_files)
+        has_project_oracle = bool(_categorized_project_tests(project_files, "performance")) if categorized else False
+        has_explicit_oracle = _explicit_suite_supports(test_code, "performance") if require_category_marker else bool((test_code or "").strip())
+        if not has_project_oracle and not has_explicit_oracle:
+            return PerformanceTestReport(
+                agent_id=self.AGENT_ID,
+                metrics=PerformanceMetrics(
+                    sample_size=0, duration_ms=0.0, workload_duration_ms=0.0,
+                    container_startup_overhead_ms=0.0, mean_latency_ms=0.0,
+                    latency_p50_ms=0.0, latency_p95_ms=0.0, latency_p99_ms=0.0,
+                    max_latency_ms=0.0, throughput_rps=0.0,
+                    threshold_latency_ms=latency_threshold_ms, is_breached=False,
+                ),
+                bottlenecks_detected=["No authorized performance workload or threshold assertion was supplied."],
+                test_results=[],
+                status="NOT_EXECUTED",
+            )
+
         start_time = time.perf_counter()
-        exec_result: SandboxExecutionResult = await self.runner.execute_verification(
-            source_code=source_code,
-            trusted_test_cases=test_code,
-            filename=filename,
-            timeout_seconds=25,
-        )
+        exec_kwargs = {
+            "source_code": source_code,
+            "trusted_test_cases": test_code,
+            "filename": filename,
+            "timeout_seconds": 25,
+        }
+        if project_files is not None:
+            exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "performance")
+        exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         measured_wall_ms = round((time.perf_counter() - start_time) * 1000, 2)
         total_time_ms = round(exec_result.duration_ms if (exec_result.duration_ms and exec_result.duration_ms > 0) else measured_wall_ms, 2)
 
@@ -550,6 +714,7 @@ print("---BENCHMARK_OUTPUT_END---")
         is_breached = (
             p95 > latency_threshold_ms
             or exec_result.is_timeout
+            or exec_result.status == TestResultStatus.FAILED.value
             or (len(complexity_patterns) > 0 and (p95 >= 50.0 or exec_result.status == TestResultStatus.FAILED.value))
         )
 
@@ -566,6 +731,8 @@ print("---BENCHMARK_OUTPUT_END---")
                 )
             if exec_result.is_timeout:
                 bottlenecks.append("Execution timed out under performance workload: potential non-terminating loop or catastrophic algorithmic scaling.")
+            if exec_result.status == TestResultStatus.FAILED.value and not exec_result.is_timeout:
+                bottlenecks.append("An authorized performance assertion failed in the submitted performance test suite.")
 
         metrics = PerformanceMetrics(
             sample_size=count,
@@ -590,6 +757,10 @@ print("---BENCHMARK_OUTPUT_END---")
             status = "ERROR"
 
         perf_test_results = []
+        for tr in exec_result.test_results:
+            tr.test_type = TestType.PERFORMANCE
+            tr.test_id = f"performance::{tr.test_id}"
+            perf_test_results.append(tr)
         if status == "ERROR":
             perf_test_results.append(
                 TestResult(
@@ -671,10 +842,12 @@ class TestCoordinationService:
         filename: str = "solution.py",
         timeout_seconds: int = 25,
         specifications: Optional[Dict[str, Any]] = None,
+        project_files: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Executes agents according to the shared coordination plan and merges results.
         Safely captures agent failures, timeouts, and execution errors.
+        Supports multi-file projects through project_files.
         """
         agent_reports = {}
         all_test_results = []
@@ -688,6 +861,7 @@ class TestCoordinationService:
                     filename=filename,
                     timeout_seconds=timeout_seconds,
                     specifications=specifications,
+                    project_files=project_files,
                 )
                 agent_reports["unit"] = unit_rep
                 all_test_results.extend(unit_rep.test_results)
@@ -719,12 +893,13 @@ class TestCoordinationService:
                     test_code=test_code,
                     filename=filename,
                     timeout_seconds=timeout_seconds,
+                    project_files=project_files,
+                    require_category_marker=True,
                 )
                 agent_reports["integration"] = integ_rep
-                existing_ids = {t.test_id for t in all_test_results}
-                for tr in integ_rep.test_results:
-                    if tr.test_id not in existing_ids:
-                        all_test_results.append(tr)
+                # Unit and integration agents intentionally execute independently.
+                # Preserve both evidence sets even when pytest node names match.
+                all_test_results.extend(integ_rep.test_results)
             except Exception as exc:
                 logger.error("IntegrationTestAgent execution failed: %s", exc, exc_info=True)
                 err_result = TestResult(
@@ -754,6 +929,8 @@ class TestCoordinationService:
                     test_code=test_code,
                     filename=filename,
                     latency_threshold_ms=plan.nfr_latency_threshold_ms,
+                    project_files=project_files,
+                    require_category_marker=True,
                 )
                 agent_reports["performance"] = perf_rep
                 existing_ids = {t.test_id for t in all_test_results}
@@ -790,15 +967,19 @@ class TestCoordinationService:
                 )
 
         # Calculate strict aggregated overall status
+        # NOT_EXECUTED is a valid neutral state (no test oracle supplied for that
+        # category), and must not block the verdict when other categories genuinely
+        # passed.  If ALL agents are NOT_EXECUTED the overall is BLOCKED because
+        # no real testing occurred.
         agent_statuses = [r.status for r in agent_reports.values()]
         if not agent_statuses:
-            overall_status = "PENDING"
+            overall_status = "BLOCKED"
         elif any(s == "ERROR" for s in agent_statuses):
             overall_status = "ERROR"
         elif any(s == "FAILED" for s in agent_statuses):
             overall_status = "FAILED"
-        elif any(s == "PENDING" for s in agent_statuses):
-            overall_status = "PENDING"
+        elif any(s in ("PENDING", "BLOCKED", "NOT_EXECUTED") for s in agent_statuses):
+            overall_status = "BLOCKED"
         elif all(s == "PASSED" for s in agent_statuses) and len(all_test_results) > 0:
             overall_status = "PASSED"
         else:

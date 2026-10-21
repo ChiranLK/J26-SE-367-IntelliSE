@@ -75,16 +75,16 @@ export default function Navbar({ onToggleSidebar }) {
       <div className="navbar-right">
         {/* Connection status pill */}
         <div
-          className="status-pill"
+          className="status-pill api-status-pill"
           title={`Backend status: ${healthStatus.status}. Storage engine: ${healthStatus.storageBackend || 'unknown'}`}
         >
           <span className={`status-dot ${healthStatus.status}`} />
-          <span style={{ fontSize: '0.75rem' }}>
+          <span className="api-status-text" style={{ fontSize: '0.75rem' }}>
             {healthStatus.status === 'online' ? (
               <>
                 <span style={{ fontWeight: 500 }}>API Online</span>
                 {healthStatus.latencyMs !== null && (
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '4px', fontFamily: 'var(--font-mono)' }}>
+                  <span className="api-status-latency" style={{ color: 'var(--text-muted)', marginLeft: '4px', fontFamily: 'var(--font-mono)' }}>
                     {healthStatus.latencyMs}ms
                   </span>
                 )}
@@ -100,7 +100,7 @@ export default function Navbar({ onToggleSidebar }) {
         {/* Ephemeral storage badge indicator */}
         {healthStatus.storageBackend && (
           <div
-            className="status-pill"
+            className="status-pill storage-status-pill"
             style={{
               borderColor: healthStatus.isEphemeral ? 'var(--status-pending-border)' : 'var(--border-color)',
               color: healthStatus.isEphemeral ? 'var(--status-pending)' : 'var(--text-secondary)',

@@ -1,0 +1,4 @@
+# Component 4 local demo runtime artifacts (preserve other state evidence)
+/state/friday-demo/ollama-serve.*.log
+/state/friday-demo/*.pid
+

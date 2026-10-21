@@ -8,6 +8,8 @@ __pycache__/
 *.pyo
 *.log
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Environment variables and secrets
 .env
@@ -21,9 +23,10 @@ __pycache__/
 
 # Test and coverage outputs
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 test-results/
-.pytest_cache/
 
 # IDE and operating system files
 .vscode/
@@ -35,4 +38,9 @@ Thumbs.db
 node_modules/
 frontend/node_modules/
 frontend/dist/
-frontend/.vite/
+frontend/.vite/
+
+# Local runtime process files and temporary project extraction
+*.pid
+.tmp/
+tmp/

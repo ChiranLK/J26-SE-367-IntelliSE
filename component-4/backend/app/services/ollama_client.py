@@ -31,9 +31,26 @@ class OllamaClient:
     ):
         self.base_url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/")
         self.model_name = model_name or settings.OLLAMA_MODEL
-        self.timeout_seconds = timeout_seconds or settings.OLLAMA_TIMEOUT_SECONDS
+        self.timeout_seconds = (
+            timeout_seconds if timeout_seconds is not None else settings.OLLAMA_TIMEOUT_SECONDS
+        )
+        self.post_delivery_timeout_seconds = (
+            timeout_seconds if timeout_seconds is not None else settings.OLLAMA_READ_TIMEOUT_SECONDS
+        )
+        self.connect_timeout_seconds = settings.OLLAMA_CONNECT_TIMEOUT_SECONDS
+        self.max_output_tokens = settings.OLLAMA_MAX_OUTPUT_TOKENS
+        self.keep_alive = settings.OLLAMA_KEEP_ALIVE
         self.enabled = enabled if enabled is not None else settings.OLLAMA_ENABLED
         self._http_client = http_client
+
+    def _inference_timeout(self) -> httpx.Timeout:
+        """Use a short connection deadline without cutting off bounded local generation."""
+        return httpx.Timeout(
+            connect=self.connect_timeout_seconds,
+            read=self.post_delivery_timeout_seconds,
+            write=10.0,
+            pool=self.connect_timeout_seconds,
+        )
 
     async def check_availability(self) -> Tuple[bool, List[str], str]:
         """
@@ -320,3 +337,131 @@ Return a JSON object with EXACTLY the following structure:
         except Exception as exc:
             raise OllamaInferenceException(f"Ollama inference error: {exc}")
 
+    def generate_post_delivery_understanding_sync(
+        self,
+        source_code: str,
+        filename: str,
+        structural_facts: Dict[str, Any],
+        verified_tests: List[str],
+        evidence_bundle: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Generate software-understanding prose only after the caller enforces delivery gates."""
+        is_ok, models, msg = self.check_availability_sync()
+        if not is_ok:
+            raise OllamaInferenceException(f"Ollama unavailable: {msg}")
+
+        target_model = self.model_name
+        if models and target_model not in models:
+            target_model = next(
+                (m for m in models if m.startswith(f"{target_model}:") or target_model.startswith(f"{m}:")),
+                models[0],
+            )
+
+        system_prompt = (
+            "You are the INTELISE post-delivery software-understanding assistant. "
+            "Explain what verified, delivered software does; do not discuss defects or repair. "
+            "Use only supplied source, AST facts, and passed-test names. Return valid JSON only."
+        )
+        bounded_evidence = evidence_bundle or {
+            "primary_file": filename,
+            "ast_facts": structural_facts,
+            "passed_tests": verified_tests,
+            "source_excerpt": self.sanitize_prompt_inputs(source_code),
+        }
+        serialized_evidence = json.dumps(bounded_evidence, indent=2, default=str)[:24_000]
+        user_prompt = f"""
+<verified_delivered_evidence>
+{serialized_evidence}
+</verified_delivered_evidence>
+
+Return exactly this JSON shape:
+{{
+  "software_overview": "Comprehensive multi-paragraph explanation (100-150 words) detailing the real-world domain, core responsibilities, supported capabilities, inputs/outputs, and limitations.",
+  "architecture_explanation": "Detailed architectural explanation (80-120 words) detailing module responsibilities, decomposition, and how modules collaborate.",
+  "api_and_data_flow": "Detailed explanation (80-120 words) tracing data flow from input to validation to calculation to output across functions. State clearly that interfaces are Python callables (no HTTP API).",
+  "setup_and_usage": "Clear setup and practical invocation instructions (50-80 words) using real modules and functions.",
+  "limitations_and_scope": "Detailed explanation (60-100 words) detailing verified capabilities vs untested assumptions and operational boundaries.",
+  "beginner_overview": "Accessible, non-technical explanation (60-100 words) for a general audience.",
+  "beginner_what_it_does": "Clear plain-English description (50-80 words) of everyday functionality without technical jargon.",
+  "beginner_how_to_use": "Step-by-step practical guide (40-70 words) on how someone uses this software.",
+  "beginner_realistic_example": "A concrete scenario (40-60 words) with sample numbers and calculated outcome.",
+  "beginner_test_confidence": "Clear statement (30-50 words) on what passing tests prove and do not prove."
+}}
+
+Grounding rules:
+- Cite relevant evidence inline as [source: path.py], [function: name], or [test: identifier].
+- Never invent APIs, databases, frameworks, functions, signatures, dependencies, measurements, or intentions.
+- If a requested fact is unavailable, write: "Not established by the available evidence."
+- Passing tests establish only the behavior exercised by those tests, not complete correctness.
+"""
+        payload = {
+            "model": target_model,
+            "prompt": user_prompt,
+            "system": system_prompt,
+            "stream": False,
+            "format": "json",
+            "keep_alive": self.keep_alive,
+            "options": {
+                "temperature": 0.1,
+                "top_p": 0.9,
+                "num_predict": self.max_output_tokens,
+            },
+        }
+        started = time.perf_counter()
+        try:
+            with httpx.Client(timeout=self._inference_timeout()) as client:
+                response = client.post(f"{self.base_url}/api/generate", json=payload)
+            if response.status_code != 200:
+                raise OllamaInferenceException(f"Ollama returned HTTP {response.status_code}: {response.text[:200]}")
+            body = response.json()
+            raw_text = body.get("response", "{}")
+            try:
+                parsed = json.loads(raw_text)
+            except json.JSONDecodeError as exc:
+                if body.get("done_reason") == "length":
+                    raise OllamaInferenceException(
+                        f"Ollama post-delivery response reached the {self.max_output_tokens}-token output bound and produced truncated JSON"
+                    ) from exc
+                raise OllamaInferenceException(f"Ollama post-delivery JSON decode error: {exc}") from exc
+
+            required = {
+                "software_overview", "architecture_explanation", "api_and_data_flow",
+                "setup_and_usage", "limitations_and_scope",
+            }
+            if not required.issubset(parsed) or not all(isinstance(parsed.get(key), str) and parsed[key].strip() for key in required):
+                raise OllamaInferenceException("Ollama post-delivery response did not satisfy the required schema")
+            parsed["_provenance"] = {
+                "provider": "ollama",
+                "model": target_model,
+                "genuine_inference": True,
+                "fallback_used": False,
+                "fallback_reason": None,
+                "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                "prompt_eval_count": body.get("prompt_eval_count"),
+                "eval_count": body.get("eval_count"),
+            }
+            logger.info(
+                "Post-delivery Ollama inference completed model=%s duration_ms=%.2f "
+                "prompt_chars=%d prompt_tokens=%s output_tokens=%s",
+                target_model,
+                parsed["_provenance"]["duration_ms"],
+                len(system_prompt) + len(user_prompt),
+                body.get("prompt_eval_count"),
+                body.get("eval_count"),
+            )
+            return parsed
+        except OllamaInferenceException:
+            raise
+        except httpx.ConnectTimeout as exc:
+            raise OllamaInferenceException(
+                f"Ollama post-delivery connection timed out after {self.connect_timeout_seconds}s: {exc}"
+            ) from exc
+        except httpx.ReadTimeout as exc:
+            raise OllamaInferenceException(
+                "Ollama post-delivery generation timed out after "
+                f"{self.post_delivery_timeout_seconds}s: {exc}"
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise OllamaInferenceException(f"Ollama post-delivery HTTP timeout: {exc}") from exc
+        except Exception as exc:
+            raise OllamaInferenceException(f"Ollama post-delivery inference error: {exc}") from exc

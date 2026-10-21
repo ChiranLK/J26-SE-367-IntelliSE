@@ -1,0 +1,30 @@
+[
+  {
+    "scenario": "A",
+    "initial_run_id": "run-0df5e6fd574e",
+    "initial_status": "FAILED",
+    "defects_detected": 1,
+    "repaired_file": "auth/service.py",
+    "repair_id": "rep-ce5c68746c4b",
+    "reverify_verdict": "FULLY_RESOLVED",
+    "resolved_defects": 1,
+    "remaining_defects": 0
+  },
+  {
+    "scenario": "B",
+    "run_id": "run-d36a5cd53250",
+    "status": "FAILED",
+    "is_ready_for_deployment": false,
+    "readiness_status": "BLOCKED",
+    "delivery_blocked": true
+  },
+  {
+    "scenario": "C",
+    "run_id": "run-971d900218e7",
+    "status": "PASSED",
+    "delivery_id": null,
+    "delivery_simulation": false,
+    "xai_generated": true,
+    "dimensions_count": 0
+  }
+]

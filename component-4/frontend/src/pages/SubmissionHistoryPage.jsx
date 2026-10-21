@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   History,
   Code2,
@@ -25,12 +25,14 @@ import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import CodeViewer from '../components/common/CodeViewer';
 import Modal from '../components/common/Modal';
 import Pagination from '../components/common/Pagination';
-import { getSubmissions } from '../api/submissionApi';
+import { getSubmissionById, getSubmissions } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
 import { SUBMISSION_SOURCES } from '../utils/constants';
 
 export default function SubmissionHistoryPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewSubmissionId = searchParams.get('view') || '';
 
   const [submissions, setSubmissions] = useState([]);
   const [total, setTotal] = useState(0);
@@ -69,6 +71,32 @@ export default function SubmissionHistoryPage() {
   useEffect(() => {
     fetchSubmissions(0);
   }, []);
+
+  useEffect(() => {
+    if (!viewSubmissionId) return undefined;
+
+    let isCurrent = true;
+    getSubmissionById(viewSubmissionId)
+      .then((submission) => {
+        if (isCurrent) setActiveSubmission(submission);
+      })
+      .catch((err) => {
+        if (isCurrent) setError(err.message || 'Failed to load the requested submission.');
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [viewSubmissionId]);
+
+  const handleCloseSubmission = () => {
+    setActiveSubmission(null);
+    if (viewSubmissionId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('view');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const handleCopy = async (id) => {
     try {
@@ -184,14 +212,9 @@ export default function SubmissionHistoryPage() {
             }
             action={
               !searchTerm && (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Button size="sm" variant="primary" onClick={() => navigate('/submissions/new')} icon={Plus}>
-                    Submit Code Manually
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/submissions/upload')} icon={Upload}>
-                    Upload File
-                  </Button>
-                </div>
+                <Button size="sm" variant="primary" onClick={() => navigate('/submissions/new')} icon={Plus}>
+                  New Submission
+                </Button>
               )
             }
           />
@@ -315,7 +338,7 @@ export default function SubmissionHistoryPage() {
       {activeSubmission && (
         <Modal
           isOpen={!!activeSubmission}
-          onClose={() => setActiveSubmission(null)}
+          onClose={handleCloseSubmission}
           title={`Artifact Details: ${activeSubmission.id}`}
           size="lg"
           footer={
@@ -343,7 +366,7 @@ export default function SubmissionHistoryPage() {
               >
                 Initiate Verification
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => setActiveSubmission(null)}>
+              <Button variant="secondary" size="sm" onClick={handleCloseSubmission}>
                 Close
               </Button>
             </>

@@ -71,7 +71,7 @@ describe('Human-Facing XAI Explanations UI', () => {
     schema_version: '1.0',
   };
 
-  it('renders XAI Explanations page with run selector and full 5-part explanation for failed run', async () => {
+  it('renders the delivery gate without exposing defect XAI for a failed run', async () => {
     const mockRuns = [
       {
         id: 'run-calc-fail',
@@ -86,49 +86,47 @@ describe('Human-Facing XAI Explanations UI', () => {
       total: 1,
       items: mockRuns,
     });
-    vi.spyOn(verificationApi, 'getXaiExplanation').mockResolvedValue(mockFailedExplanation);
+    vi.spyOn(verificationApi, 'getXaiExplanation').mockResolvedValue({
+      ...mockFailedExplanation,
+      eligible: false,
+      delivery_status: 'BLOCKED_VERIFICATION_FAILED',
+      summary: 'Verification failed. User-facing software explanation is withheld until delivery.',
+      what_failed: [],
+      confirmed_observations: [],
+      evidence_based_interpretation: 'Post-delivery explanation is locked.',
+      suggested_investigations: [],
+    });
 
     renderWithRouter(<XaiExplanationsPage />);
 
     // Header & Target Callout
-    expect(await screen.findByText('Human-Facing XAI Explanations')).toBeInTheDocument();
+    expect(await screen.findByText('Post-Delivery Software Explanations')).toBeInTheDocument();
     expect(screen.getByText(/Target: Reviewer/i)).toBeInTheDocument();
-    expect(screen.getByText(/Engineering Explanations/i)).toBeInTheDocument();
+    expect(screen.getByText(/Strict post-delivery boundary/i)).toBeInTheDocument();
 
     // Section 1: Executive Summary
     expect(await screen.findByText('1. Executive Findings Summary')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Verification run run-calc-fail FAILED with 2 confirmed application-code defect\(s\)\./i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/User-facing software explanation is withheld until delivery/i)).toBeInTheDocument();
 
     // Section 2: What Failed?
     expect(screen.getByText('2. What Failed?')).toBeInTheDocument();
-    expect(screen.getByText(/Test 'test_total_with_tax' failed/i)).toBeInTheDocument();
-    expect(screen.getByText(/Test 'test_total_without_tax' failed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Test 'test_total_with_tax' failed/i)).not.toBeInTheDocument();
 
     // Section 3: Confirmed Observations
     expect(screen.getByText('3. Confirmed Observations')).toBeInTheDocument();
-    expect(screen.getByText('108.0')).toBeInTheDocument();
-    expect(screen.getByText('8.0')).toBeInTheDocument();
-    expect(screen.getByText('100.0')).toBeInTheDocument();
-    expect(screen.getByText('0.0')).toBeInTheDocument();
+    expect(screen.queryByText('108.0')).not.toBeInTheDocument();
 
     // Section 4: Evidence-Based Interpretation
     expect(screen.getByText('4. Evidence-Based Interpretation')).toBeInTheDocument();
-    expect(screen.getByText(/Causal attribution caveat/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Causal attribution caveat/i)).not.toBeInTheDocument();
 
     // Section 5: Action Recommendation
     expect(screen.getByText('5. Action Recommendation for Engineering Review')).toBeInTheDocument();
     expect(screen.getByText('SEND FOR REPAIR')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Component 4 recommends human approval to return the technical feedback payload/i)
-    ).toBeInTheDocument();
 
     // Section 6: Suggested Next Investigations
     expect(screen.getByText('6. Suggested Next Investigations')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Review 'defective_calculator\.py' \(around line 14\)/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No corrective investigations required/i)).toBeInTheDocument();
   });
 
   it('renders passed verification run explanation with accept recommendation', async () => {
@@ -214,7 +212,7 @@ describe('Human-Facing XAI Explanations UI', () => {
     expect(screen.getByText(/Failed to retrieve XAI explanation/i)).toBeInTheDocument();
   });
 
-  it('renders compact Human-Facing XAI Explanation section inside VerificationRunsPage details modal', async () => {
+  it('does not render post-delivery XAI inside a failed verification modal', async () => {
     const mockRun = {
       id: 'run-modal-xai-1',
       submission_id: 'sub-modal-1',
@@ -254,8 +252,7 @@ describe('Human-Facing XAI Explanations UI', () => {
     expect(await screen.findByText(/Pipeline Details: run-modal-xai-1/i)).toBeInTheDocument();
 
     // Verify Human-Facing XAI Explanation section in modal
-    expect(screen.getByText('Human-Facing XAI Explanation')).toBeInTheDocument();
-    expect(screen.getByText('Action: Send for Repair')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Open Full XAI Explanation Page/i })).toBeInTheDocument();
+    expect(screen.queryByText('Post-Delivery XAI Status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Review Delivery Gate & XAI/i })).not.toBeInTheDocument();
   });
 });

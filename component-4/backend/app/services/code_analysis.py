@@ -145,6 +145,68 @@ def inspect_python_code_ast(source_code: str, filename: str = "solution.py") -> 
     }
 
 
+def inspect_python_project(
+    project_files: Dict[str, str],
+    entrypoint: Optional[str] = None,
+    max_source_files: int = 16,
+    max_source_chars: int = 16_000,
+) -> Dict[str, Any]:
+    """Build a bounded, non-executing evidence summary for a Python project.
+
+    Production modules are prioritized over tests, then the configured entrypoint is
+    placed first. Raw source excerpts are bounded globally so larger archives cannot
+    create unbounded LLM prompts.
+    """
+    python_files = {
+        str(path).replace("\\", "/"): content
+        for path, content in (project_files or {}).items()
+        if str(path).lower().endswith(".py") and isinstance(content, str)
+    }
+    source_paths = [p for p in python_files if not p.startswith("tests/") and "/tests/" not in p]
+    ordered = sorted(source_paths, key=lambda p: (p != entrypoint, p))[:max_source_files]
+    omitted = sorted(set(source_paths) - set(ordered))
+
+    modules: List[Dict[str, Any]] = []
+    excerpts: List[Dict[str, str]] = []
+    remaining_chars = max_source_chars
+    for path in ordered:
+        content = python_files[path]
+        modules.append(inspect_python_code_ast(content, filename=path))
+        if remaining_chars > 0:
+            excerpt = content[:remaining_chars]
+            excerpts.append({"file_path": path, "source": excerpt})
+            remaining_chars -= len(excerpt)
+
+    known_modules = {p[:-3].replace("/", ".") for p in ordered}
+    interactions: List[Dict[str, str]] = []
+    for module in modules:
+        for imported in module.get("imports", []):
+            matched = next(
+                (known for known in known_modules if imported == known or imported.startswith(f"{known}.") or known.endswith(f".{imported}")),
+                None,
+            )
+            if matched:
+                interactions.append({
+                    "from": module["filename"],
+                    "to": f"{matched.replace('.', '/')}.py",
+                    "evidence": f"import {imported}",
+                })
+
+    return {
+        "entrypoint": entrypoint,
+        "project_file_count": len(project_files or {}),
+        "python_source_file_count": len(source_paths),
+        "analyzed_source_files": ordered,
+        "omitted_source_files": omitted,
+        "analyzed_line_count": sum(m.get("line_count", 0) for m in modules),
+        "modules": modules,
+        "module_interactions": interactions,
+        "source_excerpts": excerpts,
+        "source_excerpt_char_count": sum(len(item["source"]) for item in excerpts),
+        "test_files": sorted(p for p in python_files if p.startswith("tests/") or "/tests/" in p),
+    }
+
+
 def _extract_function_meta(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     lines: List[str],
@@ -168,7 +230,10 @@ def _extract_function_meta(
             default_val = args.defaults[i - defaults_offset]
         formatted_args.append(_format_arg(a, default_val))
 
-        param_dict: Dict[str, Any] = {"name": a.arg}
+        param_dict: Dict[str, Any] = {
+            "name": a.arg,
+            "is_required": default_val is None,
+        }
         if a.annotation:
             try:
                 param_dict["type"] = ast.unparse(a.annotation)
@@ -199,12 +264,47 @@ def _extract_function_meta(
 
     # Extract internal function calls for data-flow awareness
     calls: List[str] = []
+    raised_exceptions: List[str] = []
+    raised_exception_types: List[str] = []
+    return_expressions: List[str] = []
+    validation_conditions: List[str] = []
+    loop_types: List[str] = []
+    operations: List[str] = []
+
     for sub in ast.walk(node):
         if isinstance(sub, ast.Call):
             try:
-                calls.append(ast.unparse(sub.func))
+                call_name = ast.unparse(sub.func)
+                calls.append(call_name)
+                if call_name in {"sum", "len", "round", "min", "max", "abs", "float", "int", "str"}:
+                    operations.append(call_name)
             except Exception:
                 pass
+        elif isinstance(sub, ast.Raise) and sub.exc is not None:
+            try:
+                raised_exceptions.append(ast.unparse(sub.exc))
+                if isinstance(sub.exc, ast.Call) and hasattr(sub.exc.func, "id"):
+                    raised_exception_types.append(sub.exc.func.id)
+                elif hasattr(sub.exc, "id"):
+                    raised_exception_types.append(sub.exc.id)
+            except Exception:
+                pass
+        elif isinstance(sub, ast.Return) and sub.value is not None:
+            try:
+                return_expressions.append(ast.unparse(sub.value))
+            except Exception:
+                pass
+        elif isinstance(sub, ast.If):
+            try:
+                validation_conditions.append(ast.unparse(sub.test))
+            except Exception:
+                pass
+        elif isinstance(sub, ast.For):
+            loop_types.append("for")
+        elif isinstance(sub, ast.While):
+            loop_types.append("while")
+        elif isinstance(sub, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            operations.append("comprehension")
 
     return {
         "name": node.name,
@@ -217,6 +317,12 @@ def _extract_function_meta(
         "parameters": params,
         "return_type": return_type,
         "calls": list(dict.fromkeys(calls)),
+        "raised_exceptions": list(dict.fromkeys(raised_exceptions))[:6],
+        "raised_exception_types": list(dict.fromkeys(raised_exception_types))[:4],
+        "return_expressions": list(dict.fromkeys(return_expressions))[:6],
+        "validation_conditions": list(dict.fromkeys(validation_conditions))[:8],
+        "loop_types": list(dict.fromkeys(loop_types)),
+        "operations": list(dict.fromkeys(operations)),
     }
 
 

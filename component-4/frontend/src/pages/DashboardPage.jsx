@@ -260,14 +260,9 @@ export default function DashboardPage() {
               title="No submissions recorded"
               description="Ingest code manually or upload files to begin verification testing."
               action={
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Button size="sm" variant="primary" onClick={() => navigate('/submissions/new')} icon={Plus}>
-                    Submit Code
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/submissions/upload')} icon={Upload}>
-                    Upload File
-                  </Button>
-                </div>
+                <Button size="sm" variant="primary" onClick={() => navigate('/submissions/new')} icon={Plus}>
+                  New Submission
+                </Button>
               }
             />
           ) : (
