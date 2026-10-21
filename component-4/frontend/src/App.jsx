@@ -2,8 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';
-import ManualSubmissionPage from './pages/ManualSubmissionPage';
-import FileUploadPage from './pages/FileUploadPage';
+import UnifiedSubmissionPage from './pages/UnifiedSubmissionPage';
 import SubmissionHistoryPage from './pages/SubmissionHistoryPage';
 import VerificationRunsPage from './pages/VerificationRunsPage';
 import DefectReportsPage from './pages/DefectReportsPage';
@@ -18,8 +17,8 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="submissions">
             <Route index element={<SubmissionHistoryPage />} />
-            <Route path="new" element={<ManualSubmissionPage />} />
-            <Route path="upload" element={<FileUploadPage />} />
+            <Route path="new" element={<UnifiedSubmissionPage />} />
+            <Route path="upload" element={<UnifiedSubmissionPage />} />
           </Route>
           <Route path="verifications" element={<VerificationRunsPage />} />
           <Route path="defects" element={<DefectReportsPage />} />

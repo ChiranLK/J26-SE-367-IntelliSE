@@ -1,7 +1,7 @@
 {
   "evaluation_title": "INTELISE Component 4 \u2014 Phase 3C.1 Pilot Benchmark Results",
   "dataset_version": "v3.1.0-phase3c1-pilot",
-  "timestamp": "2026-10-20T03:11:59.009729+00:00",
+  "timestamp": "2026-10-21T11:42:11.329029+00:00",
   "total_scenarios": 16,
   "clean_controls_count": 4,
   "seeded_defects_count": 12,
@@ -118,7 +118,7 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 1.47,
+        "duration_ms": 1.69,
         "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -157,7 +157,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.33,
+        "duration_ms": 0.54,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -167,13 +167,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.29,
+        "duration_ms": 0.37,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "3f236592f14460dc3c7246bc3a186dbec8f00f57752b7c2017496af9c2aa28d2",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -203,7 +203,7 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 1.14,
+        "duration_ms": 3.01,
         "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -242,7 +242,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.43,
+        "duration_ms": 0.52,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -252,13 +252,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.44,
+        "duration_ms": 0.77,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "21ac4ef659af8adc841b9bc93f8d13809dcfd2e99ed66676d01dbd8b349c3970",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -288,7 +288,7 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.32,
+        "duration_ms": 0.45,
         "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -327,7 +327,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.16,
+        "duration_ms": 0.23,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -337,13 +337,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.1,
+        "duration_ms": 0.22,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "ee4d42da981aaabae0dce74d00b131c51ded2a0a00dd652722b081145d1b0e83",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -373,7 +373,7 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 1.06,
+        "duration_ms": 1.07,
         "sanitized_evidence": "Component 4 analyzed 0 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -412,7 +412,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.42,
+        "duration_ms": 4.53,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -422,13 +422,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.17,
+        "duration_ms": 0.3,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "82d0db58a27d7b180c401df34e1f45a07223b2b96cb6d7015e8765696e017baa",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -458,7 +458,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 1.34,
+        "duration_ms": 0.77,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -504,7 +504,7 @@
               "functional_bug",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:11:59.790129Z",
+            "created_at": "2026-10-21T11:42:11.962439Z",
             "verification_run_id": "run-PILOT-SC-05",
             "submission_id": "sub-PILOT-SC-05",
             "failed_test": "test_paginate_page_1",
@@ -518,7 +518,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.01,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -536,7 +537,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.24,
+        "duration_ms": 0.51,
         "sanitized_evidence": "AssertionError in test_paginate_page_1: Expected [1, 2], got [3, 4]",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -546,13 +547,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.2,
+        "duration_ms": 0.21,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "012d00e6f7b0c928a178843a0ca41f0f623b488798f299d5b9c7273b943e9764",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -582,7 +583,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.88,
+        "duration_ms": 0.68,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -628,7 +629,7 @@
               "functional_bug",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:11:59.791749Z",
+            "created_at": "2026-10-21T11:42:11.964439Z",
             "verification_run_id": "run-PILOT-SC-06",
             "submission_id": "sub-PILOT-SC-06",
             "failed_test": "test_high_loyalty_discount",
@@ -642,7 +643,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.01,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -660,7 +662,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.18,
+        "duration_ms": 0.6,
         "sanitized_evidence": "AssertionError in test_high_loyalty_discount: Expected 80.0 for 7 years loyalty, got 100.0",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -676,7 +678,7 @@
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "bdf5a70055f096256f5b22376231bf38ed82e60911ffd08981d7a74a97cd4cff",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -706,7 +708,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.77,
+        "duration_ms": 0.66,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -752,7 +754,7 @@
               "functional_bug",
               "severity:critical"
             ],
-            "created_at": "2026-10-20T03:11:59.793762Z",
+            "created_at": "2026-10-21T11:42:11.966439Z",
             "verification_run_id": "run-PILOT-SC-07",
             "submission_id": "sub-PILOT-SC-07",
             "failed_test": "test_zero_weights_safe_return",
@@ -766,7 +768,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.01,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -784,7 +787,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.22,
+        "duration_ms": 0.73,
         "sanitized_evidence": "ZeroDivisionError in test_zero_weights_safe_return: float division by zero",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -800,7 +803,7 @@
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "e7a80f4c53f2bc601624efdf98bf88a8da2f63fbd25825c913e3879944f5855d",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -830,7 +833,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 27.55,
+        "duration_ms": 27.91,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -876,7 +879,7 @@
               "cwe-78",
               "severity:critical"
             ],
-            "created_at": "2026-10-20T03:11:59.821356Z",
+            "created_at": "2026-10-21T11:42:11.994703Z",
             "verification_run_id": "run-PILOT-SC-08",
             "submission_id": "sub-PILOT-SC-08",
             "failed_test": "security_ast_scan_cwe-78",
@@ -906,7 +909,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 18.25,
+        "duration_ms": 305.9,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -922,7 +925,7 @@
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "5274f664b8e98ebe443a2731558999e49064a726f32f8e45b518fb0bb92445f8",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -952,7 +955,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.33,
+        "duration_ms": 0.31,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -998,7 +1001,7 @@
               "cwe-95",
               "severity:critical"
             ],
-            "created_at": "2026-10-20T03:11:59.822370Z",
+            "created_at": "2026-10-21T11:42:11.995710Z",
             "verification_run_id": "run-PILOT-SC-09",
             "submission_id": "sub-PILOT-SC-09",
             "failed_test": "security_ast_scan_cwe-95",
@@ -1028,7 +1031,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.26,
+        "duration_ms": 0.32,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1038,13 +1041,13 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.07,
+        "duration_ms": 0.06,
         "sanitized_evidence": "Flagged 1 vulnerability pattern(s): ['CWE-95']",
         "findings_count": 1,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "d166a232f19147a71ab561e9fab1b4b3de1ab02dc8ee3e66c0cf2f493f9f78e1",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1074,7 +1077,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 648.86,
+        "duration_ms": 763.85,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1110,7 +1113,7 @@
             "requirement_id": "REQ-PILOT-01",
             "title": "Observed Assertion Failure in test_find_dups_performance_sla",
             "severity": "HIGH",
-            "description": "Test case 'test_find_dups_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 647.1ms (threshold 200ms).",
+            "description": "Test case 'test_find_dups_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 762.2ms (threshold 200ms).",
             "file_path": "solution.py",
             "line_number": 4,
             "suggested_fix": null,
@@ -1120,27 +1123,28 @@
               "performance_bottleneck",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:12:00.473087Z",
+            "created_at": "2026-10-21T11:42:12.761421Z",
             "verification_run_id": "run-PILOT-SC-10",
             "submission_id": "sub-PILOT-SC-10",
             "failed_test": "test_find_dups_performance_sla",
             "failure_category": "ASSERTION_FAILURE",
-            "assertion_or_exception": "Latency SLA breach: took 647.1ms (threshold 200ms)",
+            "assertion_or_exception": "Latency SLA breach: took 762.2ms (threshold 200ms)",
             "expected_value": null,
             "actual_value": null,
-            "traceback_excerpt": "Latency SLA breach: took 647.1ms (threshold 200ms)",
+            "traceback_excerpt": "Latency SLA breach: took 762.2ms (threshold 200ms)",
             "evidence_references": {
               "test_id": "t_PILOT-SC-10_test_find_dups_performance_sla",
               "test_status": "FAILED",
-              "duration_ms": 647.15,
+              "duration_ms": 762.18,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "performance_bottleneck",
             "cwe_id": null,
             "owasp_category": null,
             "performance_metrics": {
-              "duration_ms": 647.15,
+              "duration_ms": 762.18,
               "threshold_breached": true,
               "threshold_latency_ms": 200.0,
               "complexity_patterns": [
@@ -1159,7 +1163,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 1084.55,
+        "duration_ms": 1425.08,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1169,13 +1173,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.26,
+        "duration_ms": 0.28,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "53a12b6d54ae31ac009016d45635f89c823f758b7285258d5c9041e73b7a8794",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1205,7 +1209,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 496.55,
+        "duration_ms": 719.58,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1241,7 +1245,7 @@
             "requirement_id": "REQ-PILOT-01",
             "title": "Observed Assertion Failure in test_fib_performance_sla",
             "severity": "HIGH",
-            "description": "Test case 'test_fib_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 495.7ms (threshold 200ms).",
+            "description": "Test case 'test_fib_performance_sla' failed under pytest execution. Observed diagnostic: Latency SLA breach: took 718.6ms (threshold 200ms).",
             "file_path": "solution.py",
             "line_number": 3,
             "suggested_fix": null,
@@ -1251,27 +1255,28 @@
               "performance_bottleneck",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:12:00.970740Z",
+            "created_at": "2026-10-21T11:42:13.482115Z",
             "verification_run_id": "run-PILOT-SC-11",
             "submission_id": "sub-PILOT-SC-11",
             "failed_test": "test_fib_performance_sla",
             "failure_category": "ASSERTION_FAILURE",
-            "assertion_or_exception": "Latency SLA breach: took 495.7ms (threshold 200ms)",
+            "assertion_or_exception": "Latency SLA breach: took 718.6ms (threshold 200ms)",
             "expected_value": null,
             "actual_value": null,
-            "traceback_excerpt": "Latency SLA breach: took 495.7ms (threshold 200ms)",
+            "traceback_excerpt": "Latency SLA breach: took 718.6ms (threshold 200ms)",
             "evidence_references": {
               "test_id": "t_PILOT-SC-11_test_fib_performance_sla",
               "test_status": "FAILED",
-              "duration_ms": 495.69,
+              "duration_ms": 718.63,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "performance_bottleneck",
             "cwe_id": null,
             "owasp_category": null,
             "performance_metrics": {
-              "duration_ms": 495.69,
+              "duration_ms": 718.63,
               "threshold_breached": true,
               "threshold_latency_ms": 200.0,
               "complexity_patterns": [
@@ -1290,7 +1295,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 653.86,
+        "duration_ms": 605.43,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1300,13 +1305,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.14,
+        "duration_ms": 0.24,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "1998e71eadde42505b0d9e18020de05cf6682c204ece16fddbd1b7cc95751f50",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1336,7 +1341,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.83,
+        "duration_ms": 0.73,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1382,7 +1387,7 @@
               "functional_bug",
               "severity:critical"
             ],
-            "created_at": "2026-10-20T03:12:00.972370Z",
+            "created_at": "2026-10-21T11:42:13.483116Z",
             "verification_run_id": "run-PILOT-SC-12",
             "submission_id": "sub-PILOT-SC-12",
             "failed_test": "test_caller_integration",
@@ -1396,7 +1401,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.01,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -1414,7 +1420,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.36,
+        "duration_ms": 0.4,
         "sanitized_evidence": "TypeError in test_caller_integration: authenticate_request() got an unexpected keyword argument 'api_key'",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1424,13 +1430,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.09,
+        "duration_ms": 0.15,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "7067ef7c342090c77b3f052ca0af5cb08069e95cc92847b41bdebaa9fc4dcb28",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1460,7 +1466,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.87,
+        "duration_ms": 0.88,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1506,7 +1512,7 @@
               "regression",
               "severity:critical"
             ],
-            "created_at": "2026-10-20T03:12:00.974027Z",
+            "created_at": "2026-10-21T11:42:13.485115Z",
             "verification_run_id": "run-PILOT-SC-13",
             "submission_id": "sub-PILOT-SC-13",
             "failed_test": "test_legacy_v1_regression",
@@ -1520,7 +1526,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.0,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "regression",
             "cwe_id": null,
@@ -1538,7 +1545,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.22,
+        "duration_ms": 0.25,
         "sanitized_evidence": "ValueError in test_legacy_v1_regression: Invalid envelope format",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1548,13 +1555,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.13,
+        "duration_ms": 0.24,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "fa1ec960ce5fdecc362a8f002fbff458dfd66af48d0680ef30b64648f8587c7f",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1626,7 +1633,7 @@
             "suggested_fix": null,
             "xai_explanation": null,
             "tags": [],
-            "created_at": "2026-10-20T03:12:00.975263Z",
+            "created_at": "2026-10-21T11:42:13.487115Z",
             "verification_run_id": "run-PILOT-SC-14",
             "submission_id": "sub-PILOT-SC-14",
             "failed_test": null,
@@ -1657,7 +1664,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.15,
+        "duration_ms": 0.14,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1667,13 +1674,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.08,
+        "duration_ms": 0.14,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "c94c901e56b9166094aae9ef968970675013d1eb9a45ed5571edd7ed450e9e92",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1703,7 +1710,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.28,
+        "duration_ms": 0.34,
         "sanitized_evidence": "Component 4 analyzed 1 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1745,7 +1752,7 @@
             "suggested_fix": null,
             "xai_explanation": null,
             "tags": [],
-            "created_at": "2026-10-20T03:12:00.976370Z",
+            "created_at": "2026-10-21T11:42:13.488116Z",
             "verification_run_id": "run-PILOT-SC-15",
             "submission_id": "sub-PILOT-SC-15",
             "failed_test": null,
@@ -1776,7 +1783,7 @@
         "execution_status": "PASSED",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.11,
+        "duration_ms": 0.1,
         "sanitized_evidence": "All tests passed",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1786,13 +1793,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.08,
+        "duration_ms": 0.14,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "bb4d987909fbbc54783bc20cce34c1a152fc032807d91379aa25a623a9e1de21",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {
@@ -1822,7 +1829,7 @@
         "execution_status": "DEFECT_DETECTED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.92,
+        "duration_ms": 1.04,
         "sanitized_evidence": "Component 4 analyzed 2 defect report(s)",
         "provenance": "EMPIRICAL_EXECUTION",
         "ai_contribution": {
@@ -1868,7 +1875,7 @@
               "functional_bug",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:12:00.977489Z",
+            "created_at": "2026-10-21T11:42:13.490116Z",
             "verification_run_id": "run-PILOT-SC-16",
             "submission_id": "sub-PILOT-SC-16",
             "failed_test": "test_rule_alpha",
@@ -1880,9 +1887,10 @@
             "evidence_references": {
               "test_id": "t_PILOT-SC-16_test_rule_alpha",
               "test_status": "FAILED",
-              "duration_ms": 0.0,
+              "duration_ms": 0.01,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -1906,7 +1914,7 @@
               "functional_bug",
               "severity:high"
             ],
-            "created_at": "2026-10-20T03:12:00.978043Z",
+            "created_at": "2026-10-21T11:42:13.490116Z",
             "verification_run_id": "run-PILOT-SC-16",
             "submission_id": "sub-PILOT-SC-16",
             "failed_test": "test_rule_beta",
@@ -1920,7 +1928,8 @@
               "test_status": "FAILED",
               "duration_ms": 0.0,
               "localization_confidence": "HIGH",
-              "localization_provenance": "AST_SOURCE_MAPPING"
+              "localization_provenance": "AST_SOURCE_MAPPING",
+              "affected_file": "solution.py"
             },
             "defect_category": "functional_bug",
             "cwe_id": null,
@@ -1938,7 +1947,7 @@
         "execution_status": "FAILED",
         "container_exit_code": 1,
         "timeout": false,
-        "duration_ms": 0.13,
+        "duration_ms": 0.12,
         "sanitized_evidence": "AssertionError in test_rule_alpha:",
         "provenance": "EMPIRICAL_EXECUTION"
       },
@@ -1948,13 +1957,13 @@
         "execution_status": "CLEAN",
         "container_exit_code": 0,
         "timeout": false,
-        "duration_ms": 0.05,
+        "duration_ms": 0.07,
         "sanitized_evidence": "No AST security patterns detected",
         "findings_count": 0,
         "provenance": "EMPIRICAL_EXECUTION"
       },
       "artifact_checksum": "eaa133ba0f367138ab05e426aba494b723eb2a915546e55ab16dc3671abd99f2",
-      "execution_timestamp": "2026-10-20T03:11:59.009729+00:00",
+      "execution_timestamp": "2026-10-21T11:42:11.329029+00:00",
       "evaluator_version": "v3.1.0-phase3c1",
       "provenance": "EMPIRICAL_EXECUTION",
       "llm_telemetry": {

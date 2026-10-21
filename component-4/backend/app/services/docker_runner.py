@@ -139,42 +139,75 @@ class DockerTestRunner:
         trusted_test_cases: Optional[str] = None,
         filename: Optional[str] = None,
         timeout_seconds: Optional[int] = None,
+        project_files: Optional[Dict[str, str]] = None,
     ) -> SandboxExecutionResult:
         """
         Orchestrates safe syntax validation and containerized execution of trusted test cases.
+        Supports both single-file modules and multi-file projects with relative directory structures.
         """
         effective_timeout = timeout_seconds or self.timeout_seconds
         start_time = time.perf_counter()
 
         # Step 1: Host-side static AST parsing (syntax safety check)
-        try:
-            ast.parse(source_code)
-        except SyntaxError as syn_err:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            error_msg = f"SyntaxError in submitted source code (line {syn_err.lineno}): {syn_err.msg}"
-            logger.warning("Submitted code failed static AST parsing: line %s, %s", syn_err.lineno, syn_err.msg)
-            return SandboxExecutionResult(
-                status=TestResultStatus.ERROR.value,
-                duration_ms=duration_ms,
-                error_message=error_msg,
-                test_results=[
-                    TestResult(
-                        test_id="ast_syntax_check",
-                        name="Python AST Syntax Validation",
-                        test_type=TestType.UNIT,
-                        status=TestResultStatus.ERROR,
-                        duration_ms=duration_ms,
-                        error_message=error_msg,
-                    )
-                ],
-                telemetry={"syntax_valid": False, "error_type": "SyntaxError"},
-            )
+        if project_files:
+            for p_path, p_code in project_files.items():
+                if p_path.endswith(".py"):
+                    try:
+                        ast.parse(p_code)
+                    except SyntaxError as syn_err:
+                        duration_ms = (time.perf_counter() - start_time) * 1000
+                        error_msg = f"SyntaxError in {p_path} (line {syn_err.lineno}): {syn_err.msg}"
+                        logger.warning("Project file %s failed static AST parsing: line %s, %s", p_path, syn_err.lineno, syn_err.msg)
+                        return SandboxExecutionResult(
+                            status=TestResultStatus.ERROR.value,
+                            duration_ms=duration_ms,
+                            error_message=error_msg,
+                            test_results=[
+                                TestResult(
+                                    test_id="ast_syntax_check",
+                                    name=f"Python AST Syntax Validation ({p_path})",
+                                    test_type=TestType.UNIT,
+                                    status=TestResultStatus.ERROR,
+                                    duration_ms=duration_ms,
+                                    error_message=error_msg,
+                                )
+                            ],
+                            telemetry={"syntax_valid": False, "error_type": "SyntaxError", "affected_file": p_path},
+                        )
+        else:
+            try:
+                ast.parse(source_code)
+            except SyntaxError as syn_err:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                error_msg = f"SyntaxError in submitted source code (line {syn_err.lineno}): {syn_err.msg}"
+                logger.warning("Submitted code failed static AST parsing: line %s, %s", syn_err.lineno, syn_err.msg)
+                return SandboxExecutionResult(
+                    status=TestResultStatus.ERROR.value,
+                    duration_ms=duration_ms,
+                    error_message=error_msg,
+                    test_results=[
+                        TestResult(
+                            test_id="ast_syntax_check",
+                            name="Python AST Syntax Validation",
+                            test_type=TestType.UNIT,
+                            status=TestResultStatus.ERROR,
+                            duration_ms=duration_ms,
+                            error_message=error_msg,
+                        )
+                    ],
+                    telemetry={"syntax_valid": False, "error_type": "SyntaxError"},
+                )
 
         # Step 2: Test Oracle Check
-        # Rule 1 & 6: Never treat submitted code's test functions as trusted test oracles.
-        # Only explicitly authorized test cases determine correctness.
         cleaned_test_code = (trusted_test_cases or "").strip()
-        if not cleaned_test_code:
+        has_project_tests = False
+        if project_files:
+            has_project_tests = any(
+                f.endswith(".py") and (os.path.basename(f).startswith("test_") or "/tests/" in f"/{f}" or "/test/" in f"/{f}")
+                for f in project_files.keys()
+            )
+
+        if not cleaned_test_code and not has_project_tests:
             duration_ms = (time.perf_counter() - start_time) * 1000
             msg = (
                 "No authorized test oracle or test suite provided. "
@@ -203,29 +236,30 @@ class DockerTestRunner:
                 },
             )
 
-        # Check test code syntax
-        try:
-            ast.parse(cleaned_test_code)
-        except SyntaxError as test_syn_err:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            error_msg = f"SyntaxError in authorized test specification (line {test_syn_err.lineno}): {test_syn_err.msg}"
-            logger.warning("Trusted test code failed AST parsing: line %s, %s", test_syn_err.lineno, test_syn_err.msg)
-            return SandboxExecutionResult(
-                status=TestResultStatus.ERROR.value,
-                duration_ms=duration_ms,
-                error_message=error_msg,
-                test_results=[
-                    TestResult(
-                        test_id="test_suite_syntax_check",
-                        name="Trusted Test Suite Syntax Check",
-                        test_type=TestType.UNIT,
-                        status=TestResultStatus.ERROR,
-                        duration_ms=duration_ms,
-                        error_message=error_msg,
-                    )
-                ],
-                telemetry={"test_syntax_valid": False, "error_type": "TestSyntaxError"},
-            )
+        # Check explicit test code syntax if supplied
+        if cleaned_test_code:
+            try:
+                ast.parse(cleaned_test_code)
+            except SyntaxError as test_syn_err:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                error_msg = f"SyntaxError in authorized test specification (line {test_syn_err.lineno}): {test_syn_err.msg}"
+                logger.warning("Trusted test code failed AST parsing: line %s, %s", test_syn_err.lineno, test_syn_err.msg)
+                return SandboxExecutionResult(
+                    status=TestResultStatus.ERROR.value,
+                    duration_ms=duration_ms,
+                    error_message=error_msg,
+                    test_results=[
+                        TestResult(
+                            test_id="test_suite_syntax_check",
+                            name="Trusted Test Suite Syntax Check",
+                            test_type=TestType.UNIT,
+                            status=TestResultStatus.ERROR,
+                            duration_ms=duration_ms,
+                            error_message=error_msg,
+                        )
+                    ],
+                    telemetry={"test_syntax_valid": False, "error_type": "TestSyntaxError"},
+                )
 
         # Step 3: Docker availability and image readiness (Fail-closed)
         docker_ok, docker_msg = self.check_docker_available()
@@ -257,25 +291,46 @@ class DockerTestRunner:
         container_id = f"intelise_run_{uuid.uuid4().hex[:12]}"
 
         try:
-            # Write solution code
-            solution_filename = "solution.py"
-            if filename and filename.endswith(".py") and not filename.startswith("test_") and filename != "conftest.py":
-                clean_name = os.path.basename(filename)
-                with open(os.path.join(temp_dir, clean_name), "w", encoding="utf-8") as f:
+            # Write project files or single solution file
+            if project_files:
+                for rel_path, file_content in project_files.items():
+                    target_file = os.path.join(temp_dir, rel_path.replace("/", os.sep))
+                    os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                    with open(target_file, "w", encoding="utf-8") as f:
+                        f.write(file_content)
+
+                test_target = "/workspace"
+                # If explicit test cases provided, write as test_verification.py
+                if cleaned_test_code:
+                    test_file_path = os.path.join(temp_dir, "test_verification.py")
+                    with open(test_file_path, "w", encoding="utf-8") as f:
+                        f.write(cleaned_test_code)
+                    test_target = "/workspace/test_verification.py"
+
+                # Write pytest.ini with pythonpath for relative package imports
+                with open(os.path.join(temp_dir, "pytest.ini"), "w", encoding="utf-8") as f:
+                    f.write("[pytest]\npython_files = test_*.py *_test.py\npythonpath = . /workspace\naddopts = -s\n")
+            else:
+                solution_filename = "solution.py"
+                if filename and filename.endswith(".py") and not filename.startswith("test_") and filename != "conftest.py":
+                    clean_name = os.path.basename(filename)
+                    with open(os.path.join(temp_dir, clean_name), "w", encoding="utf-8") as f:
+                        f.write(source_code)
+
+                # Always write solution.py as standard entry module
+                with open(os.path.join(temp_dir, solution_filename), "w", encoding="utf-8") as f:
                     f.write(source_code)
 
-            # Always write solution.py as standard entry module
-            with open(os.path.join(temp_dir, solution_filename), "w", encoding="utf-8") as f:
-                f.write(source_code)
+                # Write trusted test suite
+                test_filename = "test_verification.py"
+                with open(os.path.join(temp_dir, test_filename), "w", encoding="utf-8") as f:
+                    f.write(cleaned_test_code)
 
-            # Write trusted test suite
-            test_filename = "test_verification.py"
-            with open(os.path.join(temp_dir, test_filename), "w", encoding="utf-8") as f:
-                f.write(cleaned_test_code)
+                test_target = f"/workspace/{test_filename}"
 
-            # Write neutral pytest.ini to avoid root or environmental interference
-            with open(os.path.join(temp_dir, "pytest.ini"), "w", encoding="utf-8") as f:
-                f.write("[pytest]\npython_files = test_*.py\naddopts = -s\n")
+                # Write neutral pytest.ini to avoid root or environmental interference
+                with open(os.path.join(temp_dir, "pytest.ini"), "w", encoding="utf-8") as f:
+                    f.write("[pytest]\npython_files = test_*.py\naddopts = -s\n")
 
             # Step 5: Execute containerized pytest with strict containment
             xml_report_marker = "__INTELISE_XML_REPORT_START__"
@@ -308,7 +363,7 @@ class DockerTestRunner:
                 "sh",
                 "-c",
                 (
-                    f"pytest -v --tb=short -rA --junitxml=/tmp/report.xml /workspace/{test_filename}; "
+                    f"pytest -v --tb=short -rA --junitxml=/tmp/report.xml {test_target}; "
                     f"exit_code=$?; "
                     f"echo '{xml_report_marker}'; "
                     f"cat /tmp/report.xml 2>/dev/null; "

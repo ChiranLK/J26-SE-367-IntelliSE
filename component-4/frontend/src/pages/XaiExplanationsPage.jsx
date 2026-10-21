@@ -43,6 +43,7 @@ export default function XaiExplanationsPage() {
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const [error, setError] = useState(null);
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [copiedSetupSnippet, setCopiedSetupSnippet] = useState(false);
   const [explanationLevel, setExplanationLevel] = useState('technical');
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
@@ -127,6 +128,18 @@ Recommendation:
     }
   };
 
+  const handleCopySetupSnippet = async () => {
+    const text = explanation?.post_delivery_explanation?.setup_and_usage;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedSetupSnippet(true);
+      setTimeout(() => setCopiedSetupSnippet(false), 2000);
+    } catch {
+      setCopiedSetupSnippet(false);
+    }
+  };
+
   const handleSimulateDelivery = async () => {
     if (!selectedRunId) return;
     setConfirmingDelivery(true);
@@ -194,13 +207,13 @@ Recommendation:
           <div>
             <h1 className="page-title">
               <BrainCircuit size={22} color="var(--primary-400)" />
-              <span>Human-Facing XAI Explanations</span>
+              <span>Post-Delivery Software Explanations</span>
               <Badge variant="secondary" style={{ fontSize: '0.6875rem' }}>
                 Target: Reviewer
               </Badge>
             </h1>
             <p className="page-description">
-              Evidence-grounded root-cause reasoning and repair recommendations for software engineers, derived directly from test execution outcomes.
+              Beginner and technical explanations of verified software, available only after an authorized delivery event.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -236,8 +249,8 @@ Recommendation:
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <ShieldCheck size={18} color="var(--primary-400)" />
           <span style={{ color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Engineering Explanations:</strong>{' '}
-            Diagnostic narratives provide human-readable root-cause analysis for code review, decoupled from automated machine-level repair payloads.
+            <strong style={{ color: 'var(--text-primary)' }}>Strict post-delivery boundary:</strong>{' '}
+            Failed verification exposes technical test evidence in the verification workflow only. This console explains delivered software, not defects.
           </span>
         </div>
       </div>
@@ -361,7 +374,7 @@ Recommendation:
                   </Badge>
                 ) : (
                   <Badge variant="secondary" style={{ fontSize: '0.6875rem' }}>
-                    Corrective Feedback Ineligible
+                    Post-Delivery XAI Locked
                   </Badge>
                 )}
                 <Badge variant="secondary" style={{ fontSize: '0.6875rem' }}>
@@ -383,7 +396,7 @@ Recommendation:
                 }}
               >
                 <strong style={{ color: '#f59e0b' }}>Simulated Delivery (Development Mode):</strong>{' '}
-                Downstream delivery was confirmed via test harness simulation. This enables development preview of verification telemetry, but simulated delivery does not satisfy the production delivery gate or unlock production-gated code understanding explanations.
+                A server-authorized development simulation confirmed delivery. The software-understanding package below is a development-only preview and is not evidence of production delivery.
               </div>
             )}
             {explanation.delivery_status === 'CONFIRMED_PRODUCTION_DELIVERY' && (
@@ -500,7 +513,7 @@ Recommendation:
                   onClick={handleSimulateDelivery}
                   loading={confirmingDelivery}
                 >
-                  Confirm Delivery (Simulated)
+                  Authorize Dev Delivery Simulation
                 </Button>
               }
             >
@@ -511,7 +524,7 @@ Recommendation:
                   after confirmed deployment to prevent generating premature explanations for unreleased artifacts.
                 </p>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Click <em>"Confirm Delivery (Simulated)"</em> to record downstream deployment and synthesize the complete 8-dimension code understanding package.
+                  Click <em>"Authorize Dev Delivery Simulation"</em> to record a clearly labeled non-production delivery event and synthesize the software-understanding package.
                 </div>
               </div>
             </Card>
@@ -538,122 +551,388 @@ Recommendation:
           )}
 
           {/* Post-Delivery Software Understanding Package (Unlocked upon Confirmed Delivery) */}
-          {explanation.post_delivery_explanation && (
-            <Card
-              title="Post-Delivery Code Understanding Console"
-              subtitle={`Verified Software: ${explanation.post_delivery_explanation.software_name} — All ${explanation.post_delivery_explanation.verified_test_count} tests passed`}
-              action={
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  <Button
-                    variant={explanationLevel === 'beginner' ? 'primary' : 'outline'}
-                    size="sm"
-                    icon={User}
-                    onClick={() => setExplanationLevel('beginner')}
-                    style={{ fontSize: '0.75rem', height: '28px' }}
-                  >
-                    Beginner View
-                  </Button>
-                  <Button
-                    variant={explanationLevel === 'technical' ? 'primary' : 'outline'}
-                    size="sm"
-                    icon={FileCode2}
-                    onClick={() => setExplanationLevel('technical')}
-                    style={{ fontSize: '0.75rem', height: '28px' }}
-                  >
-                    Technical View
-                  </Button>
-                </div>
-              }
-            >
-              {explanationLevel === 'beginner' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>Software Purpose</h4>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                      {explanation.post_delivery_explanation.beginner_level.overview}
-                    </p>
+          {explanation.post_delivery_explanation && (() => {
+            const pdx = explanation.post_delivery_explanation;
+            const prov = pdx.inference_provenance || explanation.inference_provenance;
+            return (
+              <Card
+                title="Post-Delivery Code Understanding Console"
+                subtitle={`Verified Software: ${pdx.software_name} — All ${pdx.verified_test_count} tests passed`}
+                action={
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <Button
+                      variant={explanationLevel === 'beginner' ? 'primary' : 'outline'}
+                      size="sm"
+                      icon={User}
+                      onClick={() => setExplanationLevel('beginner')}
+                      style={{ fontSize: '0.75rem', height: '28px' }}
+                    >
+                      Beginner View
+                    </Button>
+                    <Button
+                      variant={explanationLevel === 'technical' ? 'primary' : 'outline'}
+                      size="sm"
+                      icon={FileCode2}
+                      onClick={() => setExplanationLevel('technical')}
+                      style={{ fontSize: '0.75rem', height: '28px' }}
+                    >
+                      Technical View
+                    </Button>
                   </div>
-                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>What It Does</h4>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                      {explanation.post_delivery_explanation.beginner_level.what_it_does}
-                    </p>
-                  </div>
-                  <div style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>How to Use</h4>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                      {explanation.post_delivery_explanation.beginner_level.how_to_use}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>Key Verified Capabilities</h4>
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      {explanation.post_delivery_explanation.beginner_level.key_capabilities.map((cap, i) => (
-                        <li key={i}>{cap}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ) : (
+                }
+              >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>1. Software Overview</h4>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                      {explanation.post_delivery_explanation.software_overview}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>2. Architecture & Modules</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {explanation.post_delivery_explanation.module_responsibilities.map((m, idx) => (
-                        <div key={idx} style={{ padding: '0.6rem 0.8rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600 }}>
-                            <code style={{ color: 'var(--primary-300)' }}>{m.file_path}</code>
-                            <span style={{ color: 'var(--text-muted)' }}>{m.line_count} LOC</span>
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                            {m.primary_responsibility}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Provenance and Integrity Banner */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-xs)',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {prov?.genuine_inference ? (
+                        <Badge variant="success">
+                          <Sparkles size={12} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                          Hybrid Synthesis: Ollama Narrative ({prov.model || 'qwen2.5-coder:3b'}) + Verified AST Invariants
+                        </Badge>
+                      ) : prov?.fallback_used ? (
+                        <Badge variant="warning">
+                          <FileCode2 size={12} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                          Deterministic AST Fallback (Ollama Offline)
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral">
+                          <FileCode2 size={12} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                          Deterministic AST Synthesis
+                        </Badge>
+                      )}
+                      <span style={{ color: 'var(--text-secondary)' }}>
+                        {pdx.evidence_manifest?.analyzed_source_files?.length || 1} module(s) · {pdx.evidence_manifest?.analyzed_line_count || 0} LOC · {pdx.verified_test_count} tests verified
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                        {prov?.genuine_inference ? 'Narrative: Ollama + AST validation' : 'Narrative: Deterministic AST'} · Invariants: Verified artifact
+                      </span>
+                      {prov?.duration_ms && (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                          Inference latency: {(prov.duration_ms / 1000).toFixed(1)}s
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div>
-                    <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>3. Important Functions & Behavioral Contracts</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      {explanation.post_delivery_explanation.important_functions.map((fn, idx) => (
-                        <div key={idx} style={{ padding: '0.75rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            <code style={{ fontSize: '0.84rem', color: '#818cf8', fontWeight: 600 }}>{fn.signature}</code>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Line {fn.line_number}–{fn.end_line_number || fn.line_number}</span>
+                  {explanationLevel === 'beginner' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ padding: '0.85rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <BookOpen size={15} /> Software Purpose
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                          {pdx.beginner_level.overview}
+                        </p>
+                      </div>
+
+                      <div style={{ padding: '0.85rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Cpu size={15} /> What It Does
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                          {pdx.beginner_level.what_it_does}
+                        </p>
+                      </div>
+
+                      {pdx.beginner_level.key_capabilities && pdx.beginner_level.key_capabilities.length > 0 && (
+                        <div style={{ padding: '0.85rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <ShieldCheck size={15} /> Key Verified Capabilities
+                          </h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {pdx.beginner_level.key_capabilities.map((cap, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                <CheckCircle2 size={15} style={{ color: 'var(--status-passed)', flexShrink: 0, marginTop: '2px' }} />
+                                <span>{cap}</span>
+                              </div>
+                            ))}
                           </div>
-                          <p style={{ margin: '0.4rem 0 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                            {fn.technical_behavior}
+                        </div>
+                      )}
+
+                      {pdx.beginner_level.realistic_example && (
+                        <div style={{ padding: '0.85rem', background: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: 'var(--radius-xs)' }}>
+                          <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <FileCode2 size={15} /> Practical Usage Scenario (Illustrative — Grounded in Delivered Signatures)
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6, overflowWrap: 'anywhere', whiteSpace: 'pre-line' }}>
+                            {pdx.beginner_level.realistic_example}
                           </p>
                         </div>
-                      ))}
+                      )}
+
+                      <div style={{ padding: '0.85rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <ArrowRightCircle size={15} /> How to Use
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                          {pdx.beginner_level.how_to_use}
+                        </p>
+                      </div>
+
+                      {pdx.beginner_level.safety_and_boundaries && (
+                        <div style={{ padding: '0.85rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <ShieldCheck size={15} /> Safety Guardrails & Verified Limits
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                            {pdx.beginner_level.safety_and_boundaries}
+                          </p>
+                        </div>
+                      )}
+
+                      {pdx.beginner_level.test_confidence && (
+                        <div style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: 'var(--radius-xs)' }}>
+                          <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--status-passed)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <CheckCircle2 size={15} /> What the Tests Tell Us
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                            {pdx.beginner_level.test_confidence}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      {/* Dimension 1: Purpose & Overview */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <BookOpen size={16} /> 1. Software Overview & Engineering Scope
+                        </h4>
+                        <div style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.65, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                            {pdx.software_overview}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>4. Setup & Usage Instructions</h4>
-                    <pre style={{ margin: 0, padding: '0.75rem', background: '#050608', borderRadius: 'var(--radius-xs)', fontSize: '0.75rem', color: 'var(--text-secondary)', overflowX: 'auto' }}>
-                      {explanation.post_delivery_explanation.setup_and_usage}
-                    </pre>
-                  </div>
+                      {/* Dimension 2: Architecture & Modules */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Layers size={16} /> 2. Architecture & Module Decomposition
+                        </h4>
+                        <div style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)', marginBottom: '0.75rem' }}>
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                            {pdx.architecture_explanation}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {pdx.module_responsibilities?.map((m, idx) => (
+                            <div key={idx} style={{ padding: '0.7rem 0.9rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                <code style={{ color: 'var(--primary-300)', fontSize: '0.84rem', fontWeight: 600 }}>{m.file_path}</code>
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                  <Badge variant="neutral">{m.line_count} LOC</Badge>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                                {m.primary_responsibility}
+                              </div>
+                              {m.exported_symbols && m.exported_symbols.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Exposed symbols:</span>
+                                  {m.exported_symbols.map((sym, sIdx) => (
+                                    <code key={sIdx} style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.04)', padding: '1px 5px', borderRadius: '3px', color: 'var(--text-secondary)' }}>
+                                      {sym}
+                                    </code>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div>
-                    <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--primary-400)' }}>5. Known Limitations & Scope</h4>
-                    <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)', whiteSpace: 'pre-line' }}>
-                      {explanation.post_delivery_explanation.limitations_and_verification_scope}
-                    </p>
-                  </div>
+                      {/* Dimension 3: Important Functions & Behavioral Contracts */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <FileCode2 size={16} /> 3. Important Functions & Behavioral Contracts
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {pdx.important_functions?.map((fn, idx) => (
+                            <div key={idx} style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                                <code style={{ fontSize: '0.86rem', color: '#818cf8', fontWeight: 600, overflowWrap: 'anywhere' }}>{fn.signature}</code>
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                  {fn.return_type && (
+                                    <Badge variant="outline" style={{ fontSize: '0.7rem' }}>returns {fn.return_type}</Badge>
+                                  )}
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    Line {fn.line_number}–{fn.end_line_number || fn.line_number}
+                                  </span>
+                                </div>
+                              </div>
+                              <p style={{ margin: '0 0 0.5rem', fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: 1.55 }}>
+                                {fn.technical_behavior}
+                              </p>
+                              {fn.parameters && fn.parameters.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.4rem', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Parameters:</span>
+                                  {fn.parameters.map((p, pIdx) => (
+                                    <span key={pIdx} style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.04)', padding: '2px 6px', borderRadius: '3px', color: 'var(--text-secondary)' }}>
+                                      <code>{p.name}</code>: {p.type_annotation || 'Any'}{p.default_value !== undefined && p.default_value !== null ? ` = ${p.default_value}` : ''}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {fn.verified_by_tests && fn.verified_by_tests.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Verified by:</span>
+                                  {fn.verified_by_tests.map((tName, tIdx) => (
+                                    <Badge key={tIdx} variant="success" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>{tName}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dimension 4: Callable Interfaces & Data Flow */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <ArrowRightCircle size={16} /> 4. Callable Interfaces & Data Flow
+                        </h4>
+                        <div style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                            {pdx.api_and_data_flow}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Dimension 5: Verified Behavior & Test Evidence */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <CheckCircle2 size={16} /> 5. Verified Behavior & Test Evidence
+                        </h4>
+                        <p style={{ margin: '0 0 0.6rem', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                          Passing tests support their exercised scenarios; they do not prove complete correctness.
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {pdx.test_evidence?.map((item, idx) => (
+                            <div key={item.test_id || idx} style={{ padding: '0.7rem 0.9rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
+                                <code style={{ overflowWrap: 'anywhere', fontSize: '0.82rem', fontWeight: 600 }}>{item.test_name}</code>
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                  {item.duration_ms !== null && item.duration_ms !== undefined && (
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{Number(item.duration_ms).toFixed(1)} ms</span>
+                                  )}
+                                  <Badge variant="success">{item.test_type} · {item.status}</Badge>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>Demonstrated scope:</strong> {item.demonstrated_scope}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dimension 6: Measured Performance & SLA Evidence */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Clock size={16} /> 6. Measured Performance & SLA Evidence
+                        </h4>
+                        <div style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          {pdx.measured_sla?.available ? (
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <span>Latency p95: <strong style={{ color: 'var(--text-primary)' }}>{Number(pdx.measured_sla.latency_p95_ms).toFixed(2)} ms</strong></span>
+                                <span>Threshold: <strong style={{ color: 'var(--text-primary)' }}>{Number(pdx.measured_sla.threshold_latency_ms).toFixed(2)} ms</strong></span>
+                                {pdx.measured_sla.sample_size && <span>Sample size: <strong style={{ color: 'var(--text-primary)' }}>{pdx.measured_sla.sample_size}</strong></span>}
+                                <Badge variant={pdx.measured_sla.verdict === 'PASSED' ? 'success' : 'danger'}>{pdx.measured_sla.verdict}</Badge>
+                              </div>
+                              <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
+                                {pdx.measured_sla.environment_note}
+                              </p>
+                            </div>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                              {pdx.measured_sla?.environment_note || 'No measured SLA evidence is available.'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Dimension 7: Algorithms & Observable Design Decisions */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Cpu size={16} /> 7. Observable Design Decisions & Algorithmic Patterns
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {pdx.algorithms_and_design_decisions?.map((item, idx) => (
+                            <div key={idx} style={{ padding: '0.75rem 0.9rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                                <strong style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>{item.topic}: {item.decision}</strong>
+                                {item.traceability_seam && (
+                                  <Badge variant="neutral" style={{ fontSize: '0.68rem' }}>{item.traceability_seam}</Badge>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                {item.rationale}
+                              </div>
+                              <div style={{ marginTop: '0.3rem', fontSize: '0.74rem', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>
+                                <strong>Code evidence:</strong> {item.evidence_in_code}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dimension 8: Assumptions, Limitations & Verification Scope */}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <AlertTriangle size={16} /> 8. Assumptions, Limitations & Verification Scope
+                        </h4>
+                        <div style={{ padding: '0.85rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-color)' }}>
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                            {pdx.limitations_and_verification_scope}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Supporting Setup & Usage */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--primary-400)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <FileCode2 size={16} /> Supporting Setup & Usage Guide
+                          </h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            icon={copiedSetupSnippet ? Check : Copy}
+                            onClick={handleCopySetupSnippet}
+                            style={{ height: '24px', fontSize: '0.6875rem' }}
+                          >
+                            {copiedSetupSnippet ? 'Copied' : 'Copy Code Snippet'}
+                          </Button>
+                        </div>
+                        <pre style={{ margin: 0, padding: '0.85rem 1rem', background: '#050608', borderRadius: 'var(--radius-xs)', fontSize: '0.75rem', color: 'var(--text-secondary)', overflowX: 'auto', border: '1px solid var(--border-color)', lineHeight: 1.5 }}>
+                          {pdx.setup_and_usage}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </Card>
-          )}
+              </Card>
+            );
+          })()}
 
           {/* Section 1: Executive Findings Summary */}
           <Card

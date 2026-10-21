@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export default function Modal({
@@ -28,7 +29,7 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -55,6 +56,7 @@ export default function Modal({
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

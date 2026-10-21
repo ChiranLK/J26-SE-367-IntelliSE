@@ -1,5 +1,6 @@
+import secrets
 from typing import List, Union
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -56,10 +57,13 @@ class Settings(BaseSettings):
     MONGODB_CONNECT_TIMEOUT_MS: int = 5000
 
     # File Upload Constraints
-    # Default max upload size: 2MB (2,097,152 bytes)
-    MAX_UPLOAD_SIZE_BYTES: int = 2 * 1024 * 1024
+    # Default max upload size: 5MB (5,242,880 bytes)
+    MAX_UPLOAD_SIZE_BYTES: int = 5 * 1024 * 1024
+    MAX_PROJECT_ZIP_FILES: int = 100
+    MAX_PROJECT_UNCOMPRESSED_BYTES: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = [
         ".py",
+        ".zip",
         ".js",
         ".ts",
         ".jsx",
@@ -111,14 +115,22 @@ class Settings(BaseSettings):
     OLLAMA_ENABLED: bool = True
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen2.5-coder:3b"
+    # OLLAMA_TIMEOUT_SECONDS is retained for compatibility with existing callers.
     OLLAMA_TIMEOUT_SECONDS: float = 60.0
+    OLLAMA_CONNECT_TIMEOUT_SECONDS: float = 5.0
+    OLLAMA_READ_TIMEOUT_SECONDS: float = 120.0
+    OLLAMA_MAX_OUTPUT_TOKENS: int = 800
+    OLLAMA_KEEP_ALIVE: str = "10m"
 
     # Multi-Agent Test Runner Configuration
     PERFORMANCE_TEST_ITERATIONS: int = 10
     PERFORMANCE_LATENCY_THRESHOLD_MS: float = 200.0
 
     # Production Delivery Authentication & XAI Gate Security (Phase 3B.2)
-    DELIVERY_AUTH_TOKEN: str = "intelise_dev_delivery_token_secret"
+    DELIVERY_AUTH_TOKEN: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="Cryptographic shared secret for production delivery confirmation. Loaded from DELIVERY_AUTH_TOKEN env variable or .env file."
+    )
     ALLOW_SIMULATED_DELIVERY: bool = True
 
     def is_simulation_permitted(self) -> bool:

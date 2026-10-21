@@ -64,6 +64,7 @@ export function detectLanguageFromFilename(filename) {
   
   const extToLang = {
     '.py': 'python',
+    '.zip': 'python',
     '.js': 'javascript',
     '.jsx': 'javascript',
     '.ts': 'typescript',

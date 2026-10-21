@@ -51,7 +51,7 @@ class VerificationStatusResponse(BaseModel):
 
     id: str = Field(description="Unique verification run identifier")
     submission_id: str = Field(description="Associated submission identifier")
-    status: VerificationStatus = Field(description="Current status (PENDING, RUNNING, PASSED, FAILED, ERROR)")
+    status: VerificationStatus = Field(description="Current status (PENDING, RUNNING, PASSED, FAILED, BLOCKED, ERROR)")
     error_message: Optional[str] = Field(
         default=None,
         description="Error message if run status is ERROR",

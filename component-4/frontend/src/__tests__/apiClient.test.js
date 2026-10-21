@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import apiClient from '../api/client';
 import { checkBackendHealth } from '../api/healthApi';
 import { submitCode, uploadSourceFile, getSubmissions, getSubmissionById } from '../api/submissionApi';
-import { createVerificationRun, getVerificationRuns, getVerificationRunById, getVerificationStatus, getXaiExplanation } from '../api/verificationApi';
+import { createVerificationRun, getVerificationRuns, getVerificationRunById, getVerificationStatus, getXaiExplanation, getPostDeliveryExplanation } from '../api/verificationApi';
 
 describe('API Client & Endpoints', () => {
   beforeEach(() => {
@@ -117,8 +117,20 @@ describe('API Client & Endpoints', () => {
 
     const res = await getXaiExplanation('run-1');
     expect(apiClient.get).toHaveBeenCalledWith('/api/v1/verifications/run-1/explanation', {
-      timeout: 90000,
+      timeout: 180000,
     });
     expect(res.summary).toBe('AI Analysis');
+  });
+
+  it('uses the extended client timeout for dedicated post-delivery explanations', async () => {
+    const mockExplanation = { verification_run_id: 'run-1', software_name: 'Verified App' };
+    vi.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: mockExplanation });
+
+    const res = await getPostDeliveryExplanation('run-1');
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/verifications/run-1/post-delivery-explanation',
+      { timeout: 180000 }
+    );
+    expect(res.software_name).toBe('Verified App');
   });
 });

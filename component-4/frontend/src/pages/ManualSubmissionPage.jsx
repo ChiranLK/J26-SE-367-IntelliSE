@@ -21,6 +21,14 @@ import Badge from '../components/common/Badge';
 import Alert from '../components/common/Alert';
 import { submitCode } from '../api/submissionApi';
 import { PROGRAMMING_LANGUAGES } from '../utils/constants';
+import {
+  getLanguageSample,
+  getLanguageFilename,
+  getLanguagePlaceholder,
+  getLanguageCapability,
+  LANGUAGE_SAMPLES,
+  LANGUAGE_FILENAMES,
+} from '../utils/languageSamples';
 
 export default function ManualSubmissionPage() {
   const navigate = useNavigate();
@@ -85,24 +93,38 @@ export default function ManualSubmissionPage() {
     }
   };
 
-  const languagePlaceholders = {
-    python: `# Paste your Python source code here...\n\ndef verify_feature(payload: dict) -> bool:\n    """Validates telemetry payload and returns verification status."""\n    if not payload or not isinstance(payload, dict):\n        return False\n    return bool(payload.get("status") == "ACTIVE")\n`,
-    javascript: `// Paste your JavaScript source code here...\n\nexport function verifyFeature(payload) {\n  // Validates telemetry payload and returns verification status\n  if (!payload || typeof payload !== 'object') return false;\n  return Boolean(payload.status === 'ACTIVE');\n}\n`,
-    typescript: `// Paste your TypeScript source code here...\n\ninterface TelemetryPayload {\n  id: string;\n  status: string;\n}\n\nexport function verifyFeature(payload: TelemetryPayload): boolean {\n  return Boolean(payload && payload.status === 'ACTIVE');\n}\n`,
-  };
-
   const loadSampleSnippet = () => {
-    const samples = {
-      python: `def calculate_metrics(data_points: list) -> dict:\n    """Calculates summary statistics for telemetry."""\n    if not data_points:\n        return {"count": 0, "mean": 0.0}\n    total = sum(data_points)\n    mean = total / len(data_points)\n    return {\n        "count": len(data_points),\n        "total": total,\n        "mean": round(mean, 2)\n    }\n`,
-      javascript: `export function formatPayload(record) {\n  if (!record || typeof record !== 'object') {\n    throw new TypeError('Invalid record object');\n  }\n  return {\n    id: record.id,\n    processedAt: new Date().toISOString(),\n    status: 'READY',\n  };\n}\n`,
-      typescript: `interface TelemetryEvent {\n  id: string;\n  timestamp: number;\n  payload: Record<string, unknown>;\n}\n\nexport function validateEvent(event: TelemetryEvent): boolean {\n  return Boolean(event.id && event.timestamp > 0);\n}\n`,
-    };
-    setCode(samples[language] || samples.python);
-    if (!filename) {
-      setFilename(`sample_${language}.${language === 'python' ? 'py' : language === 'javascript' ? 'js' : 'ts'}`);
+    // Overwrite protection: check if editor contains custom code before replacing
+    const isKnownSample = Object.values(LANGUAGE_SAMPLES).some(
+      (s) => s.trim() === code.trim()
+    );
+    if (code.trim() && !isKnownSample) {
+      const selectedLangObj = PROGRAMMING_LANGUAGES.find((l) => l.value === language);
+      const confirmReplace = window.confirm(
+        `Replace current editor contents with the ${selectedLangObj?.label || language} sample snippet?`
+      );
+      if (!confirmReplace) {
+        return;
+      }
     }
+
+    const sample = getLanguageSample(language);
+    setCode(sample);
+    setFilename(getLanguageFilename(language));
     if (requirementIds.length === 0) {
       setRequirementIds(['REQ-TEST-01', 'REQ-PERF-01']);
+    }
+    setError(null);
+  };
+
+  const handleLanguageChange = (e) => {
+    const newLang = e.target.value;
+    setLanguage(newLang);
+    // Overwrite protection: changing dropdown alone MUST NOT overwrite user-written code!
+    // If the filename is empty or was set to an auto sample filename, update it to match the new language
+    const isAutoSampleFilename = Object.values(LANGUAGE_FILENAMES).includes(filename);
+    if (!filename || isAutoSampleFilename) {
+      setFilename(getLanguageFilename(newLang));
     }
   };
 
@@ -289,7 +311,7 @@ export default function ManualSubmissionPage() {
                 id="language-select"
                 className="form-select"
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
+                onChange={handleLanguageChange}
                 required
               >
                 {PROGRAMMING_LANGUAGES.map((lang) => (
@@ -298,6 +320,14 @@ export default function ManualSubmissionPage() {
                   </option>
                 ))}
               </select>
+              <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <Badge variant={getLanguageCapability(language).badgeVariant} style={{ fontSize: '0.6875rem' }}>
+                  {getLanguageCapability(language).label}
+                </Badge>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {getLanguageCapability(language).description}
+                </span>
+              </div>
             </div>
 
             {/* Optional Filename */}
@@ -431,7 +461,7 @@ export default function ManualSubmissionPage() {
               id="code-textarea"
               className="form-textarea code-textarea"
               rows={16}
-              placeholder={languagePlaceholders[language] || languagePlaceholders.python}
+              placeholder={getLanguagePlaceholder(language)}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={handleKeyDownInEditor}

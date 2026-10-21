@@ -16,19 +16,20 @@ export const PROGRAMMING_LANGUAGES = [
 ];
 
 export const ALLOWED_EXTENSIONS = [
-  '.py', '.js', '.ts', '.jsx', '.tsx', '.java',
+  '.py', '.zip', '.js', '.ts', '.jsx', '.tsx', '.java',
   '.cpp', '.c', '.h', '.hpp', '.cs', '.go',
   '.rs', '.html', '.css', '.json', '.txt', '.md',
 ];
 
-export const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
-export const MAX_UPLOAD_SIZE_LABEL = '2 MB';
+export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB for projects
+export const MAX_UPLOAD_SIZE_LABEL = '10 MB';
 
 export const VERIFICATION_STATUSES = {
   PENDING: { label: 'Pending', variant: 'warning', description: 'Queued for verification' },
   RUNNING: { label: 'Running', variant: 'info', description: 'Currently executing tests' },
   PASSED: { label: 'Passed', variant: 'success', description: 'All test suites passed' },
   FAILED: { label: 'Failed', variant: 'danger', description: 'Defects detected during testing' },
+  BLOCKED: { label: 'Blocked', variant: 'warning', description: 'Requested tests are not configured with authorized oracles' },
   ERROR: { label: 'Error', variant: 'danger', description: 'Execution failed due to system error' },
 };
 

@@ -125,21 +125,32 @@ class RepairService:
             raise ResourceNotFoundException("Submission", orig_run.submission_id)
 
         # 4. Validate corrected code and filename security
-        raw_filename = (request.filename or orig_submission.filename or "solution.py").strip()
+        orig_meta = orig_submission.metadata or {}
+        is_multi_file = orig_meta.get("is_multi_file", False)
+        orig_project_files = orig_meta.get("project_files") or {}
 
-        # Reject path traversal, absolute paths, null bytes, slashes
+        raw_filename = (request.filename or orig_submission.filename or "solution.py").strip()
+        norm_filename = raw_filename.replace("\\", "/").strip()
+
+        # Reject path traversal, absolute paths, null bytes
         if (
-            "\x00" in raw_filename
-            or "/" in raw_filename
-            or "\\" in raw_filename
-            or ".." in raw_filename
-            or raw_filename in (".", "..")
+            "\x00" in norm_filename
+            or ".." in norm_filename
+            or norm_filename.startswith("/")
+            or (len(norm_filename) > 1 and norm_filename[1] == ":")
+            or norm_filename in (".", "..")
         ):
             raise FileValidationException(
                 "Invalid filename: path traversal sequences, absolute paths, or path separators are not permitted."
             )
 
-        sanitized_filename = os.path.basename(raw_filename).strip()
+        # For single-file submissions, preserve strict no-slash check
+        if not is_multi_file and "/" in norm_filename:
+            raise FileValidationException(
+                "Invalid filename: path traversal sequences, absolute paths, or path separators are not permitted."
+            )
+
+        sanitized_filename = norm_filename if is_multi_file else os.path.basename(norm_filename).strip()
         _, ext = os.path.splitext(sanitized_filename)
         if ext.lower() != ".py":
             raise FileValidationException(
@@ -207,21 +218,50 @@ class RepairService:
         new_submission_id = f"sub-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc)
 
+        new_metadata = {
+            "parent_submission_id": orig_submission.id,
+            "repair_for_run_id": orig_run.id,
+            "repair_source": request.repair_source.value,
+            "feedback_iteration_id": target_iteration.iteration_id,
+        }
+
+        if is_multi_file:
+            updated_project_files = dict(orig_project_files)
+            matched_key = None
+            if sanitized_filename in updated_project_files:
+                matched_key = sanitized_filename
+            else:
+                base_target = sanitized_filename.split("/")[-1]
+                for k in updated_project_files.keys():
+                    if k.endswith(sanitized_filename) or k.split("/")[-1] == base_target:
+                        matched_key = k
+                        break
+            if not matched_key:
+                matched_key = sanitized_filename
+
+            updated_project_files[matched_key] = request.corrected_code
+            new_metadata["is_multi_file"] = True
+            new_metadata["project_files"] = updated_project_files
+            new_metadata["repaired_file"] = matched_key
+
+            entrypoint = orig_meta.get("entrypoint")
+            if entrypoint and entrypoint in updated_project_files:
+                submission_code = updated_project_files[entrypoint]
+            else:
+                submission_code = request.corrected_code
+        else:
+            submission_code = request.corrected_code
+
         new_submission = CodeSubmissionResponse(
             id=new_submission_id,
-            code=request.corrected_code,
+            code=submission_code,
             language=ProgrammingLanguage.PYTHON,
             filename=sanitized_filename,
             requirement_ids=list(orig_submission.requirement_ids or []),
             test_code=trusted_test_code,
             source_type=SubmissionSource.MANUAL_ENTRY,
             created_at=now,
-            metadata={
-                "parent_submission_id": orig_submission.id,
-                "repair_for_run_id": orig_run.id,
-                "repair_source": request.repair_source.value,
-                "feedback_iteration_id": target_iteration.iteration_id,
-            },
+            metadata=new_metadata,
         )
         await self.submission_repo.save(new_submission)
         logger.info(

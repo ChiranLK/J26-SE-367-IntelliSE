@@ -435,10 +435,11 @@ async def test_langgraph_pipeline_respects_requested_test_types(monkeypatch):
 
     result = await verification_pipeline.ainvoke(state)
 
-    assert result["status"] == VerificationStatus.PASSED.value
+    assert result["status"] == VerificationStatus.BLOCKED.value
     assert "agent_reports" in result["telemetry"]
     assert "unit" in result["telemetry"]["agent_reports"]
     assert "performance" in result["telemetry"]["agent_reports"]
+    assert result["telemetry"]["agent_reports"]["performance"]["status"] == "NOT_EXECUTED"
     assert result["telemetry"]["coordination_plan_id"].startswith("plan-")
 
 

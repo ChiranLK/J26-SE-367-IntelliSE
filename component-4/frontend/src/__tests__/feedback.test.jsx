@@ -105,11 +105,11 @@ describe('Technical Feedback Preview UI', () => {
     expect(await screen.findByText(/Pipeline Details: run-failed-feedback-1/i)).toBeInTheDocument();
 
     // Verify Technical Feedback Section Header and Target
-    expect(screen.getByText('Technical Feedback Preview')).toBeInTheDocument();
-    expect(screen.getByText('Target: Repair Service')).toBeInTheDocument();
+    expect(screen.getByText('Machine-Readable Feedback Preview')).toBeInTheDocument();
+    expect(screen.getByText('Target: Component 3')).toBeInTheDocument();
 
     // Verify Eligibility status badge & reason
-    expect(screen.getByText('Eligible for Repair Loop')).toBeInTheDocument();
+    expect(screen.getByText('Eligible for Component 3 Feedback')).toBeInTheDocument();
     expect(
       screen.getByText(/Verification run failed with 1 confirmed application-code defect report/i)
     ).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('Technical Feedback Preview UI', () => {
     expect(screen.getByRole('button', { name: /Copy JSON/i })).toBeInTheDocument();
 
     // Verify unavailable repair dispatch button is disabled
-    const dispatchBtn = screen.getByRole('button', { name: /Send for Repair \(Unavailable\)/i });
+    const dispatchBtn = screen.getByRole('button', { name: /Component 3 Integration Unavailable/i });
     expect(dispatchBtn).toBeInTheDocument();
     expect(dispatchBtn).toBeDisabled();
   });
@@ -174,7 +174,7 @@ describe('Technical Feedback Preview UI', () => {
     fireEvent.click(detailsBtn);
 
     expect(await screen.findByText(/Pipeline Details: run-passed-1/i)).toBeInTheDocument();
-    expect(screen.getByText('Technical Feedback Preview')).toBeInTheDocument();
+    expect(screen.getByText('Machine-Readable Feedback Preview')).toBeInTheDocument();
     expect(screen.getByText('Corrective Feedback Ineligible')).toBeInTheDocument();
     expect(screen.getByText(/Verification run passed; zero code defects detected/i)).toBeInTheDocument();
 

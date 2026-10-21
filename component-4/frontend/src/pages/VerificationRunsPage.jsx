@@ -20,7 +20,6 @@ import {
   Terminal,
   FileCode,
   ShieldCheck,
-  ExternalLink,
   Bug,
   ShieldAlert,
   FileJson,
@@ -42,6 +41,7 @@ import EmptyState from '../components/common/EmptyState';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import Pagination from '../components/common/Pagination';
 import CodeViewer from '../components/common/CodeViewer';
+import ProjectFileTree from '../components/common/ProjectFileTree';
 import ExpandableDiagnostic from '../components/common/ExpandableDiagnostic';
 import {
   getVerificationRuns,
@@ -65,6 +65,12 @@ import { getSubmissionById } from '../api/submissionApi';
 import { formatDate, formatRelativeTime, truncateId } from '../utils/formatters';
 import { VERIFICATION_STATUSES, TEST_TYPES, DEFECT_SEVERITIES } from '../utils/constants';
 
+const TEST_GROUP_LABELS = {
+  unit: 'Unit Testing',
+  integration: 'Integration Testing',
+  performance: 'Performance Testing',
+};
+
 
 
 export default function VerificationRunsPage() {
@@ -74,6 +80,7 @@ export default function VerificationRunsPage() {
   // Query parameter filters
   const submissionIdParam = searchParams.get('submission_id') || '';
   const createForParam = searchParams.get('create_for') || '';
+  const runIdParam = searchParams.get('run_id') || '';
 
   // Data states
   const [runs, setRuns] = useState([]);
@@ -101,6 +108,7 @@ export default function VerificationRunsPage() {
   // Run detail modal state
   const [selectedRun, setSelectedRun] = useState(null);
   const [relatedSubmission, setRelatedSubmission] = useState(null);
+  const [activeProjectFile, setActiveProjectFile] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
@@ -174,6 +182,14 @@ export default function VerificationRunsPage() {
       setSearchParams(nextParams, { replace: true });
     }
   }, [createForParam]);
+
+  useEffect(() => {
+    if (!runIdParam) return;
+    handleViewDetails(runIdParam);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('run_id');
+    setSearchParams(nextParams, { replace: true });
+  }, [runIdParam]);
 
   useEffect(() => {
     getAiEngineStatus()
@@ -295,6 +311,7 @@ export default function VerificationRunsPage() {
     setForceConfirmRepair(null);
     setConvergenceReport(null);
     setReadinessReport(null);
+    setActiveProjectFile(null);
 
     try {
       const run = await getVerificationRunById(runId);
@@ -303,7 +320,16 @@ export default function VerificationRunsPage() {
       try {
         const sub = await getSubmissionById(run.submission_id);
         setRelatedSubmission(sub);
-        if (sub?.filename) {
+        if (sub?.metadata?.is_multi_file) {
+          const firstDefectiveFile = run.defect_reports?.find((d) => d.file_path)?.file_path;
+          const initialFile =
+            firstDefectiveFile ||
+            sub.metadata?.entrypoint ||
+            Object.keys(sub.metadata?.project_files || {})[0] ||
+            'solution.py';
+          setActiveProjectFile(initialFile);
+          setCorrectedFilename(initialFile);
+        } else if (sub?.filename) {
           setCorrectedFilename(sub.filename);
         }
       } catch {
@@ -458,7 +484,7 @@ export default function VerificationRunsPage() {
     try {
       const iteration = await approveFeedback(runId, {
         approver: 'human_engineer',
-        notes: 'Approved via Verification Explorer for repair feedback loop',
+        notes: 'Approved via Verification Explorer for Component 3 technical feedback', // ui-copy-ignore: required integration terminology
       });
       // Refresh run to show updated iterations
       const updatedRun = await getVerificationRunById(runId);
@@ -466,7 +492,7 @@ export default function VerificationRunsPage() {
       setRuns((prev) => prev.map((r) => (r.id === runId ? updatedRun : r)));
       setDispatchMessage({
         type: 'success',
-        text: `Feedback iteration #${iteration.iteration_number} successfully approved by human reviewer. Ready for dispatch when repair service is connected.`,
+        text: `Feedback iteration #${iteration.iteration_number} successfully approved by human reviewer. Ready for dispatch when Component 3 integration is available.`, // ui-copy-ignore: required integration terminology
       });
     } catch (err) {
       setDispatchMessage({
@@ -493,7 +519,7 @@ export default function VerificationRunsPage() {
       if (res.delivery_status === 'ACKNOWLEDGED') {
         setDispatchMessage({
           type: 'success',
-          text: `Delivered for repair! Repair Job ID: ${res.component_3_job_id || 'N/A'}. Correlation ID: ${res.correlation_id}`,
+          text: `Technical feedback acknowledged by Component 3. Job ID: ${res.component_3_job_id || 'N/A'}. Correlation ID: ${res.correlation_id}`, // ui-copy-ignore: required integration terminology
         });
       } else if (res.delivery_status === 'NOT_DISPATCHED') {
         setDispatchMessage({
@@ -565,6 +591,63 @@ export default function VerificationRunsPage() {
     if (statusFilter === 'ALL') return true;
     return r.status === statusFilter;
   });
+
+  const renderSourceCodeViewer = () => {
+    if (!relatedSubmission) return null;
+
+    const projectFiles = relatedSubmission.metadata?.project_files;
+    const isMultiFile = Boolean(relatedSubmission.metadata?.is_multi_file && projectFiles);
+    const selectedFile = activeProjectFile || relatedSubmission.metadata?.entrypoint;
+
+    return (
+      <section className="verification-detail-section source-code-section" aria-labelledby="source-code-heading">
+        <div className="verification-section-heading">
+          <div>
+            <span className="verification-section-kicker">Section 4</span>
+            <h4 id="source-code-heading">Source Code Viewer</h4>
+          </div>
+          <span className="source-code-context">
+            {isMultiFile
+              ? `${Object.keys(projectFiles).length} files · Viewing: ${selectedFile || 'No file selected'}`
+              : (relatedSubmission.filename || 'Source snippet')}
+          </span>
+        </div>
+
+        {isMultiFile ? (
+          <div className="project-source-layout">
+            <div className="project-source-tree">
+              <ProjectFileTree
+                files={projectFiles}
+                selectedFile={selectedFile}
+                onSelectFile={(filePath) => {
+                  setActiveProjectFile(filePath);
+                  setCorrectedFilename(filePath);
+                  if (showIngestRepair) setCorrectedCode(projectFiles[filePath] || '');
+                }}
+                defects={selectedRun?.defect_reports || []}
+                entrypoint={relatedSubmission.metadata.entrypoint}
+              />
+            </div>
+            <div className="project-source-code">
+              <CodeViewer
+                code={projectFiles[selectedFile] || relatedSubmission.code}
+                language={relatedSubmission.language || 'python'}
+                filename={selectedFile}
+                maxHeight="340px"
+              />
+            </div>
+          </div>
+        ) : (
+          <CodeViewer
+            code={relatedSubmission.code}
+            language={relatedSubmission.language}
+            filename={relatedSubmission.filename}
+            maxHeight="300px"
+          />
+        )}
+      </section>
+    );
+  };
 
   return (
     <div className="animate-fade-in">
@@ -669,7 +752,7 @@ export default function VerificationRunsPage() {
         >
           {/* Status filter tabs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'var(--bg-input)', padding: '2px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-            {['ALL', 'PENDING', 'RUNNING', 'PASSED', 'FAILED'].map((st) => (
+            {['ALL', 'PENDING', 'RUNNING', 'PASSED', 'FAILED', 'BLOCKED', 'ERROR'].map((st) => (
               <button
                 key={st}
                 type="button"
@@ -1011,6 +1094,7 @@ export default function VerificationRunsPage() {
           onClose={() => setSelectedRun(null)}
           title={`Pipeline Details: ${selectedRun.id}`}
           size="lg"
+          className="verification-details-modal"
           footer={
             <>
               {selectedRun.status === 'PENDING' && (
@@ -1039,53 +1123,85 @@ export default function VerificationRunsPage() {
             </>
           }
         >
-          {/* Metadata bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>
-            <div>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pipeline Status</span>
+          <section className="verification-detail-section" aria-labelledby="verification-overview-heading">
+            <div className="verification-section-heading">
               <div>
+                <span className="verification-section-kicker">Section 1</span>
+                <h4 id="verification-overview-heading">Verification Overview</h4>
+              </div>
+            </div>
+            <div className="verification-overview-grid">
+              <div className="verification-overview-item">
+                <span>Submission ID</span>
+                <strong className="text-mono">{selectedRun.submission_id}</strong>
+              </div>
+              <div className="verification-overview-item">
+                <span>Run ID</span>
+                <strong className="text-mono">{selectedRun.id}</strong>
+              </div>
+              <div className="verification-overview-item">
+                <span>Language</span>
+                <strong>{relatedSubmission?.language || 'Not reported'}</strong>
+              </div>
+              <div className="verification-overview-item">
+                <span>Overall status</span>
                 <Badge variant={VERIFICATION_STATUSES[selectedRun.status]?.variant || 'secondary'} dot>
                   {VERIFICATION_STATUSES[selectedRun.status]?.label || selectedRun.status}
                 </Badge>
               </div>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target Submission</span>
-              <div className="text-mono" style={{ fontSize: '0.8125rem', color: 'var(--primary-300)', fontWeight: 500 }}>
-                {selectedRun.submission_id}
+              <div className="verification-overview-item">
+                <span>Execution duration</span>
+                <strong>
+                  {Number.isFinite(selectedRun.execution_telemetry?.duration_ms)
+                    ? `${selectedRun.execution_telemetry.duration_ms.toFixed(1)} ms`
+                    : 'Not available'}
+                </strong>
               </div>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trigger Origin</span>
-              <div style={{ fontSize: '0.8125rem', color: 'var(--text-primary)' }}>{selectedRun.triggered_by}</div>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Registered At</span>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                {formatDate(selectedRun.created_at)}
+              <div className="verification-overview-item">
+                <span>Docker execution</span>
+                <strong>
+                  {selectedRun.execution_telemetry?.docker_available === false
+                    ? 'Unavailable'
+                    : selectedRun.execution_telemetry?.docker_ready === true || selectedRun.test_results?.length > 0
+                    ? 'Executed in sandbox'
+                    : 'Not executed'}
+                </strong>
               </div>
+              {(selectedRun.evaluation_mode === 'LLM_ASSISTED' || selectedRun.execution_telemetry?.ai_contribution) && (
+                <div className="verification-overview-item">
+                  <span>Ollama inference</span>
+                  <strong>
+                    {selectedRun.execution_telemetry?.ai_contribution?.successful_llm_response_count > 0
+                      ? 'Completed'
+                      : selectedRun.execution_telemetry?.ai_contribution?.llm_enabled === false
+                      ? 'Disabled; deterministic evidence used'
+                      : aiEngineStatus?.ollama_connected
+                      ? 'Available; no successful run inference recorded'
+                      : 'Unavailable; deterministic evidence used'}
+                  </strong>
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Requested Test Suites */}
-          <div style={{ marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.3rem' }}>
-              Requested Test Suites
-            </span>
-            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-              {selectedRun.requested_test_types.map((tt) => (
-                <Badge key={tt} variant="secondary">
-                  {tt}
-                </Badge>
+            <div className="verification-requested-suites" aria-label="Requested test suites">
+              <span>Requested:</span>
+              {(selectedRun.requested_test_types || []).map((tt) => (
+                <Badge key={tt} variant="secondary">{TEST_GROUP_LABELS[tt] || tt}</Badge>
               ))}
             </div>
-          </div>
+          </section>
+
+          {selectedRun.status === 'PASSED' && (
+            <Alert type="success" title="SUCCESSFUL / PASSED">
+              All executed authorized checks passed. See each testing category below for its actual execution status.
+            </Alert>
+          )}
 
           {/* CI/CD Agent Pipeline Telemetry Box */}
-          <div style={{ marginBottom: '1rem' }}>
+          <section className="verification-detail-section" aria-labelledby="testing-categories-heading">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Autonomous Agent Sandbox Telemetry
+                <span className="verification-section-kicker">Section 2</span>
+                <span id="testing-categories-heading">Testing Categories</span>
               </span>
               {selectedRun.execution_telemetry?.duration_ms && (
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -1121,6 +1237,83 @@ export default function VerificationRunsPage() {
                 <strong style={{ color: 'var(--status-pending)' }}>No Test Oracle Supplied:</strong> Safe AST syntax validation passed, but functional correctness cannot be verified without authorized test specifications.
               </div>
             )}
+
+            <div
+                className="testing-category-grid"
+                aria-label="Testing category results"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                {['unit', 'integration', 'performance'].map((testType) => {
+                  const report = selectedRun.execution_telemetry?.agent_reports?.[testType];
+                  const metrics = report?.metrics;
+                  const passedCount = testType === 'unit'
+                    ? report?.passed_tests
+                    : testType === 'integration'
+                    ? report?.passed_interactions
+                    : report?.status === 'PASSED' ? 1 : 0;
+                  const failedCount = testType === 'unit'
+                    ? report?.failed_tests
+                    : testType === 'integration'
+                    ? report?.failed_interactions
+                    : report?.status === 'FAILED' ? 1 : 0;
+                  const executedCount = testType === 'unit'
+                    ? report?.total_tests
+                    : testType === 'integration'
+                    ? report?.total_interactions
+                    : metrics?.sample_size;
+                  const durationMs = testType === 'performance' ? metrics?.duration_ms : report?.duration_ms;
+                  return (
+                    <div
+                      key={testType}
+                      style={{
+                        padding: '0.65rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-tertiary)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                        <strong style={{ fontSize: '0.75rem' }}>{TEST_GROUP_LABELS[testType]}</strong>
+                        <Badge
+                          variant={
+                            report?.status === 'PASSED' ? 'success'
+                            : report?.status === 'FAILED' ? 'danger'
+                            : report?.status === 'ERROR' ? 'danger'
+                            : report?.status === 'NOT_EXECUTED' ? 'warning'
+                            : report?.status === 'BLOCKED' ? 'warning'
+                            : 'secondary'
+                          }
+                          dot={Boolean(report)}
+                        >
+                          {report?.status || 'NOT EXECUTED'}
+                        </Badge>
+                      </div>
+                      <div className="testing-category-metrics">
+                        <span>Executed <strong>{report ? (executedCount ?? 0) : 0}</strong></span>
+                        {testType !== 'performance' && (
+                          <>
+                            <span>Passed <strong>{passedCount ?? 0}</strong></span>
+                            <span>Failed <strong>{failedCount ?? 0}</strong></span>
+                          </>
+                        )}
+                        <span>Duration <strong>{Number.isFinite(durationMs) ? `${Number(durationMs).toFixed(1)} ms` : 'Not available'}</strong></span>
+                      </div>
+                      {metrics && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          Measured latency (p95): {Number(metrics.latency_p95_ms || 0).toFixed(2)} ms<br />
+                          Configured threshold: {Number(metrics.threshold_latency_ms || 0).toFixed(2)} ms<br />
+                          Performance verdict: {metrics.is_breached ? 'THRESHOLD BREACHED' : 'WITHIN THRESHOLD'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
 
             {selectedRun.test_results && selectedRun.test_results.length > 0 ? (
               <div className="table-responsive">
@@ -1195,15 +1388,16 @@ export default function VerificationRunsPage() {
                 Verification run is registered in <code style={{ color: 'var(--status-pending)' }}>PENDING</code> state. Click <strong>Execute in Sandbox</strong> to dispatch the LangGraph Docker test runner.
               </div>
             )}
-          </div>
+          </section>
 
           {/* Evidence-Based Defect Reports Section */}
-          <div style={{ marginBottom: '1.25rem' }}>
+          <section className="verification-detail-section" aria-labelledby="defect-results-heading">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Bug size={16} color="var(--primary-400)" />
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Evidence-Based Defect Analysis
+                  <span className="verification-section-kicker">Section 3</span>
+                  <span id="defect-results-heading">Defect Detection Results</span>
                 </span>
                 {selectedRun.defect_reports && selectedRun.defect_reports.length > 0 && (
                   <Badge variant="danger" dot style={{ fontSize: '0.65rem' }}>
@@ -1212,6 +1406,23 @@ export default function VerificationRunsPage() {
                 )}
               </div>
             </div>
+
+            {selectedRun.execution_telemetry?.ai_contribution && (
+              <div style={{ marginBottom: '0.65rem', padding: '0.65rem', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: 'var(--radius-sm)', background: 'rgba(99, 102, 241, 0.06)' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: '0.3rem' }}>Local AI inference evidence</div>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <Badge variant="secondary">Mode: {selectedRun.execution_telemetry.ai_contribution.evaluation_mode}</Badge>
+                  <Badge variant={selectedRun.execution_telemetry.ai_contribution.llm_enabled ? 'success' : 'secondary'}>
+                    LLM enabled: {String(selectedRun.execution_telemetry.ai_contribution.llm_enabled)}
+                  </Badge>
+                  <Badge variant="secondary">Invocations: {selectedRun.execution_telemetry.ai_contribution.actual_llm_invocation_count}</Badge>
+                  <Badge variant={selectedRun.execution_telemetry.ai_contribution.successful_llm_response_count > 0 ? 'success' : 'warning'}>
+                    Successful responses: {selectedRun.execution_telemetry.ai_contribution.successful_llm_response_count}
+                  </Badge>
+                  <Badge variant="secondary">Model: {selectedRun.execution_telemetry.ai_contribution.model_identifier}</Badge>
+                </div>
+              </div>
+            )}
 
             {/* Zero Defects Detected for PASSED runs */}
             {selectedRun.status === 'PASSED' && (
@@ -1230,7 +1441,7 @@ export default function VerificationRunsPage() {
               >
                 <CheckCircle2 size={18} color="var(--status-passed)" style={{ flexShrink: 0 }} />
                 <div>
-                  <strong style={{ color: 'var(--status-passed)' }}>Zero Defects Detected:</strong> All test assertions passed within the isolated Docker sandbox. No runtime exceptions or assertion failures observed.
+                  <strong style={{ color: 'var(--status-passed)' }}>No defects detected by the executed tests.</strong>
                 </div>
               </div>
             )}
@@ -1273,9 +1484,36 @@ export default function VerificationRunsPage() {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.35rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)' }}>Affected File: </span>
-                        <code style={{ color: 'var(--primary-300)' }}>
-                          {defect.file_path || 'solution.py'}{defect.line_number ? `:${defect.line_number}` : ''}
-                        </code>
+                        {relatedSubmission?.metadata?.is_multi_file && defect.file_path ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveProjectFile(defect.file_path);
+                              setCorrectedFilename(defect.file_path);
+                              if (relatedSubmission?.metadata?.project_files?.[defect.file_path]) {
+                                setCorrectedCode(relatedSubmission.metadata.project_files[defect.file_path]);
+                              }
+                            }}
+                            title="Click to view file in project tree & source viewer"
+                            style={{
+                              background: 'rgba(59, 130, 246, 0.1)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: '3px',
+                              padding: '1px 6px',
+                              cursor: 'pointer',
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: '0.75rem',
+                              color: 'var(--primary-300, #93c5fd)',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {defect.file_path}{defect.line_number ? `:${defect.line_number}` : ''} ↗
+                          </button>
+                        ) : (
+                          <code style={{ color: 'var(--primary-300)' }}>
+                            {defect.file_path || 'solution.py'}{defect.line_number ? `:${defect.line_number}` : ''}
+                          </code>
+                        )}
                       </div>
                       <div>
                         <span style={{ color: 'var(--text-muted)' }}>Defect ID: </span>
@@ -1316,6 +1554,29 @@ export default function VerificationRunsPage() {
                             {defect.actual_value || '—'}
                           </span>
                         </div>
+                      </div>
+                    )}
+
+                    {defect.description && (
+                      <div style={{ marginTop: '0.45rem', padding: '0.55rem', borderRadius: 'var(--radius-xs)', background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                          <strong style={{ color: 'var(--text-primary)' }}>Verified facts:</strong>{' '}
+                          {defect.description.split('\n[LLM Root Cause]:')[0]}
+                        </div>
+                        {defect.description.includes('\n[LLM Root Cause]:') && (
+                          <div style={{ marginTop: '0.4rem', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                            <strong style={{ color: 'var(--primary-300)' }}>AI-assisted hypothesis:</strong>{' '}
+                            {defect.description.split('\n[LLM Root Cause]:').slice(1).join('\n[LLM Root Cause]:').trim()}
+                            <div style={{ marginTop: '0.25rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              This hypothesis is grounded in the test evidence above and requires human review. It is not authorized Post-Delivery XAI.
+                            </div>
+                          </div>
+                        )}
+                        {defect.suggested_fix && (
+                          <div style={{ marginTop: '0.4rem', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                            <strong style={{ color: 'var(--status-pending)' }}>Suggested correction:</strong> {defect.suggested_fix}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1369,110 +1630,95 @@ export default function VerificationRunsPage() {
                 Defect reports will be synthesized dynamically if test execution detects failures.
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Human-Facing XAI Explanation Section (Human Engineer Review) */}
-          <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <BrainCircuit size={16} color="var(--primary-400)" />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Human-Facing XAI Explanation
-                </span>
-                <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
-                  Target: Human Reviewer
-                </Badge>
+          {renderSourceCodeViewer()}
+
+          <section className="verification-detail-section verification-outcome" aria-labelledby="verification-outcome-heading">
+            <div className="verification-section-heading">
+              <div>
+                <span className="verification-section-kicker">Section 5</span>
+                <h4 id="verification-outcome-heading">Verification Outcome and Delivery</h4>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                {xaiExplanation?.recommendation?.action === 'RETURN_TO_COMPONENT_3' ? (
-                  <Badge variant="danger" dot style={{ fontSize: '0.65rem' }}>
-                    Action: Send for Repair
-                  </Badge>
-                ) : xaiExplanation?.recommendation?.action === 'ACCEPT_VERIFICATION' ? (
-                  <Badge variant="success" dot style={{ fontSize: '0.65rem' }}>
-                    Action: Accept Verification
-                  </Badge>
-                ) : xaiExplanation?.recommendation?.action === 'RETRY_INFRASTRUCTURE' ? (
-                  <Badge variant="warning" dot style={{ fontSize: '0.65rem' }}>
-                    Action: Retry Infrastructure
-                  </Badge>
+              <Badge
+                variant={selectedRun.status === 'PASSED' ? 'success' : selectedRun.status === 'FAILED' ? 'danger' : 'warning'}
+                dot
+              >
+                {selectedRun.status === 'PASSED'
+                  ? 'Verification Passed'
+                  : selectedRun.status === 'FAILED'
+                  ? 'Verification Failed'
+                  : `Verification ${selectedRun.status}`}
+              </Badge>
+            </div>
+
+            {selectedRun.status === 'FAILED' ? (
+              <div className="verification-outcome-panel is-failed">
+                <div>
+                  <strong>Delivery blocked</strong>
+                  <p>The submitted software cannot proceed to delivery because one or more executed checks failed.</p>
+                  {selectedRun.test_results?.some((test) => test.status === 'FAILED') && (
+                    <ul>
+                      {selectedRun.test_results.filter((test) => test.status === 'FAILED').map((test, index) => (
+                        <li key={`${test.test_name || test.name}-${index}`}>{test.test_name || test.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="xai-lock-status"><Lock size={15} /> Post-delivery XAI locked</div>
+              </div>
+            ) : selectedRun.status === 'PASSED' ? (
+              <div className="verification-outcome-panel is-passed">
+                <div>
+                  <strong>Verification passed; delivery is a separate decision</strong>
+                  <p>
+                    Governance decision: {readinessReport?.readiness_status || 'Evaluating'}. Delivery status:{' '}
+                    {xaiExplanation?.delivery_status?.replace(/_/g, ' ') || 'Pending delivery confirmation'}.
+                  </p>
+                </div>
+                {['CONFIRMED_PRODUCTION_DELIVERY', 'CONFIRMED_DELIVERED'].includes(xaiExplanation?.delivery_status) && xaiExplanation?.post_delivery_explanation ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={BrainCircuit}
+                    onClick={() => {
+                      const targetRunId = selectedRun.id;
+                      setSelectedRun(null);
+                      navigate(`/xai?runId=${targetRunId}`);
+                    }}
+                  >
+                    View Software Explanation
+                  </Button>
                 ) : (
-                  <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>
-                    {xaiExplanation?.recommendation?.action || 'Awaiting Analysis'}
-                  </Badge>
+                  <div className="xai-lock-status"><Lock size={15} /> Software explanation locked until authorized delivery</div>
                 )}
               </div>
-            </div>
-
-            {/* Explanation Preview Card */}
-            <div
-              style={{
-                padding: '0.75rem',
-                backgroundColor: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-xs)',
-                fontSize: '0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <div style={{ color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                {xaiExplanation?.summary || (selectedRun.status === 'PASSED'
-                  ? 'All executed test cases passed successfully. No defects detected.'
-                  : 'Evaluating XAI explanation telemetry...')}
+            ) : (
+              <div className="verification-outcome-panel">
+                Verification must complete before a delivery decision can be made. Post-delivery XAI remains locked.
               </div>
+            )}
+          </section>
 
-              {xaiExplanation?.recommendation?.reason && (
-                <div
-                  style={{
-                    padding: '0.5rem 0.65rem',
-                    backgroundColor: 'var(--bg-input)',
-                    borderRadius: 'var(--radius-xs)',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.72rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  <strong style={{ color: 'var(--primary-300)' }}>Recommendation:</strong>{' '}
-                  {xaiExplanation.recommendation.reason}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={ExternalLink}
-                  onClick={() => {
-                    const targetRunId = selectedRun.id;
-                    setSelectedRun(null);
-                    navigate(`/xai?runId=${targetRunId}`);
-                  }}
-                  style={{ height: '26px', fontSize: '0.7rem' }}
-                >
-                  Open Full XAI Explanation Page
-                </Button>
-              </div>
-            </div>
-          </div>
-
+          <details className="advanced-details">
+            <summary>Advanced — Component 3 Feedback Integration</summary> {/* ui-copy-ignore: supervisor-required integration label */}
+            <div className="advanced-details-content">
           {/* Technical Feedback & Component 3 Integration Section */}
           <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <FileJson size={16} color="var(--primary-400)" />
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Technical Feedback Preview
+                  Machine-Readable Feedback Preview
                 </span>
                 <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
-                  Target: Repair Service
+                  Target: Component 3
                 </Badge>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 {feedbackPreview?.eligible ? (
                   <Badge variant="success" dot style={{ fontSize: '0.65rem' }}>
-                    Eligible for Repair Loop
+                    Eligible for Component 3 Feedback
                   </Badge>
                 ) : (
                   <Badge variant="secondary" style={{ fontSize: '0.65rem' }}>
@@ -1526,7 +1772,7 @@ export default function VerificationRunsPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <ShieldAlert size={14} color="var(--primary-400)" />
-                  Repair Integration Status:
+                  Component 3 Integration Status:
                 </span>
                 <div style={{ display: 'flex', gap: '0.35rem' }}>
                   <Badge variant="outline" style={{ fontSize: '0.625rem' }}>
@@ -1538,7 +1784,9 @@ export default function VerificationRunsPage() {
                 </div>
               </div>
               <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                {c3Status?.reason ? c3Status.reason.replace(/Component 3 code correction contract is currently under development\.?/i, 'Automatic repair delivery is currently unavailable.') : 'Automatic repair delivery is currently unavailable. Automated feedback delivery is safely disabled to prevent invalid outbound requests.'}
+                {c3Status?.dispatch_allowed
+                  ? (c3Status.reason || 'Component 3 integration is available for authorized feedback dispatch.')
+                  : 'Component 3 integration unavailable. Technical feedback dispatch is safely disabled.'}
               </p>
             </div>
 
@@ -1652,7 +1900,7 @@ export default function VerificationRunsPage() {
                           loading={approvingFeedback}
                           style={{ height: '26px', fontSize: '0.7rem' }}
                         >
-                          Approve for Repair
+                          Approve Feedback for Component 3
                         </Button>
                       ) : (
                         <Badge variant="success" style={{ fontSize: '0.6875rem' }}>
@@ -1668,14 +1916,16 @@ export default function VerificationRunsPage() {
                         disabled={!c3Status?.dispatch_allowed}
                         title={
                           !c3Status?.dispatch_allowed
-                            ? 'Automatic repair delivery is currently unavailable. Outbound delivery is safely disabled.'
-                            : 'Send technical feedback for repair'
+                            ? 'Component 3 integration unavailable. Outbound delivery is safely disabled.'
+                            : 'Send authorized technical feedback to Component 3'
                         }
                         onClick={() => handleDispatchFeedback(selectedRun.id)}
                         loading={dispatchingFeedback}
                         style={{ height: '26px', fontSize: '0.7rem', opacity: c3Status?.dispatch_allowed ? 1 : 0.6 }}
                       >
-                        {c3Status?.dispatch_allowed ? 'Send for Repair' : 'Send for Repair (Unavailable)'}
+                        {c3Status?.dispatch_allowed
+                          ? 'Send Technical Feedback to Component 3'
+                          : 'Component 3 Integration Unavailable'}
                       </Button>
 
                       {/* Test Fail-Closed Button to demonstrate safety verification */}
@@ -1748,7 +1998,7 @@ export default function VerificationRunsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Wrench size={16} color="var(--primary-400)" />
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Repair Ingestion & Re-Verification
+                  Corrected Code Re-Verification
                 </span>
                 <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
                   Target: Verification Engine
@@ -2298,14 +2548,19 @@ export default function VerificationRunsPage() {
               </div>
             )}
           </div>
+            </div>
+          </details>
 
           {/* Verification Governance & Deployment Readiness Section */}
+          <details className="advanced-details">
+            <summary>Advanced — Governance &amp; Research Diagnostics</summary>
+            <div className="advanced-details-content">
           <div style={{ marginBottom: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <ShieldCheck size={16} color="var(--primary-400)" />
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Verification Governance & Deployment Readiness
+                  Governance &amp; Research Diagnostics
                 </span>
                 <Badge variant="secondary" style={{ fontSize: '0.625rem' }}>
                   Safety Gates
@@ -2417,28 +2672,9 @@ export default function VerificationRunsPage() {
               </div>
             </div>
           </div>
-
-          {/* Target Code Snippet */}
-          {relatedSubmission && (
-
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Associated Code ({relatedSubmission.language}):
-                </span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  {relatedSubmission.filename || 'Snippet'}
-                </span>
-              </div>
-              <CodeViewer
-                code={relatedSubmission.code}
-                language={relatedSubmission.language}
-                filename={relatedSubmission.filename}
-                maxHeight="220px"
-              />
             </div>
-          )}
+          </details>
+
         </Modal>
       )}
 

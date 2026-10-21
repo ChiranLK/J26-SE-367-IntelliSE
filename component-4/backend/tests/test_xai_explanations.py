@@ -165,7 +165,7 @@ def test_total_without_tax():
     # Step 2: Confirm production delivery with authenticated credentials
     deliv_res = client.post(
         f"/api/v1/verifications/{run_id}/delivery-confirmation",
-        headers={"X-Delivery-Token": "intelise_dev_delivery_token_secret"},
+        headers={"X-Delivery-Token": settings.DELIVERY_AUTH_TOKEN},
         json={"is_simulation": False, "artifact_version": sub_id, "notes": "Production delivery release signoff"},
     )
     assert deliv_res.status_code == 201

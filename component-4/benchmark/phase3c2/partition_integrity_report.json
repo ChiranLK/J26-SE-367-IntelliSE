@@ -1,0 +1,41 @@
+{
+  "report_title": "Phase 3C.2 Partition Isolation and Anti-Leakage Audit",
+  "partitions": {
+    "dev": {
+      "count": 250,
+      "percentage": 50.0,
+      "families": [
+        "FAM-01-BOOKING",
+        "FAM-02-INVENTORY",
+        "FAM-03-PAYMENT",
+        "FAM-04-AUTH",
+        "FAM-05-CONTENT"
+      ]
+    },
+    "val": {
+      "count": 100,
+      "percentage": 20.0,
+      "families": [
+        "FAM-06-API",
+        "FAM-07-REPORT"
+      ]
+    },
+    "held_out": {
+      "count": 150,
+      "percentage": 30.0,
+      "families": [
+        "FAM-08-SCHEDULE",
+        "FAM-09-PIPELINE",
+        "FAM-10-CACHE"
+      ]
+    }
+  },
+  "isolation_guarantees": {
+    "zero_family_overlap": true,
+    "zero_scenario_id_overlap": true,
+    "zero_defect_id_overlap": true,
+    "zero_eval_input_leakage": true,
+    "frozen_heldout_immutability": true
+  },
+  "verified_timestamp": "2026-10-20T04:22:38.645362+00:00"
+}

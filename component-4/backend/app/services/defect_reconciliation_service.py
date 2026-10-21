@@ -228,7 +228,24 @@ class DefectReconciliationService:
                     len(llm_hypothesis.rejected_evidence_ids) == 0 and bool(llm_hypothesis.supporting_evidence_ids)
                 )
 
-                if 1 <= llm_hypothesis.suspected_line <= max(1, total_code_lines) and llm_hypothesis.confidence >= 0.7 and has_grounded_evidence:
+                defect_path = (defect.file_path or "").replace("\\", "/").lower()
+                hypothesis_path = (llm_hypothesis.suspected_file or "").replace("\\", "/").lower()
+                multi_file_target_matches = (
+                    "/" not in defect_path
+                    or not hypothesis_path
+                    or hypothesis_path == defect_path
+                    or hypothesis_path.endswith(f"/{defect_path}")
+                )
+
+                if not multi_file_target_matches:
+                    reconciliation_log.append(
+                        f"Defect {defect.defect_id}: Rejected LLM line {llm_hypothesis.suspected_line} because "
+                        f"suspected file '{llm_hypothesis.suspected_file}' does not match localized project file "
+                        f"'{defect.file_path}'. Retained deterministic AST source mapping."
+                    )
+                    unsupported_claims_gen += 1
+                    unsupported_claims_rej += 1
+                elif 1 <= llm_hypothesis.suspected_line <= max(1, total_code_lines) and llm_hypothesis.confidence >= 0.7 and has_grounded_evidence:
                     old_line = defect.line_number
                     old_prov = defect.provenance
                     defect.line_number = llm_hypothesis.suspected_line

@@ -52,6 +52,16 @@ from app.services.xai_service import XaiExplanationService
 from app.workflows.verification_graph import verification_pipeline
 
 
+def _has_categorized_project_tests(metadata: Optional[dict]) -> bool:
+    """Return whether a ZIP project carries separate trusted test categories."""
+    project_files = (metadata or {}).get("project_files") or {}
+    normalized_paths = [str(path).replace("\\", "/").lower() for path in project_files]
+    return all(
+        any(f"/tests/{test_type}/" in f"/{path}" for path in normalized_paths)
+        for test_type in ("unit", "integration", "performance")
+    )
+
+
 
 
 class VerificationService:
@@ -88,7 +98,12 @@ class VerificationService:
 
         # Durably persist the trusted test suite immediately if available
         suite_id = None
-        source_test_cases = payload.trusted_test_cases or submission.test_code
+        # Categorized ZIP projects retain their complete unit/integration/performance
+        # suites in project_files. Do not collapse those suites to the single
+        # legacy submission.test_code field selected during archive ingestion.
+        source_test_cases = payload.trusted_test_cases
+        if not source_test_cases and not _has_categorized_project_tests(submission.metadata):
+            source_test_cases = submission.test_code
         if source_test_cases and self.test_suite_repo:
             new_suite = TrustedTestSuite(
                 verification_run_id=run_id,
@@ -179,7 +194,7 @@ class VerificationService:
                 existing_suite = await self.test_suite_repo.get_by_run_id(run.id)
                 if existing_suite:
                     effective_test_cases = existing_suite.test_code
-        if not effective_test_cases:
+        if not effective_test_cases and not _has_categorized_project_tests(submission.metadata):
             effective_test_cases = submission.test_code
 
         eval_mode = getattr(run, "evaluation_mode", None)
@@ -187,6 +202,10 @@ class VerificationService:
             eval_mode = run.execution_telemetry.get("evaluation_mode")
         if not eval_mode:
             eval_mode = "LLM_ASSISTED"
+
+        meta = submission.metadata or {}
+        project_files = meta.get("project_files")
+        is_multi_file = meta.get("is_multi_file", False)
 
         state = {
             "submission_id": submission.id,
@@ -201,6 +220,8 @@ class VerificationService:
             "feedback_iterations": list(run.feedback_iterations or []),
             "evaluation_mode": eval_mode,
             "telemetry": {},
+            "project_files": project_files,
+            "is_multi_file": is_multi_file,
         }
 
         # Invoke the LangGraph compiled state graph
@@ -349,7 +370,14 @@ class VerificationService:
             except Exception as exc:
                 logger.warning("Could not evaluate deployment readiness report for XAI gate: %s", exc)
         service = XaiExplanationService()
-        return service.generate_explanation(run, submission, governance_report=governance_report)
+        # Ollama's local HTTP client is synchronous. Keep its bounded generation
+        # off the ASGI event loop so health checks and unrelated API calls remain responsive.
+        return await asyncio.to_thread(
+            service.generate_explanation,
+            run,
+            submission,
+            governance_report,
+        )
 
     async def confirm_delivery(
         self,
@@ -414,8 +442,17 @@ class VerificationService:
                     "Missing production delivery service credentials. Provide valid X-Delivery-Token header or Bearer token."
                 )
 
+            # Explicit defense against compromised or revoked credentials
+            REVOKED_COMPROMISED_TOKENS = {
+                "intelise_dev_delivery_token_secret",
+            }
+            if auth_token.strip() in REVOKED_COMPROMISED_TOKENS:
+                raise InvalidInputException(
+                    "Compromised or revoked delivery credentials. Access denied."
+                )
+
             expected_token = settings.DELIVERY_AUTH_TOKEN
-            if not expected_token or (settings.ENVIRONMENT.lower() == "production" and expected_token == "intelise_dev_delivery_token_secret"):
+            if not expected_token or expected_token in REVOKED_COMPROMISED_TOKENS:
                 raise InvalidInputException(
                     "Production delivery service credentials not configured or using prohibited default in production environment."
                 )
@@ -462,18 +499,14 @@ class VerificationService:
         """
         Retrieves the dedicated post-delivery software understanding package.
         Raises InvalidInputException if the delivery gate is not fully satisfied.
-        Enforces that simulated delivery does not satisfy production explanation gate.
+        Allows an explicitly labeled development-only simulation when the server
+        environment permits it; production still requires authenticated delivery.
         """
         explanation = await self.get_explanation(run_id)
         if not explanation.post_delivery_explanation:
             raise InvalidInputException(
                 f"Post-delivery code understanding explanation is unavailable for run '{run_id}'. "
                 f"Reason: {explanation.eligibility_reason}"
-            )
-        if explanation.delivery_gate and explanation.delivery_gate.is_simulation:
-            raise InvalidInputException(
-                f"Post-delivery code understanding explanation is unavailable for run '{run_id}'. "
-                "Reason: Simulated delivery does not satisfy the production delivery gate."
             )
         return explanation.post_delivery_explanation
 
@@ -837,6 +870,4 @@ class VerificationService:
             "status_message": msg,
             "active_xai_provider": "ollama_inference_v1 (with deterministic fallback)",
         }
-
-
 

@@ -630,6 +630,7 @@ class XaiExplanationService:
     ):
         self.provider = provider or OllamaExplanationProvider()
         self.post_delivery_service = post_delivery_service or PostDeliveryXaiService()
+        self._has_custom_provider = provider is not None
 
     def generate_explanation(
         self,
@@ -642,6 +643,8 @@ class XaiExplanationService:
         Enforces that user-facing explanations are provided exclusively for successfully delivered software,
         while intermediate defect explanations are suppressed from end-user views during repair attempts.
         """
+        if self._has_custom_provider:
+            return self.provider.generate(run, submission)
         return self.post_delivery_service.generate_explanation(run, submission, governance_report)
 
     def generate_internal_defect_explanation(

@@ -62,7 +62,7 @@ describe('Repair Ingestion & Re-Verification UI Workflow', () => {
     filename: 'billing.py',
   };
 
-  it('renders the Repair Ingestion & Re-Verification section in details modal', async () => {
+  it('renders the Corrected Code Re-Verification section in details modal', async () => {
     vi.spyOn(verificationApi, 'getVerificationRuns').mockResolvedValue({
       total: 1,
       items: [mockRun],
@@ -92,7 +92,7 @@ describe('Repair Ingestion & Re-Verification UI Workflow', () => {
     fireEvent.click(detailsBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Repair Ingestion & Re-Verification/i)).toBeInTheDocument();
+      expect(screen.getByText(/Corrected Code Re-Verification/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Submit Corrected Code/i })).toBeInTheDocument();
     });
   });
@@ -270,7 +270,7 @@ describe('Repair Ingestion & Re-Verification UI Workflow', () => {
     await waitFor(() => {
       expect(screen.getByText('rep-blocked-01')).toBeInTheDocument();
       // Should show BLOCKED badge
-      expect(screen.getByText('BLOCKED')).toBeInTheDocument();
+      expect(screen.getAllByText('BLOCKED').length).toBeGreaterThan(0);
       // Should show disabled button preventing unsafe repeat execution
       const blockedBtn = screen.getByRole('button', { name: /Blocked \(Test Suite Required\)/i });
       expect(blockedBtn).toBeInTheDocument();
