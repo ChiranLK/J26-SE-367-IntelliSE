@@ -1,0 +1,19 @@
+{
+  "file_id": "KB-STACK-REACT-SPRING",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-STACK-REACT-SPRING-BOOT",
+      "stack_id": "react-spring-boot",
+      "frontend": "REACT",
+      "backend": "SPRING_BOOT",
+      "hybrid_generator_status": "NOT_IMPLEMENTED",
+      "architecture_item": null,
+      "rag_stack_tokens": {
+        "frontend": "react",
+        "backend": "spring"
+      },
+      "unsupported_behavior": "UNSUPPORTED: no hybrid template set exists; C3 must not substitute another stack."
+    }
+  ]
+}

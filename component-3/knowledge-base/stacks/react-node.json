@@ -1,0 +1,38 @@
+{
+  "file_id": "KB-STACK-REACT-NODE",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-STACK-REACT-NODEJS",
+      "stack_id": "react-nodejs",
+      "frontend": "REACT",
+      "backend": "NODE_JS",
+      "hybrid_generator_status": "IMPLEMENTED",
+      "architecture_item": "KB-ARCH-NODE-LAYERED",
+      "rag_stack_tokens": {
+        "frontend": "react",
+        "backend": "node"
+      },
+      "database": "POSTGRESQL",
+      "runtime_image": "node:24-bookworm-slim",
+      "database_image": "postgres:16-alpine",
+      "package_pins": {
+        "react": "18.3.1",
+        "react-dom": "18.3.1",
+        "vite": "8.3.4",
+        "@vitejs/plugin-react": "5.2.0",
+        "express": "4.22.3",
+        "pg": "8.13.1"
+      },
+      "module_system": "ESM",
+      "layout": {
+        "frontend": "frontend/",
+        "backend": "backend/",
+        "database": "database/",
+        "openapi": "openapi/",
+        "test_seams": "test-seams/",
+        "deployment": "deployment/"
+      }
+    }
+  ]
+}

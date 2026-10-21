@@ -1,0 +1,50 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-API-GPA-001",
+      "version": "1.0.0",
+      "category": "API",
+      "priority": 80,
+      "description": "GPA calculation and history endpoints with stable operation IDs and the KB error schema.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "stack_id",
+            "equals": "react-nodejs"
+          },
+          {
+            "fact": "concern",
+            "equals": "API"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "be.routes",
+          "be.controller",
+          "api.openapi",
+          "fe.app-shell"
+        ],
+        "artifact_types": [
+          "API",
+          "CONTROLLER"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-API-CONVENTIONS"
+      ],
+      "validation_requirements": [
+        "V-D2C-ENDPOINTS"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}

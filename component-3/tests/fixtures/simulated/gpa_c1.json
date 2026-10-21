@@ -1,0 +1,25 @@
+{
+  "contract_version": "1.0",
+  "project_id": "PROJECT-GPA-001",
+  "srs_version": "SRS-GPA-1.0",
+  "approval_status": "APPROVED",
+  "approval_provenance_ref": "SIMULATED-C1-GPA-APPROVAL-001",
+  "validation_report_ref": "SIMULATED-C1-GPA-VALIDATION-001",
+  "requirements": [
+    {
+      "requirement_id": "REQ-GPA-001",
+      "title": "Users can create and list courses with grade points",
+      "status": "APPROVED"
+    },
+    {
+      "requirement_id": "REQ-GPA-002",
+      "title": "Users can update, delete and calculate courses for GPA",
+      "status": "APPROVED"
+    },
+    {
+      "requirement_id": "REQ-GPA-003",
+      "title": "Course persistence uses a mockable repository persistence boundary",
+      "status": "APPROVED"
+    }
+  ]
+}

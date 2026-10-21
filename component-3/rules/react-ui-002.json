@@ -1,0 +1,23 @@
+{
+  "id": "react-ui-002",
+  "stack": "react",
+  "layer": "ui",
+  "category": "accessibility",
+  "priority": 3,
+  "rule": "Give every form control a programmatic label (label htmlFor / aria-label) and expose field errors with aria-invalid and aria-describedby.",
+  "bad_example": "<input value={credits} onChange={...} />  // no label, error shown only by colour",
+  "good_example": "<label htmlFor={id}>Credits</label><input id={id} aria-invalid={!!error} aria-describedby={errId} />",
+  "document_id": "DOC-REACT-FORMS",
+  "artifact_types": [
+    "FRONTEND"
+  ],
+  "modules": [
+    "fe.gpa-form",
+    "fe.ui"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases W3C WAI forms tutorial and React docs on accessibility"
+}

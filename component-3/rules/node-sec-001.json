@@ -1,0 +1,10 @@
+{
+  "id": "node-sec-001",
+  "stack": "node",
+  "layer": "api",
+  "category": "security",
+  "priority": 3,
+  "rule": "Validate and sanitise all request input at the API boundary and use parameterised queries.",
+  "bad_example": "db.query(`SELECT * FROM gpa_records WHERE id = '${req.params.id}'`)",
+  "good_example": "db.query('SELECT * FROM gpa_records WHERE id = $1', [req.params.id])"
+}

@@ -1,0 +1,21 @@
+{
+  "dataset_id": "SIMULATED-RESEARCHER-GROUND-TRUTH-TASK-MVP",
+  "dataset_version": "1.0",
+  "authorship": "RESEARCHER_CURATED",
+  "researcher_reference": "SIMULATED-MANUAL-LABELS-001",
+  "in_scope_node_ids": [
+    "CODE_MODULE:FILE-017F30BBE617",
+    "CODE_MODULE:FILE-F8399082BF7B",
+    "REQUIREMENT:REQ-TASK-001",
+    "REQUIREMENT:REQ-TASK-002",
+    "REQUIREMENT:REQ-TASK-003"
+  ],
+  "expected_links": [
+    {"source_node_id": "CODE_MODULE:FILE-017F30BBE617", "relation_type": "IMPLEMENTS", "target_node_id": "REQUIREMENT:REQ-TASK-001"},
+    {"source_node_id": "CODE_MODULE:FILE-017F30BBE617", "relation_type": "IMPLEMENTS", "target_node_id": "REQUIREMENT:REQ-TASK-002"},
+    {"source_node_id": "CODE_MODULE:FILE-017F30BBE617", "relation_type": "IMPLEMENTS", "target_node_id": "REQUIREMENT:REQ-TASK-003"},
+    {"source_node_id": "CODE_MODULE:FILE-017F30BBE617", "relation_type": "VERIFIED_BY", "target_node_id": "CODE_MODULE:FILE-F8399082BF7B"},
+    {"source_node_id": "CODE_MODULE:FILE-F8399082BF7B", "relation_type": "IMPLEMENTS", "target_node_id": "REQUIREMENT:REQ-TASK-001"},
+    {"source_node_id": "CODE_MODULE:FILE-F8399082BF7B", "relation_type": "IMPLEMENTS", "target_node_id": "REQUIREMENT:REQ-TASK-003"}
+  ]
+}

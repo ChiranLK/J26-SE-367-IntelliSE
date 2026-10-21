@@ -31,8 +31,9 @@
     "uml_elements": [
       {
         "uml_id": "UML-CLASS-001",
-        "element_type": "CLASS",
-        "name": "TraceabilityRecord"
+        "element_type": "CLASS_DIAGRAM",
+        "name": "CoreDomainClassDiagram",
+        "plantuml_source": "@startuml\nclass TraceabilityRecord {\n  +requirement_id: String\n  +uml_id: String\n  +link(requirement_id: String, uml_id: String): void\n}\nclass GenerationFlow {\n  +generate(context: GenerationContext): Application\n}\nTraceabilityRecord \"1\" -- \"*\" GenerationFlow : informs\n@enduml"
       },
       {
         "uml_id": "UML-SEQUENCE-001",

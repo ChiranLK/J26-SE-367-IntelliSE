@@ -1,0 +1,71 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-DEPLOY-001",
+      "version": "1.0.0",
+      "category": "DEPLOYMENT",
+      "priority": 80,
+      "description": "Disposable Docker preview definition: non-root, loopback-only ports, no socket or host-source mounts, health checks.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "stack_id",
+            "equals": "react-nodejs"
+          },
+          {
+            "fact": "concern",
+            "equals": "DEPLOYMENT"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "deployment"
+        ],
+        "artifact_types": [
+          "DEPLOYMENT"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-STACK-REACT-NODEJS"
+      ],
+      "validation_requirements": [],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    },
+    {
+      "rule_id": "R-DEPLOY-GATE-001",
+      "version": "1.0.0",
+      "category": "DEPLOYMENT_GATE",
+      "priority": 100,
+      "description": "Deployment requires an unrevoked C4 READY signal for the exact artifact and module digests with PRESERVED semantics and CONVERGED status.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "concern",
+            "equals": "DEPLOYMENT_GATE"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [],
+        "artifact_types": []
+      },
+      "requires_knowledge": [],
+      "validation_requirements": [
+        "G-EXACT-DIGEST",
+        "G-NOT-REVOKED",
+        "G-SEMANTIC-PRESERVED",
+        "G-CONVERGED"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "FAILED"
+    }
+  ]
+}

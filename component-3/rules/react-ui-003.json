@@ -1,0 +1,23 @@
+{
+  "id": "react-ui-003",
+  "stack": "react",
+  "layer": "ui",
+  "category": "state-management",
+  "priority": 2,
+  "rule": "Render dynamic form rows from an array in state with a stable per-row id as the React key; never use the array index as the key when rows can be removed.",
+  "bad_example": "rows.map((row, i) => <ModuleRow key={i} ... />)",
+  "good_example": "rows.map((row) => <ModuleRow key={row.rowId} ... />)",
+  "document_id": "DOC-REACT-FORMS",
+  "artifact_types": [
+    "FRONTEND"
+  ],
+  "modules": [
+    "fe.gpa-form",
+    "fe.ui"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases React docs: rendering lists and keys"
+}

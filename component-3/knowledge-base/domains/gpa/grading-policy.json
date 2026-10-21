@@ -1,0 +1,71 @@
+{
+  "file_id": "KB-GPA-GRADING-POLICY",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-GPA-GRADE-SCALE",
+      "policy_id": "SLIIT-UG-GPA-SAMPLE",
+      "policy_version": "1.0.0",
+      "policy_name": "SLIIT (Sri Lanka Institute of Information Technology) undergraduate 4.0 grade-point scale - research transcription",
+      "authority_status": "SAMPLE_RESEARCH_POLICY",
+      "authority_status_reason": "Transcribed by the C3 research team from publicly available descriptions of the SLIIT grading scheme. It has NOT been supplied or approved by SLIIT, by the client, or by Component 1. It must be explicitly accepted before generation and must be replaced by an authoritative, client-approved policy for any real use.",
+      "requires_explicit_acceptance": true,
+      "institution": "Sri Lanka Institute of Information Technology (SLIIT), Malabe, Sri Lanka",
+      "provenance": {
+        "sources": [
+          {
+            "source_id": "SRC-SLIIT-SUPPORT-GRADING",
+            "title": "Grading at SLIIT - SLIIT Support Desk knowledge-base article",
+            "url": "https://support.sliit.lk/kb/articles/grading-at-sliit",
+            "used_for": "A+/A = 4.0, A- = 3.7, pass grade C, E = 0.0, 12-grade scale, D pass criteria discontinued from the 2022 regular intake.",
+            "access_note": "Article content was observed through search-engine summaries on 2026-10-20; the page returned HTTP 403 to automated retrieval, so it was not read verbatim."
+          },
+          {
+            "source_id": "SRC-SLIIT-GPA-CALCULATOR-PUBLIC",
+            "title": "SLIIT GPA Calculator (public, unofficial student tool)",
+            "url": "https://detunu-wijeratne.github.io/sliit-gpa-calculator/",
+            "used_for": "Full grade -> grade point -> marks-range table (corroborates the official article for A+ to B+).",
+            "access_note": "Retrieved 2026-10-20. Unofficial; used only as corroboration."
+          }
+        ],
+        "transcribed_by": "C3 research team",
+        "transcribed_on": "2026-10-20",
+        "verified_by_institution": false
+      },
+      "scale_maximum": 4.0,
+      "grade_point_precision": 1,
+      "grades": [
+        {"grade": "A+", "grade_point": 4.0, "marks_min": 90, "marks_max": 100, "counts_as_pass": true},
+        {"grade": "A",  "grade_point": 4.0, "marks_min": 80, "marks_max": 89,  "counts_as_pass": true},
+        {"grade": "A-", "grade_point": 3.7, "marks_min": 75, "marks_max": 79,  "counts_as_pass": true},
+        {"grade": "B+", "grade_point": 3.3, "marks_min": 70, "marks_max": 74,  "counts_as_pass": true},
+        {"grade": "B",  "grade_point": 3.0, "marks_min": 65, "marks_max": 69,  "counts_as_pass": true},
+        {"grade": "B-", "grade_point": 2.7, "marks_min": 60, "marks_max": 64,  "counts_as_pass": true},
+        {"grade": "C+", "grade_point": 2.3, "marks_min": 55, "marks_max": 59,  "counts_as_pass": true},
+        {"grade": "C",  "grade_point": 2.0, "marks_min": 45, "marks_max": 54,  "counts_as_pass": true},
+        {"grade": "C-", "grade_point": 1.7, "marks_min": 40, "marks_max": 44,  "counts_as_pass": false},
+        {"grade": "D+", "grade_point": 1.3, "marks_min": 35, "marks_max": 39,  "counts_as_pass": false},
+        {"grade": "D",  "grade_point": 1.0, "marks_min": 30, "marks_max": 34,  "counts_as_pass": false},
+        {"grade": "E",  "grade_point": 0.0, "marks_min": 0,  "marks_max": 29,  "counts_as_pass": false}
+      ],
+      "known_unverified_aspects": [
+        "Exact repeat-module grade capping rules",
+        "Treatment of non-GPA (pass/fail) modules on transcripts",
+        "Official GPA rounding/display rule",
+        "Faculty-specific weighted GPA (WGPA) year weights and class thresholds"
+      ]
+    },
+    {
+      "item_id": "KB-GPA-WGPA-YEAR-WEIGHTS",
+      "status": "RECORDED_NOT_GENERATED",
+      "description": "Weighted GPA by academic year as publicly described for SLIIT degree classification. No accepted C1 requirement asks for WGPA, so C3 records the fact but generates nothing from it.",
+      "weights_by_faculty": {
+        "COMPUTING": [0.0, 0.2, 0.3, 0.5],
+        "BUSINESS": [0.1, 0.2, 0.3, 0.4],
+        "ENGINEERING": [0.1, 0.2, 0.3, 0.4]
+      },
+      "applies_to": "Intakes from 2017 onwards, per the SLIIT Support Desk description (search-summary observation, unverified).",
+      "source_id": "SRC-SLIIT-SUPPORT-GRADING"
+    }
+  ]
+}

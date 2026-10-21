@@ -1,0 +1,52 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-DB-001",
+      "version": "1.0.0",
+      "category": "DATABASE",
+      "priority": 80,
+      "description": "PostgreSQL migration derived from released entities and approved constraints, applied only inside the disposable environment.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "stack_id",
+            "equals": "react-nodejs"
+          },
+          {
+            "fact": "concern",
+            "equals": "DATABASE"
+          },
+          {
+            "fact": "persistence_required",
+            "equals": true
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "db.schema",
+          "be.app"
+        ],
+        "artifact_types": [
+          "DATABASE"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-DB-CONVENTIONS",
+        "KB-TYPE-MAP"
+      ],
+      "validation_requirements": [
+        "V-D2C-ENTITIES"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}

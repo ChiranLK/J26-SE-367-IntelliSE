@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "HumanOverrideScope": {
+      "enum": [
+        "C2_NEEDS_HUMAN_REVIEW_RELEASE"
+      ],
+      "title": "HumanOverrideScope",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Explicit, version-bound and auditable override. FAILED inputs can never be overridden.",
+  "properties": {
+    "approval_reference": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Approval Reference",
+      "type": "string"
+    },
+    "approved_at_utc": {
+      "maxLength": 40,
+      "minLength": 10,
+      "title": "Approved At Utc",
+      "type": "string"
+    },
+    "approved_by": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Approved By",
+      "type": "string"
+    },
+    "bound_project_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Bound Project Id",
+      "type": "string"
+    },
+    "bound_srs_version": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Bound Srs Version",
+      "type": "string"
+    },
+    "bound_uml_version": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Bound Uml Version",
+      "type": "string"
+    },
+    "override_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Override Id",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 600,
+      "minLength": 10,
+      "title": "Reason",
+      "type": "string"
+    },
+    "scope": {
+      "$ref": "#/$defs/HumanOverrideScope"
+    }
+  },
+  "required": [
+    "override_id",
+    "scope",
+    "reason",
+    "approved_by",
+    "approval_reference",
+    "bound_project_id",
+    "bound_srs_version",
+    "bound_uml_version",
+    "approved_at_utc"
+  ],
+  "title": "HumanOverride",
+  "type": "object"
+}

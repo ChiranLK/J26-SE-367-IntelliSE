@@ -1,0 +1,47 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-LIBRARY-MANAGEMENT-001",
+    "srs_version": "SRS-LIBRARY-1.0",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "SIMULATED-C1-LIBRARY-APPROVAL-001",
+    "validation_report_ref": "SIMULATED-C1-LIBRARY-VALIDATION-001",
+    "requirements": [
+      {"requirement_id": "REQ-BOOK-001", "title": "Librarians can create and list books", "status": "APPROVED"},
+      {"requirement_id": "REQ-BOOK-002", "title": "Librarians can update and delete books", "status": "APPROVED"},
+      {"requirement_id": "REQ-BOOK-003", "title": "Book persistence uses a mockable repository boundary", "status": "APPROVED"},
+      {"requirement_id": "REQ-MEMBER-001", "title": "Librarians can create and list members", "status": "APPROVED"},
+      {"requirement_id": "REQ-MEMBER-002", "title": "Librarians can update and delete members", "status": "APPROVED"},
+      {"requirement_id": "REQ-MEMBER-003", "title": "Member persistence uses a mockable repository boundary", "status": "APPROVED"}
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJECT-LIBRARY-MANAGEMENT-001",
+    "source_srs_version": "SRS-LIBRARY-1.0",
+    "uml_version": "UML-LIBRARY-1.0",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "SIMULATED-C2-LIBRARY-VALIDATION-001",
+    "uml_elements": [
+      {
+        "uml_id": "UML-LIBRARY-CLASS-001",
+        "element_type": "CLASS_DIAGRAM",
+        "name": "LibraryManagementClasses",
+        "plantuml_source": "@startuml\nclass Book {\n  +id: String\n  +title: String\n  +publishedDate: Date\n  +available: Boolean\n}\nclass BookService {\n  +list(): Book\n  +create(title: String, publishedDate: Date, available: Boolean): Book\n  +update(id: String): Book\n  +remove(id: String): void\n}\nclass BookRepository {\n  +list(): Book\n  +findById(id: String): Book\n  +create(value: Book): Book\n  +update(id: String): Book\n  +remove(id: String): void\n}\nclass Member {\n  +id: String\n  +name: String\n  +borrowLimit: Integer\n}\nclass MemberService {\n  +list(): Member\n  +create(name: String, borrowLimit: Integer): Member\n  +update(id: String): Member\n  +remove(id: String): void\n}\nclass MemberRepository {\n  +list(): Member\n  +findById(id: String): Member\n  +create(value: Member): Member\n  +update(id: String): Member\n  +remove(id: String): void\n}\nBookService --> BookRepository : uses\nBookRepository --> Book : persists\nMemberService --> MemberRepository : uses\nMemberRepository --> Member : persists\n@enduml"
+      }
+    ],
+    "ui_artifacts": [
+      {"ui_id": "UI-LIBRARY-WIREFRAME-001", "artifact_type": "WIREFRAME", "source_ref": "simulated://c2/wireframes/library-management"}
+    ],
+    "requirement_uml_anchors": [
+      {"anchor_id": "ANCHOR-BOOK-001", "requirement_id": "REQ-BOOK-001", "uml_id": "UML-LIBRARY-CLASS-001"},
+      {"anchor_id": "ANCHOR-BOOK-002", "requirement_id": "REQ-BOOK-002", "uml_id": "UML-LIBRARY-CLASS-001"},
+      {"anchor_id": "ANCHOR-BOOK-003", "requirement_id": "REQ-BOOK-003", "uml_id": "UML-LIBRARY-CLASS-001"},
+      {"anchor_id": "ANCHOR-MEMBER-001", "requirement_id": "REQ-MEMBER-001", "uml_id": "UML-LIBRARY-CLASS-001"},
+      {"anchor_id": "ANCHOR-MEMBER-002", "requirement_id": "REQ-MEMBER-002", "uml_id": "UML-LIBRARY-CLASS-001"},
+      {"anchor_id": "ANCHOR-MEMBER-003", "requirement_id": "REQ-MEMBER-003", "uml_id": "UML-LIBRARY-CLASS-001"}
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-FE-GPA-FORM-001",
+      "version": "1.0.0",
+      "category": "FRONTEND",
+      "priority": 80,
+      "description": "Accessible GPA entry form with dynamic module rows, grade selector, credit input, result and policy disclosure.",
+      "target_kind": "UI_SCREEN",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "components",
+            "contains": "DYNAMIC_ROWS"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "fe.gpa-form"
+        ],
+        "artifact_types": [
+          "FRONTEND"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-GPA-GRADE-SCALE",
+        "KB-TEST-SEAMS"
+      ],
+      "validation_requirements": [],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}
