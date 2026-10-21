@@ -114,6 +114,27 @@ def test_overview_reports_missing_model_and_unreachable_ollama_honestly(
     assert "ConnectError" in down["detail"]
 
 
+def test_engine_reload_invalidates_provider_bound_hybrid_services(
+    demo_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GENERATION_PROVIDER", "openrouter")
+    monkeypatch.setenv("TEAMSOCLO_MODEL", "claude-opus-5-5")
+    monkeypatch.setattr(
+        demo_support.httpx,
+        "get",
+        lambda url, timeout: _FakeTagsResponse({"models": []}),
+    )
+    demo_client.app.state.hybrid_pipeline = object()
+    demo_client.app.state.hybrid_preview = object()
+
+    response = demo_client.post("/api/v1/demo/engine-reload")
+
+    assert response.status_code == 200
+    assert demo_client.app.state.settings.teamsoclo_model == "claude-opus-5-5"
+    assert demo_client.app.state.hybrid_pipeline is None
+    assert demo_client.app.state.hybrid_preview is None
+
+
 # ------------------------------------------------------------------ fixtures
 
 

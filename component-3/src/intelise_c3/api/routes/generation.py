@@ -46,16 +46,20 @@ async def create_generation_run(
     request: Request,
 ) -> GenerationRunResult:
     """Generate without running, installing, building, or deploying artifacts."""
-    if generation_request.mode is GenerationMode.EXPERIMENTAL_CLAUDE:
+    dedicated = {
+        GenerationMode.EXPERIMENTAL_CLAUDE: "/api/v1/experiments/claude-generation",
+        GenerationMode.EXPERIMENTAL_OPENROUTER: "/api/v1/experiments/openrouter-generation",
+    }
+    if generation_request.mode in dedicated:
         raise ApplicationError(
             [
                 ErrorDetail(
                     code="EXPERIMENTAL_MODE_REJECTED",
                     field="mode",
                     message=(
-                        "Experimental Claude generation is forbidden on the default "
-                        "research endpoint /api/v1/generation-runs. Use the dedicated "
-                        "experimental endpoint /api/v1/experiments/claude-generation."
+                        f"Experimental {generation_request.mode.value} generation is forbidden on the "
+                        "default research endpoint /api/v1/generation-runs. Use the dedicated "
+                        f"experimental endpoint {dedicated[generation_request.mode]}."
                     ),
                 )
             ],
@@ -63,6 +67,23 @@ async def create_generation_run(
         )
 
     settings = request.app.state.settings
+    if (
+        generation_request.mode is GenerationMode.LOCAL_LLM
+        and getattr(settings, "generation_provider", "ollama") == "openrouter"
+    ):
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="LOCAL_OLLAMA_DISABLED",
+                    field="mode",
+                    message=(
+                        "Local Ollama is disabled by GENERATION_PROVIDER=openrouter. "
+                        "Use /api/v1/experiments/openrouter-generation."
+                    ),
+                )
+            ],
+            status_code=status.HTTP_409_CONFLICT,
+        )
     llm_client = (
         OllamaLLMClient(settings)
         if generation_request.mode is GenerationMode.LOCAL_LLM

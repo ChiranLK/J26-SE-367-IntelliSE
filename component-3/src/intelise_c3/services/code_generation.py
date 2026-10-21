@@ -163,6 +163,13 @@ class _ModelGeneratedArtifact(BaseModel):
         return value
 
 
+#: Explicit experimental external-model modes and the origin recorded for their output.
+EXPERIMENTAL_MODE_ORIGINS = {
+    GenerationMode.EXPERIMENTAL_CLAUDE: ArtifactOrigin.EXPERIMENTAL_CLAUDE,
+    GenerationMode.EXPERIMENTAL_OPENROUTER: ArtifactOrigin.EXPERIMENTAL_OPENROUTER,
+}
+
+
 class CodeGenerationService:
     """Authorize, generate, validate, and write without executing artifacts."""
 
@@ -224,12 +231,12 @@ class CodeGenerationService:
                 service_artifact = self._parse_model_artifact(llm_result.output_text)
                 llm_metadata = llm_result.metadata
                 service_origin = ArtifactOrigin.LOCAL_LLM
-            elif request.mode is GenerationMode.EXPERIMENTAL_CLAUDE:
+            elif request.mode in EXPERIMENTAL_MODE_ORIGINS:
                 if self._llm_client is None:
                     self._fail(
-                        "EXPERIMENTAL_CLAUDE_CLIENT_REQUIRED",
+                        f"{request.mode.value}_CLIENT_REQUIRED",
                         "mode",
-                        "EXPERIMENTAL_CLAUDE mode requires the configured TeamSocLo client.",
+                        f"{request.mode.value} mode requires its configured external-model client.",
                         status.HTTP_503_SERVICE_UNAVAILABLE,
                     )
                 best_practices = rag.retrieve(
@@ -254,7 +261,7 @@ class CodeGenerationService:
                 llm_result = await self._llm_client.generate(prompt_request)
                 service_artifact = self._parse_model_artifact(llm_result.output_text)
                 llm_metadata = llm_result.metadata
-                service_origin = ArtifactOrigin.EXPERIMENTAL_CLAUDE
+                service_origin = EXPERIMENTAL_MODE_ORIGINS[request.mode]
             else:
                 service_artifact = template_task_service()
                 service_origin = ArtifactOrigin.TEMPLATE
@@ -289,12 +296,12 @@ class CodeGenerationService:
             mapping_policy_version = DYNAMIC_TRACEABILITY_MAPPING_POLICY_VERSION
             manifest_spec = crud_spec
 
-            if request.mode is GenerationMode.EXPERIMENTAL_CLAUDE:
+            if request.mode in EXPERIMENTAL_MODE_ORIGINS:
                 if self._llm_client is None:
                     self._fail(
-                        "EXPERIMENTAL_CLAUDE_CLIENT_REQUIRED",
+                        f"{request.mode.value}_CLIENT_REQUIRED",
                         "mode",
-                        "EXPERIMENTAL_CLAUDE mode requires the configured TeamSocLo client.",
+                        f"{request.mode.value} mode requires its configured external-model client.",
                         status.HTTP_503_SERVICE_UNAVAILABLE,
                     )
                 entity = crud_spec.entities[0]
@@ -334,7 +341,7 @@ class CodeGenerationService:
                     required_patterns=required_patterns,
                 )
                 llm_metadata = llm_result.metadata
-                service_origin = ArtifactOrigin.EXPERIMENTAL_CLAUDE
+                service_origin = EXPERIMENTAL_MODE_ORIGINS[request.mode]
 
                 artifacts_list = []
                 for art in artifacts:
@@ -384,7 +391,7 @@ class CodeGenerationService:
             crud_spec=manifest_spec,
             rag_evidence=rag.evidence(),
         )
-        if request.mode is GenerationMode.EXPERIMENTAL_CLAUDE:
+        if request.mode in EXPERIMENTAL_MODE_ORIGINS:
             workspace_prefix = (
                 PurePosixPath(request.workspace_name)
                 if str(request.workspace_name).startswith("experiments/")

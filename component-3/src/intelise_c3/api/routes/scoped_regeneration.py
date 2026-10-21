@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 
 from intelise_c3.contracts.scoped_regeneration import ScopedRegenerationRequest
-from intelise_c3.core.errors import ErrorResponse
+from intelise_c3.core.errors import ApplicationError, ErrorDetail, ErrorResponse
 from intelise_c3.domain.scoped_regeneration import (
     ImpactSelectionReport,
     ScopedRegenerationResult,
@@ -101,4 +101,18 @@ async def create_scoped_regeneration(
     request: Request,
 ) -> ScopedRegenerationResult:
     """Never overwrites the source run and never claims a repair succeeded."""
+    if getattr(request.app.state.settings, "generation_provider", "ollama") == "openrouter":
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="LOCAL_OLLAMA_DISABLED",
+                    field="generation_provider",
+                    message=(
+                        "Local-Ollama scoped regeneration is disabled by "
+                        "GENERATION_PROVIDER=openrouter."
+                    ),
+                )
+            ],
+            status_code=409,
+        )
     return await _service(request, with_model=True).regenerate(payload)

@@ -72,16 +72,28 @@ class TeamSocLoResponseMetadata(DomainModel):
     total_tokens: int | None = None
 
 
+class OpenRouterResponseMetadata(DomainModel):
+    """Non-sensitive response statistics returned by the OpenRouter API."""
+
+    id: str | None = None
+    model: str
+    upstream_provider: str | None = None
+    finish_reason: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+
+
 class LLMInferenceMetadata(DomainModel):
     """Reproducibility record for an LLM inference request."""
 
-    provider: Literal["ollama-local", "teamsoclo-claude"] = "ollama-local"
+    provider: Literal["ollama-local", "teamsoclo-claude", "openrouter"] = "ollama-local"
     configured_model_identifier: str
     response_model_identifier: str
     prompt_template_version: str
     generation_parameters: LLMGenerationParameters
     client_inference_latency_ms: float
-    response: OllamaResponseMetadata | TeamSocLoResponseMetadata
+    response: OllamaResponseMetadata | TeamSocLoResponseMetadata | OpenRouterResponseMetadata
 
 
 class LLMInferenceResponse(DomainModel):

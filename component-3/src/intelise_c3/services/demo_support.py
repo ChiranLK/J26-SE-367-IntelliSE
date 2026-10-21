@@ -20,6 +20,8 @@ from intelise_c3.contracts.demo import (
     DemoOverview,
     IntegrationStatus,
     OllamaStatus,
+    OpenRouterStatus,
+    TeamSocLoStatus,
     SimulatedFixture,
     WorkspaceRunRequest,
 )
@@ -144,11 +146,44 @@ def probe_ollama(settings: Settings) -> OllamaStatus:
     )
 
 
+def openrouter_status(settings: Settings) -> OpenRouterStatus:
+    """Report configuration only: never the key, and no network call."""
+    return OpenRouterStatus(
+        enabled=bool(getattr(settings, "openrouter_experiment_enabled", False)),
+        key_configured=bool((getattr(settings, "openrouter_api_key", None) or "").strip()),
+        model=getattr(settings, "openrouter_model", None),
+    )
+
+
+def teamsoclo_status(settings: Settings) -> TeamSocLoStatus:
+    """Report TeamSocLo configuration without exposing or calling with the key."""
+    return TeamSocLoStatus(
+        enabled=bool(getattr(settings, "teamsoclo_experiment_enabled", False)),
+        key_configured=bool((getattr(settings, "teamsoclo_api_key", None) or "").strip()),
+        model=getattr(settings, "teamsoclo_model", None),
+    )
+
+
 def build_overview(settings: Settings) -> DemoOverview:
+    provider = getattr(settings, "generation_provider", "ollama")
+    if provider == "openrouter":
+        ollama = OllamaStatus(
+            base_url="disabled",
+            configured_model="disabled",
+            reachable=False,
+            model_installed=None,
+            detail="Local Ollama is disabled by GENERATION_PROVIDER=openrouter; no probe was made.",
+            checked_at_utc=datetime.now(UTC).isoformat(),
+        )
+    else:
+        ollama = probe_ollama(settings)
     return DemoOverview(
         service_name=settings.service_name,
         api_version=settings.api_version,
-        ollama=probe_ollama(settings),
+        generation_provider=provider,
+        ollama=ollama,
+        openrouter=openrouter_status(settings),
+        teamsoclo=teamsoclo_status(settings),
         generated_workspace_root_name=settings.generated_workspace_root.name,
         traceability_store_name=settings.traceability_store_path.name,
         integrations=_INTEGRATIONS,

@@ -67,7 +67,7 @@ class TeamSocLoClaudeLLMClient:
 
         payload: dict[str, Any] = {
             "model": model,
-            "max_tokens": 4096,
+            "max_tokens": getattr(self._settings, "teamsoclo_max_tokens", 4096),
             "temperature": 0.0,
             "messages": anthropic_messages,
         }
@@ -126,15 +126,22 @@ class TeamSocLoClaudeLLMClient:
         except (JSONDecodeError, ValueError) as exception:
             raise self._application_error(
                 "TEAMSOCLO_INVALID_RESPONSE",
-                "TeamSocLo returned malformed JSON response.",
+                "TeamSocLo returned malformed JSON response "
+                f"(HTTP {response.status_code}, content-type {response.headers.get('content-type', '?')}, {len(response.content)} bytes).",
                 status.HTTP_502_BAD_GATEWAY,
             ) from exception
 
         text_content = self._extract_text_content(body)
         if not text_content:
+            # Safe diagnostics only: structure and counters, never model text.
+            blocks = [b.get("type") for b in body.get("content", []) if isinstance(b, dict)] if isinstance(body.get("content"), list) else type(body.get("content")).__name__
+            usage_hint = body.get("usage") if isinstance(body.get("usage"), dict) else {}
             raise self._application_error(
                 "TEAMSOCLO_INVALID_RESPONSE",
-                "TeamSocLo returned empty or non-text response content.",
+                "TeamSocLo returned empty or non-text response content "
+                f"(stop_reason={body.get('stop_reason')}, content blocks={blocks}, "
+                f"output_tokens={usage_hint.get('output_tokens')}, body type={body.get('type')}, "
+                f"answered_by={body.get('model')}).",
                 status.HTTP_502_BAD_GATEWAY,
             )
 
@@ -156,7 +163,7 @@ class TeamSocLoClaudeLLMClient:
             generation_parameters=LLMGenerationParameters(
                 temperature=0.0,
                 timeout_seconds=self._settings.teamsoclo_timeout_seconds,
-                max_tokens=4096,
+                max_tokens=getattr(self._settings, "teamsoclo_max_tokens", 4096),
             ),
             client_inference_latency_ms=latency_ms,
             response=TeamSocLoResponseMetadata(

@@ -45,10 +45,41 @@ class IntegrationStatus(DomainModel):
     note: str
 
 
+class OpenRouterStatus(DomainModel):
+    """Configuration state only (no network call); the key itself is never exposed."""
+
+    enabled: bool = False
+    key_configured: bool = False
+    model: str | None = None
+
+
+class TeamSocLoStatus(DomainModel):
+    """Configuration state only; the API key itself is never exposed."""
+
+    enabled: bool = False
+    key_configured: bool = False
+    model: str | None = None
+
+
+class OpenRouterCheck(DomainModel):
+    """Result of one explicit, tiny OpenRouter connectivity call (no C1/C2 content)."""
+
+    ok: bool
+    configured_model: str
+    response_model: str
+    upstream_provider: str | None = None
+    reply: str
+    latency_ms: float
+    total_tokens: int | None = None
+
+
 class DemoOverview(DomainModel):
     service_name: str
     api_version: str
+    generation_provider: Literal["ollama", "openrouter"] = "ollama"
     ollama: OllamaStatus
+    openrouter: OpenRouterStatus = OpenRouterStatus()
+    teamsoclo: TeamSocLoStatus = TeamSocLoStatus()
     generated_workspace_root_name: str
     traceability_store_name: str
     integrations: tuple[IntegrationStatus, ...]

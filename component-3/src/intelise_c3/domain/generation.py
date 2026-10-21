@@ -16,6 +16,7 @@ class ArtifactOrigin(StrEnum):
     TEMPLATE = "TEMPLATE"
     LOCAL_LLM = "LOCAL_LLM"
     EXPERIMENTAL_CLAUDE = "EXPERIMENTAL_CLAUDE"
+    EXPERIMENTAL_OPENROUTER = "EXPERIMENTAL_OPENROUTER"
 
 
 class GeneratedArtifactType(StrEnum):

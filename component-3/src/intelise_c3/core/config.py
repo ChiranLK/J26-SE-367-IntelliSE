@@ -15,6 +15,13 @@ class Settings(BaseSettings):
 
     service_name: str = "intelise-component-3"
     api_version: str = "v1"
+    generation_provider: Literal["ollama", "openrouter"] = Field(
+        default="ollama",
+        description=(
+            "Application-wide generation provider. When set to openrouter the API "
+            "does not probe or invoke local Ollama generation paths."
+        ),
+    )
     ollama_base_url: AnyHttpUrl = Field(
         default="http://127.0.0.1:11434",
         description="Base URL of the locally running Ollama service.",
@@ -85,10 +92,65 @@ class Settings(BaseSettings):
         description="Model identifier for experimental Claude inference.",
     )
     teamsoclo_timeout_seconds: float = Field(
-        default=120.0,
+        default=600.0,
         gt=0.0,
         le=600.0,
         description="Timeout for experimental TeamSocLo requests in seconds.",
+    )
+
+    teamsoclo_max_tokens: int = Field(
+        default=32000,
+        ge=256,
+        le=32000,
+        description="Completion-token cap for TeamSocLo requests (the client used a fixed 4096 before).",
+    )
+
+    openrouter_experiment_enabled: bool = Field(
+        default=False,
+        description="Explicit gate enabling the experimental OpenRouter workflow.",
+    )
+    openrouter_api_key: str | None = Field(
+        default=None,
+        description="OpenRouter API key loaded from the backend environment only.",
+    )
+    openrouter_base_url: AnyHttpUrl = Field(
+        default="https://openrouter.ai/api/v1",
+        description="Base URL of the OpenRouter OpenAI-compatible API.",
+    )
+    openrouter_model: str = Field(
+        default="openai/gpt-4o",
+        min_length=1,
+        description="OpenRouter model identifier (provider/model).",
+    )
+    openrouter_timeout_seconds: float = Field(
+        default=300.0,
+        gt=0.0,
+        le=600.0,
+        description="Timeout for experimental OpenRouter requests in seconds.",
+    )
+    openrouter_max_tokens: int = Field(
+        default=4096,
+        ge=256,
+        le=32768,
+        description="Maximum completion tokens for each OpenRouter request.",
+    )
+    openrouter_reasoning_effort: Literal[
+        "omit", "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ] = Field(
+        default="omit",
+        description=(
+            "Optional OpenRouter reasoning effort. 'omit' is portable across models; "
+            "the completion-token cap still bounds hidden reasoning."
+        ),
+    )
+    openrouter_http_referer: str | None = Field(
+        default=None,
+        description="Optional HTTP-Referer attribution header sent to OpenRouter.",
+    )
+    openrouter_app_title: str = Field(
+        default="InteliSE Component 3",
+        min_length=1,
+        description="X-Title attribution header sent to OpenRouter.",
     )
 
     hybrid_llm_max_input_tokens: int = Field(
@@ -140,6 +202,24 @@ class Settings(BaseSettings):
         if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
             raise ValueError("HYBRID_LLM_CACHE_DIR must be a child of component-3/.")
         return resolved
+
+    @field_validator("openrouter_base_url")
+    @classmethod
+    def require_https_openrouter_endpoint(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        """The bearer key is only ever sent over HTTPS and never inside the URL."""
+        if value.scheme != "https":
+            raise ValueError("OPENROUTER_BASE_URL must use https.")
+        if value.username is not None or value.password is not None or value.query:
+            raise ValueError("OPENROUTER_BASE_URL must not contain credentials or a query.")
+        return value
+
+    @field_validator("openrouter_model")
+    @classmethod
+    def normalize_openrouter_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("OPENROUTER_MODEL must not be blank.")
+        return normalized
 
     @field_validator("teamsoclo_model")
     @classmethod
