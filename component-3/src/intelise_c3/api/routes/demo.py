@@ -194,15 +194,27 @@ class EngineSwitchRequest(BaseModel):
     custom_model: str | None = None
 
 
+def _install_reloaded_settings(request: Request) -> Settings:
+    """Reload settings and discard services that captured the old provider config."""
+    get_settings.cache_clear()
+    new_settings = Settings()
+    request.app.state.settings = new_settings
+
+    # The hybrid pipeline owns provider factories and the preview service owns
+    # that pipeline. Keeping either instance would silently retain the previous
+    # model/API configuration after an .env reload.
+    request.app.state.hybrid_pipeline = None
+    request.app.state.hybrid_preview = None
+    return new_settings
+
+
 @router.post(
     "/engine-reload",
     response_model=DemoOverview,
     summary="Reload Component 3 settings from .env without restarting FastAPI",
 )
 def reload_engine_settings(request: Request) -> DemoOverview:
-    get_settings.cache_clear()
-    new_settings = Settings()
-    request.app.state.settings = new_settings
+    new_settings = _install_reloaded_settings(request)
     return demo_support.build_overview(new_settings)
 
 
@@ -215,7 +227,5 @@ def switch_engine(payload: EngineSwitchRequest, request: Request) -> DemoOvervie
     demo_support.switch_inference_engine(
         payload.engine, payload.colab_tunnel_url, payload.custom_model
     )
-    get_settings.cache_clear()
-    new_settings = Settings()
-    request.app.state.settings = new_settings
+    new_settings = _install_reloaded_settings(request)
     return demo_support.build_overview(new_settings)
