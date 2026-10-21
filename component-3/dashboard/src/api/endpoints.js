@@ -22,7 +22,7 @@ export const api = {
     apiRequest("/demo/preview/stop", { method: "POST", body: { preview_id: previewId } }),
   previewStatus: (previewId) => apiRequest(`/demo/preview/${encodeURIComponent(previewId)}`),
 
-  // Rule-governed hybrid pipeline (KB + rules + templates + RAG + bounded model).
+  // Rule-governed hybrid pipeline (KB + rules + templates + RAG + bounded OpenRouter).
   hybridOverview: () => apiRequest("/hybrid/overview", { timeoutMs: 30000 }),
   hybridFixture: (fixtureId) => apiRequest(`/hybrid/fixtures/${encodeURIComponent(fixtureId)}`),
   hybridValidate: (inputPackage) => apiRequest("/hybrid/contracts/validate", { method: "POST", body: inputPackage }),
@@ -69,6 +69,8 @@ export const api = {
     `${API_PREFIX}/behaviour/workspace/archive?workspace_relative_path=${encodeURIComponent(workspaceRelativePath)}`,
   behaviourStop: (workspaceRelativePath) =>
     apiRequest("/behaviour/apps/stop", { method: "POST", body: { workspace_relative_path: workspaceRelativePath } }),
+  openrouterCheck: () => apiRequest("/experiments/openrouter-check", { method: "POST", body: {}, timeoutMs: 2 * MINUTE }),
+  generateOpenRouter: (request) =>
     apiRequest("/experiments/openrouter-generation", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),
   generateExperimental: (request) =>
     apiRequest("/experiments/claude-generation", { method: "POST", body: request, timeoutMs: 6 * MINUTE }),

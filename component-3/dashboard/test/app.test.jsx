@@ -52,12 +52,13 @@ describe("backend status", () => {
 
     render(<App />);
 
-    expect(await screen.findByText(/intelise-component-3 · ok/)).toBeInTheDocument();
-    expect(screen.getByText("reachable · model installed")).toBeInTheDocument();
+    expect(await screen.findByText("Ollama Local ready")).toBeInTheDocument();
+    expect(screen.getByText("qwen2.5-coder:3b")).toBeInTheDocument();
+    expect(screen.queryByText("API healthy")).not.toBeInTheDocument();
+    expect(screen.queryByText("C4 NOT INTEGRATED")).not.toBeInTheDocument();
     expect(called("GET /api/v1/health")).toHaveLength(1);
     expect(called("GET /api/v1/demo/overview")).toHaveLength(1);
-    expect(screen.getByText("SIMULATED FIXTURE")).toBeInTheDocument();
-    expect(screen.getByText("NOT INTEGRATED")).toBeInTheDocument();
+    expect(screen.queryByText("SIMULATED FIXTURE")).not.toBeInTheDocument();
   });
 
   it("shows the API as unreachable instead of pretending it is healthy", async () => {
@@ -65,10 +66,9 @@ describe("backend status", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("unreachable")).toBeInTheDocument();
-    expect(await screen.findByText("API unreachable")).toBeInTheDocument();
-    expect(screen.getByTestId("error-panel")).toHaveTextContent("Backend unreachable");
-    expect(screen.getByText("Ollama unknown")).toBeInTheDocument();
+    expect(await screen.findByTestId("error-panel")).toHaveTextContent("Backend unreachable");
+    expect(screen.queryByText("API healthy")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ollama Local/)).not.toBeInTheDocument();
   });
 
   it("warns when Ollama is up but the model is missing", async () => {
@@ -82,147 +82,117 @@ describe("backend status", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("reachable · model missing")).toBeInTheDocument();
-    expect(screen.getByText("Local-model steps are unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("Ollama model missing")).toBeInTheDocument();
   });
 });
 
 describe("C1/C2 inputs", () => {
-  const openAdvancedInputs = async (user) => {
-    await user.click(screen.getByText("Advanced JSON contracts and simulated test fixtures"));
+  const C1_TEXT = ["R01 | FR | Unreviewed model prediction", "Add two numbers.", "Requirement ID: req-1"].join(String.fromCharCode(10));
+  const C2_TEXT = ["@startuml", "class Addition", "@enduml"].join(String.fromCharCode(10));
+  const fillDocuments = () => {
+    fireEvent.change(screen.getByLabelText("C1 finalized SRS text"), { target: { value: C1_TEXT } });
+    fireEvent.change(screen.getByLabelText("C2 finalized PlantUML source"), { target: { value: C2_TEXT } });
   };
 
-  it("accepts pasted finalized C1 SRS text and C2 PlantUML source in the primary PP1 intake", async () => {
+  it("offers TXT, PlantUML, and JSON files in both upload controls without extension labels", async () => {
     const user = userEvent.setup();
     installFetch(baseRoutes());
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
 
-    await user.type(screen.getByLabelText("C1 finalized SRS text"), "R01 | FR | Unreviewed model prediction\nAdd two numbers.\nRequirement ID: req-1");
-    await user.type(screen.getByLabelText("C2 finalized PlantUML source"), "@startuml\nclass Calculator\n@enduml");
-
-    expect(screen.getByText("req-1")).toBeInTheDocument();
-    expect(screen.getByText("VALID")).toBeInTheDocument();
-    expect(screen.getByText(/C2_RELEASE_METADATA_MISSING/)).toBeInTheDocument();
+    for (const upload of [screen.getByLabelText("Upload C1 SRS document"), screen.getByLabelText("Upload C2 PlantUML document")]) {
+      expect(upload).toHaveAttribute("accept", ".txt,.puml,.json");
+    }
+    expect(screen.queryByText(".txt")).not.toBeInTheDocument();
+    expect(screen.queryByText(".puml")).not.toBeInTheDocument();
   });
 
-  it("loads the simulated fixture and sends exactly that package to the validation API", async () => {
+  it("has no advanced JSON or fixture section any more", async () => {
     const user = userEvent.setup();
-    const { called } = installFetch({
-      ...baseRoutes(),
-      "GET /api/v1/demo/fixtures/input-package": { fixture_id: "input-package", classification: "SIMULATED_C1_C2_FIXTURE", notice: "SIMULATED fixture notice", payload: INPUT_PACKAGE },
-      "POST /api/v1/validate-input": GENERATION_CONTEXT,
-    });
+    installFetch(baseRoutes());
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
-    await openAdvancedInputs(user);
 
-    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
-    expect(await screen.findByText("SIMULATED fixture notice")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
+    expect(screen.queryByText(/Advanced JSON contracts/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Load Task Management fixture/ })).not.toBeInTheDocument();
+  });
 
-    expect(await screen.findByText("ACCEPTED by C3 validation")).toBeInTheDocument();
-    expect(called("POST /api/v1/validate-input")[0].body).toEqual(INPUT_PACKAGE);
-    expect(screen.getAllByText("SIMULATED C1/C2 FIXTURE").length).toBeGreaterThan(0);
+  it("shows pasted documents in plain language and keeps the IDs in the technical details", async () => {
+    const user = userEvent.setup();
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+
+    fillDocuments();
+
+    expect(screen.getByTestId("c1-summary")).toHaveTextContent("1 requirement found");
+    expect(screen.getByTestId("c2-summary")).toHaveTextContent("1 class found");
+    expect(screen.getByText("Add two numbers.")).toBeInTheDocument();
+    expect(screen.getByText(/Technical details/)).toBeInTheDocument();
+    expect(screen.queryByText(/notes about these documents/)).not.toBeInTheDocument();
+  });
+
+  it("validates with a single button and sends the package built from the two documents", async () => {
+    const user = userEvent.setup();
+    const { called } = installFetch({ ...baseRoutes(), "POST /api/v1/validate-input": GENERATION_CONTEXT });
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+
+    expect(screen.getByRole("button", { name: "Validate inputs" })).toBeDisabled();
+    fillDocuments();
+    await user.click(screen.getByRole("button", { name: "Validate inputs" }));
+
+    expect(await screen.findByText("Inputs accepted")).toBeInTheDocument();
+    const sent = called("POST /api/v1/validate-input")[0].body;
+    expect(sent.c1.requirements.map((item) => item.requirement_id)).toContain("req-1");
+    expect(screen.getByRole("button", { name: /Continue to Design/ })).toBeInTheDocument();
+  });
+
+  it("does not guess a class for a requirement that matches nothing in the diagram", async () => {
+    const user = userEvent.setup();
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+    fireEvent.change(screen.getByLabelText("C1 finalized SRS text"), { target: { value: C1_TEXT } });
+    fireEvent.change(screen.getByLabelText("C2 finalized PlantUML source"), { target: { value: ["@startuml", "class Invoice", "@enduml"].join(String.fromCharCode(10)) } });
+
+    await user.click(screen.getByRole("button", { name: "Validate inputs" }));
+
+    expect(await screen.findByTestId("error-panel")).toHaveTextContent("No class in the diagram matches the requirement");
+    expect(screen.queryByText("Inputs accepted")).not.toBeInTheDocument();
   });
 
   it("shows the backend's validation errors and does not mark the input accepted", async () => {
     const user = userEvent.setup();
     installFetch({
       ...baseRoutes(),
-      "GET /api/v1/demo/fixtures/input-package": { fixture_id: "input-package", classification: "SIMULATED_C1_C2_FIXTURE", notice: "n", payload: INPUT_PACKAGE },
       "POST /api/v1/validate-input": () => jsonResponse({ errors: [{ code: "REQUIREMENT_NOT_APPROVED", field: "c1.requirements[0].status", message: "Requirement REQ-1 is not approved." }] }, 422),
     });
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
-    await openAdvancedInputs(user);
-    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
+    fillDocuments();
 
-    await user.click(await screen.findByRole("button", { name: "Make a requirement DRAFT" }));
-    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
+    await user.click(screen.getByRole("button", { name: "Validate inputs" }));
 
     const panel = await screen.findByTestId("error-panel");
     expect(panel).toHaveTextContent("REQUIREMENT_NOT_APPROVED");
     expect(panel).toHaveTextContent("HTTP 422");
     expect(panel).toHaveTextContent("Requirement REQ-1 is not approved.");
-    expect(screen.queryByText("ACCEPTED by C3 validation")).not.toBeInTheDocument();
+    expect(screen.queryByText("Inputs accepted")).not.toBeInTheDocument();
   });
 
   it("shows an unreachable-backend error during validation without fake data", async () => {
     const user = userEvent.setup();
-    installFetch({
-      ...baseRoutes(),
-      "GET /api/v1/demo/fixtures/input-package": { fixture_id: "input-package", classification: "SIMULATED_C1_C2_FIXTURE", notice: "n", payload: INPUT_PACKAGE },
-    });
+    installFetch(baseRoutes());
     render(<App />);
     await openPage(user, /C1\/C2 Inputs/);
-    await openAdvancedInputs(user);
-    await user.click(screen.getByRole("button", { name: "Load Task Management fixture" }));
-    await screen.findByRole("button", { name: "Validate C1/C2 inputs" });
+    fillDocuments();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 
-    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
+    await user.click(screen.getByRole("button", { name: "Validate inputs" }));
 
     expect(await screen.findByTestId("error-panel")).toHaveTextContent("Backend unreachable");
-    expect(screen.queryByText("ACCEPTED by C3 validation")).not.toBeInTheDocument();
-  });
-
-  it("combines separately pasted C1 and C2 outputs without inventing upstream fields", async () => {
-    const user = userEvent.setup();
-    const { called } = installFetch({
-      ...baseRoutes(),
-      "POST /api/v1/validate-input": GENERATION_CONTEXT,
-    });
-    render(<App />);
-    await openPage(user, /C1\/C2 Inputs/);
-    await openAdvancedInputs(user);
-
-    fireEvent.change(screen.getByLabelText("Component 1 JSON"), {
-      target: { value: JSON.stringify(INPUT_PACKAGE.c1) },
-    });
-    fireEvent.change(screen.getByLabelText("Component 2 JSON"), {
-      target: { value: JSON.stringify(INPUT_PACKAGE.c2) },
-    });
-    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
-
-    expect(await screen.findByText("ACCEPTED by C3 validation")).toBeInTheDocument();
-    expect(called("POST /api/v1/validate-input")[0].body).toEqual(INPUT_PACKAGE);
-    expect(screen.getAllByText("PASTED_OR_EDITED")).toHaveLength(2);
-  });
-
-  it("adapts the limited PP1 C1/C2 JSON shapes and requires the missing C2 report reference", async () => {
-    const user = userEvent.setup();
-    const { called } = installFetch({ ...baseRoutes(), "POST /api/v1/validate-input": GENERATION_CONTEXT });
-    const c1 = {
-      contract_version: "1.0", project_id: "GPA", srs_version: "SRS-1", approval_status: "APPROVED",
-      approval_provenance_ref: "C1-APPROVAL", validation_report_ref: "C1-REPORT",
-      requirements: [{ requirement_id: "REQ-GPA-1", type: "FUNCTIONAL", title: "Calculate GPA", description: "SRS detail", priority: "MUST", status: "APPROVED" }],
-    };
-    const c2 = {
-      contract_version: "1.0", project_id: "GPA", source_srs_version: "SRS-1", uml_version: "UML-1",
-      release_status: "VALIDATED", validation_state: "PASSED",
-      uml_elements: [{ element_id: "UML-GPA-1", type: "CLASS_DIAGRAM", name: "GPA", plantuml_source: "@startuml\nclass GPA\n@enduml" }],
-      ui_artifacts: [{ artifact_id: "UI-GPA-1", type: "WIREFRAME", name: "GPA screen" }],
-      requirement_uml_anchors: [{ requirement_id: "REQ-GPA-1", uml_element_id: "UML-GPA-1" }],
-    };
-    render(<App />);
-    await openPage(user, /C1\/C2 Inputs/);
-    await openAdvancedInputs(user);
-
-    fireEvent.change(screen.getByLabelText("Component 1 JSON"), { target: { value: JSON.stringify(c1) } });
-    fireEvent.change(screen.getByLabelText("Component 2 JSON"), { target: { value: JSON.stringify(c2) } });
-    expect(screen.getByText(/C2_VALIDATION_REPORT_REF_REQUIRED/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Validate C1/C2 inputs" })).toBeDisabled();
-
-    await user.type(screen.getByLabelText("C2 validation report reference"), "SIMULATED-PP1-C2-REPORT");
-    await user.click(screen.getByRole("button", { name: "Validate C1/C2 inputs" }));
-
-    const sent = called("POST /api/v1/validate-input")[0].body;
-    expect(sent.c1.requirements[0]).toEqual({ requirement_id: "REQ-GPA-1", title: "Calculate GPA", status: "APPROVED" });
-    expect(sent.c2.uml_elements[0].uml_id).toBe("UML-GPA-1");
-    expect(sent.c2.uml_elements[0].plantuml_source).toContain("class GPA");
-    expect(sent.c2.validation_report_ref).toBe("SIMULATED-PP1-C2-REPORT");
-    expect(sent.c2.requirement_uml_anchors[0].anchor_id).toBe("C3-PP1-ADAPTER-ANCHOR-001");
+    expect(screen.queryByText("Inputs accepted")).not.toBeInTheDocument();
   });
 });
 
@@ -234,6 +204,18 @@ describe("Code generation", () => {
     approval: { status: "APPROVED_FOR_MVP_GENERATION", approvedBy: "me", approvalReference: "ref", acknowledgesProvisionalPolicy: true },
   });
 
+  it("drops the previous design, stack and approval as soon as the input is changed", async () => {
+    const user = userEvent.setup();
+    seedSession(approvedSession());
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /C1\/C2 Inputs/);
+    await user.type(screen.getByLabelText("C1 finalized SRS text"), " edited");
+    await openPage(user, /Design & Stack/);
+
+    expect(await screen.findByText("Select Analyze design to review the uploaded class diagram.")).toBeInTheDocument();
+  });
+
   it("explains the missing approval and keeps generation disabled", async () => {
     const user = userEvent.setup();
     installFetch(baseRoutes());
@@ -242,7 +224,117 @@ describe("Code generation", () => {
     await openPage(user, /Code Generation/);
 
     expect(screen.getByText("Approved stack required")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Generate with/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate with Ollama Local" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate with Google Colab" })).toBeDisabled();
+  });
+
+  it("generates a non-CRUD behaviour app and starts it on a new port", async () => {
+    const user = userEvent.setup();
+    seedSession({ ...approvedSession(), applicationProfile: "CUSTOM_NON_CRUD" });
+    const attempt = (unit, verdict, codes = []) => ({
+      unit, attempt: 1, temperature: 0, configured_model_identifier: "qwen2.5-coder:3b", response_model_identifier: "qwen2.5-coder:3b",
+      prompt_template_version: "behaviour-domain-per-class-v0", prompt_text_sha256: "a".repeat(64), prompt_request_sha256: "b".repeat(64),
+      client_inference_latency_ms: 10, verdict, syntax_check: "PASSED", findings: codes.map((code) => ({ code, message: code })),
+    });
+    const manifest = {
+      generation_run_id: "run-b1", application_profile: "CUSTOM_NON_CRUD_BEHAVIOUR", facade_class: "Calculator", facade_rule: "FACADE_MOST_PUBLIC_METHODS_V0",
+      prompt_template_version: "behaviour-domain-per-class-v0", artifact_digest_sha256: "c".repeat(64), trust_boundary: "Stage 0 boundary.",
+      attempts: [attempt("Addition", "ACCEPTED"), attempt("Calculator", "REJECTED", ["PROBE_INPUT_IGNORED"]), attempt("Calculator", "ACCEPTED")],
+      probe: { status: "PASSED", note: "probe note", plan: [], steps: [{ call: "enterNumber(12)", ok: true }], findings: [], warnings: [] },
+      files: [{ relative_path: "frontend/src/App.jsx", origin: "TEMPLATE", sha256: "f".repeat(64), size_bytes: 10 }, { relative_path: "backend/src/domain.mjs", origin: "LOCAL_LLM", sha256: "d".repeat(64), size_bytes: 10 }, { relative_path: "backend/server.mjs", origin: "TEMPLATE", sha256: "e".repeat(64), size_bytes: 10 }],
+    };
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "POST /api/v1/behaviour/generation-runs": { workspace_relative_path: "behaviour/x/run-b1", manifest_relative_path: "behaviour/x/run-b1/behaviour-manifest.json", manifest },
+      "POST /api/v1/behaviour/apps/start": { workspace_relative_path: "behaviour/x/run-b1", generation_run_id: "run-b1", status: "RUNNING", url: "http://127.0.0.1:8231/", port: 8231, pid: 1, sandbox: "node --permission" },
+    });
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    await user.click(screen.getByRole("button", { name: "Generate with Ollama Local" }));
+
+    expect(await screen.findByText("Behaviour run evidence")).toBeInTheDocument();
+    expect(called("POST /api/v1/behaviour/generation-runs")[0].body.mode).toBe("LOCAL_LLM");
+    expect(screen.queryByText("Model calls per class")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Download project (.zip)" })).toHaveAttribute("href", expect.stringContaining("/behaviour/workspace/archive?workspace_relative_path=behaviour%2Fx%2Frun-b1"));
+    expect(screen.getByTestId("folder-frontend")).toHaveTextContent("frontend/src/App.jsx");
+    expect(screen.getByTestId("folder-frontend")).toHaveTextContent("React + Vite");
+    expect(screen.getByTestId("folder-backend")).toHaveTextContent("backend/src/domain.mjs");
+    expect(screen.getByTestId("folder-api")).toHaveTextContent("/api/invoke");
+    expect(screen.queryByTestId("folder-db")).not.toBeInTheDocument();
+    expect(screen.getByTestId("folder-test-seams")).toHaveTextContent("does not produce test seams");
+    expect(screen.queryByRole("button", { name: "Start app on a new port" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue to Application Preview" }));
+    await user.click(await screen.findByRole("button", { name: "Start app on a new port" }));
+    expect(await screen.findByRole("link", { name: "Open generated app" })).toHaveAttribute("href", "http://127.0.0.1:8231/");
+    expect(called("POST /api/v1/behaviour/apps/start")[0].body).toEqual({ workspace_relative_path: "behaviour/x/run-b1" });
+  });
+
+  it("drops a saved behaviour run from the older layout instead of showing it", async () => {
+    const user = userEvent.setup();
+    seedSession({
+      ...approvedSession(),
+      applicationProfile: "CUSTOM_NON_CRUD",
+      behaviourRun: {
+        durationMs: 1000,
+        run: {
+          workspace_relative_path: "behaviour/x/old-run",
+          manifest: { generation_run_id: "old-run", probe: { status: "PASSED" }, files: [{ relative_path: "server.mjs" }, { relative_path: "public/app.js" }, { relative_path: "src/domain.mjs" }] },
+        },
+      },
+    });
+    installFetch({ ...baseRoutes() });
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    expect(await screen.findByRole("button", { name: "Generate with Ollama Local" })).toBeInTheDocument();
+    expect(screen.queryByText("Behaviour run evidence")).not.toBeInTheDocument();
+    expect(screen.queryByText(/older layout/)).not.toBeInTheDocument();
+    expect(JSON.parse(window.sessionStorage.getItem(Object.keys(window.sessionStorage).find((key) => key.toLowerCase().includes("session")) ?? "")).behaviourRun).toBeNull();
+  });
+
+  it("mentions only Ollama Local in the sidebar", async () => {
+    seedSession(approvedSession());
+    installFetch(baseRoutes());
+    render(<App />);
+
+    expect(await screen.findByText("Ollama Local ready")).toBeInTheDocument();
+    expect(screen.getByText("qwen2.5-coder:3b")).toBeInTheDocument();
+    expect(screen.queryByText(/TeamSocLo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/OpenRouter/i)).not.toBeInTheDocument();
+  });
+
+  it("points a list-of-items design to the GPA project card instead of the Ollama buttons", async () => {
+    const user = userEvent.setup();
+    const base = approvedSession();
+    seedSession({
+      ...base,
+      applicationProfile: "CUSTOM_NON_CRUD",
+      designContext: { ...base.designContext, classes: [{ name: "GpaCalculationService", methods: [{ name: "calculate", parameters: [{ name: "modules", type_name: "ModuleResult[]" }] }] }] },
+    });
+    installFetch(baseRoutes());
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    expect(screen.queryByRole("button", { name: "Generate with Ollama Local" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate with Google Colab" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate project" })).toBeInTheDocument();
+  });
+
+  it("lets the behaviour generator use TeamSocLo explicitly", async () => {
+    const user = userEvent.setup();
+    seedSession({ ...approvedSession(), applicationProfile: "CUSTOM_NON_CRUD" });
+    const { called } = installFetch({
+      ...baseRoutes(),
+      "POST /api/v1/behaviour/generation-runs": () => jsonResponse({ errors: [{ code: "TEAMSOCLO_REQUEST_TIMEOUT", field: "teamsoclo", message: "TeamSocLo request timed out." }] }, 504),
+    });
+    render(<App />);
+    await openPage(user, /Code Generation/);
+
+    await user.click(screen.getByRole("button", { name: "Generate with Google Colab" }));
+
+    expect(await screen.findByTestId("error-panel")).toHaveTextContent("TEAMSOCLO_REQUEST_TIMEOUT");
+    expect(called("POST /api/v1/behaviour/generation-runs")[0].body.mode).toBe("EXPERIMENTAL_CLAUDE");
   });
 
   it("renders a backend gate conflict (HTTP 409) as an error, not as a result", async () => {
@@ -255,7 +347,7 @@ describe("Code generation", () => {
     render(<App />);
     await openPage(user, /Code Generation/);
 
-    await user.click(screen.getByRole("button", { name: "Generate with Local Ollama" }));
+    await user.click(screen.getByRole("button", { name: "Generate with Ollama Local" }));
 
     const panel = await screen.findByTestId("error-panel");
     expect(panel).toHaveTextContent("GENERATOR_NOT_IMPLEMENTED");
@@ -286,9 +378,8 @@ describe("Code generation", () => {
     render(<App />);
     await openPage(user, /Code Generation/);
 
-    await user.click(screen.getByLabelText(/Local Ollama/));
-    await user.click(screen.getByRole("button", { name: "Generate with Local Ollama" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Generating (Local Ollama)");
+    await user.click(screen.getByRole("button", { name: "Generate with Ollama Local" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Generating (Qwen Local)");
     release();
 
     expect(await screen.findByText("run-llm")).toBeInTheDocument();
@@ -319,8 +410,7 @@ describe("Code generation", () => {
     await openPage(user, /Code Generation/);
 
     expect(screen.queryByLabelText(/TEMPLATE_ONLY/)).not.toBeInTheDocument();
-    await user.click(screen.getByLabelText(/External LLM API/));
-    await user.click(screen.getByRole("button", { name: "Generate with External LLM API" }));
+    await user.click(screen.getByRole("button", { name: "Generate with Google Colab" }));
 
     expect(await screen.findByText("run-external")).toBeInTheDocument();
     expect(called("POST /api/v1/experiments/claude-generation")[0].body.mode).toBe("EXPERIMENTAL_CLAUDE");
@@ -368,7 +458,7 @@ describe("Code generation", () => {
 });
 
 describe("Application profile", () => {
-  it("blocks custom non-CRUD generation instead of substituting an unrelated CRUD app", async () => {
+  it("routes custom non-CRUD designs to the behaviour generator instead of substituting a CRUD app", async () => {
     const user = userEvent.setup();
     seedSession({ validation: { ok: true, generationContext: GENERATION_CONTEXT } });
     installFetch(baseRoutes());
@@ -377,8 +467,8 @@ describe("Application profile", () => {
 
     await user.click(screen.getByRole("button", { name: /Custom \/ non-CRUD application/ }));
 
-    expect(screen.getByText("Custom generation is not implemented yet")).toBeInTheDocument();
-    expect(screen.getByText(/will not silently generate an unrelated CRUD application/)).toBeInTheDocument();
+    expect(screen.queryByText("How custom application generation works")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Custom \/ non-CRUD application/ })).toHaveClass("profile-active");
   });
 });
 
@@ -571,17 +661,16 @@ describe("Scoped regeneration", () => {
 });
 
 describe("Readiness", () => {
-  it("shows C4 retest pending or not run, and deployment blocked, without any approval", async () => {
+  it("shows only a short hint, not the old gate report, when nothing is generated", async () => {
     const user = userEvent.setup();
     installFetch(baseRoutes());
     render(<App />);
 
     await openPage(user, /Readiness/);
 
-    expect(screen.getAllByText("DEPLOYMENT BLOCKED").length).toBeGreaterThan(0);
-    expect(screen.getByText("C4 RETEST PENDING")).toBeInTheDocument();
-    expect(screen.getByTestId("deployment-blockers")).toHaveTextContent("Independent C4 retest evidence is missing.");
-    expect(screen.queryByText(/approved for deployment/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Nothing generated yet")).toBeInTheDocument();
+    expect(screen.queryByText("Workflow gates")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deployment")).not.toBeInTheDocument();
   });
 });
 

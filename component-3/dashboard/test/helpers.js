@@ -44,6 +44,11 @@ export const OVERVIEW_OK = {
     detail: "Ollama is reachable and the configured model is installed.",
     checked_at_utc: "2026-10-14T00:00:00Z",
   },
+  teamsoclo: {
+    enabled: true,
+    key_configured: true,
+    model: "claude-opus-5-5",
+  },
   generated_workspace_root_name: "demo-ui",
   traceability_store_name: "demo-ui.sqlite3",
   integrations: [
@@ -79,8 +84,8 @@ export function seedSession(partial) {
 export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic = false } = {}) {
   const generatedOrigin = mode === "LOCAL_LLM"
     ? "LOCAL_LLM"
-    : mode === "EXPERIMENTAL_CLAUDE"
-      ? "EXPERIMENTAL_CLAUDE"
+    : mode === "EXPERIMENTAL_CLAUDE" || mode === "EXPERIMENTAL_OPENROUTER"
+      ? mode
       : "TEMPLATE";
   const files = [
     { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: generatedOrigin, sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
@@ -106,11 +111,11 @@ export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic 
     },
     execution_status: "NOT_EXECUTED",
     trust_boundary: "Generated code is untrusted and was not executed.",
-    llm_inference: mode === "LOCAL_LLM" || mode === "EXPERIMENTAL_CLAUDE"
+    llm_inference: mode === "LOCAL_LLM" || mode === "EXPERIMENTAL_CLAUDE" || mode === "EXPERIMENTAL_OPENROUTER"
       ? {
-          provider: mode === "LOCAL_LLM" ? "ollama-local" : "teamsoclo-claude",
-          configured_model_identifier: mode === "LOCAL_LLM" ? "qwen2.5-coder:3b" : "claude-haiku-4-5",
-          response_model_identifier: mode === "LOCAL_LLM" ? "qwen2.5-coder:3b" : "claude-haiku-4-5",
+          provider: { LOCAL_LLM: "ollama-local", EXPERIMENTAL_CLAUDE: "teamsoclo-claude", EXPERIMENTAL_OPENROUTER: "openrouter" }[mode],
+          configured_model_identifier: { LOCAL_LLM: "qwen2.5-coder:3b", EXPERIMENTAL_CLAUDE: "claude-haiku-4-5", EXPERIMENTAL_OPENROUTER: "openai/gpt-4o" }[mode],
+          response_model_identifier: { LOCAL_LLM: "qwen2.5-coder:3b", EXPERIMENTAL_CLAUDE: "claude-haiku-4-5", EXPERIMENTAL_OPENROUTER: "openai/gpt-4o-2024-08-06" }[mode],
           prompt_template_version: "v-test",
           generation_parameters: mode === "LOCAL_LLM"
             ? { temperature: 0, num_ctx: 4096, timeout_seconds: 120 }

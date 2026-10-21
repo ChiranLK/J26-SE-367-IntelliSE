@@ -27,6 +27,7 @@ const STATUS_TONE = {
   TEMPLATE: "info",
   LOCAL_LLM: "real",
   EXPERIMENTAL_CLAUDE: "warn",
+  EXPERIMENTAL_OPENROUTER: "warn",
   SIMULATED: "sim",
   MOCK: "mock",
   MOCKED_TEST_DOUBLE: "mock",
@@ -306,6 +307,9 @@ export function OriginBadge({ origin }) {
   if (origin === "LOCAL_LLM") return <Badge tone="real">LOCAL_LLM</Badge>;
   if (origin === "EXPERIMENTAL_CLAUDE") {
     return <Badge tone="warn">EXTERNAL LLM</Badge>;
+  }
+  if (origin === "EXPERIMENTAL_OPENROUTER") {
+    return <Badge tone="warn">LEGACY EXTERNAL (disabled)</Badge>;
   }
   return <Badge tone="info">TEMPLATE</Badge>;
 }
