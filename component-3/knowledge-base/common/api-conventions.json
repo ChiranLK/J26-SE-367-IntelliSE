@@ -1,0 +1,17 @@
+{
+  "file_id": "KB-COMMON-API-CONVENTIONS",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-API-CONVENTIONS",
+      "base_path": "/api/v1",
+      "health_path": "/api/health",
+      "operation_id_style": "lowerCamelCase verb + noun, stable across regenerations",
+      "error_body": {
+        "shape": {"error": {"code": "string", "status": "INVALID_INPUT|REVIEW_REQUIRED|NOT_FOUND|INTERNAL", "message": "string", "details": "array"}},
+        "status_codes": {"INVALID_INPUT": 400, "REVIEW_REQUIRED": 422, "NOT_FOUND": 404, "INTERNAL": 500}
+      },
+      "openapi_version": "3.1.0"
+    }
+  ]
+}

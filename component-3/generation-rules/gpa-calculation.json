@@ -1,0 +1,99 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-GPA-POLICY-001",
+      "version": "1.0.0",
+      "category": "GPA_CALCULATION",
+      "priority": 90,
+      "description": "GradingPolicy is rendered from the accepted KB grading policy; grade points are never model-generated.",
+      "target_kind": "UML_CLASS",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "class_name",
+            "equals": "GradingPolicy"
+          },
+          {
+            "fact": "methods",
+            "contains": "gradePoint"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "be.policy",
+          "fe.policy"
+        ],
+        "artifact_types": [
+          "BUSINESS_LOGIC",
+          "FRONTEND"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-GPA-GRADE-SCALE"
+      ],
+      "validation_requirements": [
+        "V-D2C-METHODS"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    },
+    {
+      "rule_id": "R-GPA-CALC-001",
+      "version": "1.0.0",
+      "category": "GPA_CALCULATION",
+      "priority": 90,
+      "description": "Credit-weighted GPA service with exact integer arithmetic, KB rounding and explicit REVIEW_REQUIRED edge cases.",
+      "target_kind": "UML_CLASS",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "class_name",
+            "equals": "GpaCalculationService"
+          },
+          {
+            "fact": "methods",
+            "contains_all": [
+              "calculate",
+              "listHistory"
+            ]
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "be.service"
+        ],
+        "artifact_types": [
+          "BUSINESS_LOGIC"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-GPA-FORMULA",
+        "KB-GPA-ROUNDING",
+        "KB-GPA-ZERO-CREDIT",
+        "KB-GPA-UNKNOWN-GRADE",
+        "KB-GPA-NON-GPA-MODULES",
+        "KB-GPA-REPEATED-MODULES"
+      ],
+      "validation_requirements": [
+        "V-D2C-METHODS",
+        "V-ARCH-NODE-LAYERING"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}

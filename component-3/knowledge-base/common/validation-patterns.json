@@ -1,0 +1,18 @@
+{
+  "file_id": "KB-COMMON-VALIDATION-PATTERNS",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-VALIDATION-CONSTRAINT-KINDS",
+      "description": "Structured constraint kinds C3 can render into backend validators, frontend validators, OpenAPI keywords and database CHECK constraints.",
+      "kinds": {
+        "REQUIRED": {"openapi": "required", "database": "NOT NULL"},
+        "RANGE": {"openapi": "minimum/maximum", "database": "CHECK (col BETWEEN min AND max)"},
+        "PATTERN": {"openapi": "pattern", "database": null},
+        "ENUM_FROM_POLICY": {"openapi": "enum", "database": null},
+        "UNIQUE_WITHIN_REQUEST": {"openapi": null, "database": "UNIQUE (parent_id, col)"}
+      },
+      "unknown_kind_behavior": "UNSUPPORTED"
+    }
+  ]
+}
