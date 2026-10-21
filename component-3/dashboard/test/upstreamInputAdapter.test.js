@@ -50,6 +50,26 @@ describe("PP1 upstream input compatibility adapter", () => {
     );
   });
 
+  it("keeps requirement_type only when it is exactly FR or NFR", () => {
+    const withTypes = {
+      ...limitedC1,
+      requirements: [
+        { ...limitedC1.requirements[0], requirement_id: "R-FR", requirement_type: "FR" },
+        { ...limitedC1.requirements[0], requirement_id: "R-NFR", requirement_type: "NFR" },
+        { ...limitedC1.requirements[0], requirement_id: "R-BAD", requirement_type: "functional" },
+        { ...limitedC1.requirements[0], requirement_id: "R-NONE" },
+      ],
+    };
+
+    const { c1 } = adaptUpstreamInputs(withTypes, limitedC2, { c2ValidationReportRef: "R" });
+    const byId = Object.fromEntries(c1.requirements.map((item) => [item.requirement_id, item]));
+
+    expect(byId["R-FR"].requirement_type).toBe("FR");
+    expect(byId["R-NFR"].requirement_type).toBe("NFR");
+    expect(byId["R-BAD"]).not.toHaveProperty("requirement_type");
+    expect(byId["R-NONE"]).not.toHaveProperty("requirement_type");
+  });
+
   it("maps the limited C1/C2 JSON without rewriting source identities or PlantUML", () => {
     const result = adaptUpstreamInputs(limitedC1, limitedC2, { c2ValidationReportRef: "SIMULATED-PP1-C2-REPORT" });
 

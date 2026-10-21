@@ -36,6 +36,8 @@ function adaptC1(value) {
             ["requirement_id", requirement.requirement_id],
             ["title", requirement.title],
             ["status", requirement.status],
+            // Optional FR/NFR label: kept only when it is exactly "FR" or "NFR".
+            ["requirement_type", requirement.requirement_type === "FR" || requirement.requirement_type === "NFR" ? requirement.requirement_type : undefined],
           ]),
         ),
       ],
