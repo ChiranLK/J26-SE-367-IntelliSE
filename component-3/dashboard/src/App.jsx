@@ -146,7 +146,7 @@ function Sidebar({ current, onNavigate }) {
             <li key={page.id} className={`nav-li${isDone(page.id, session) ? " nav-li-done" : ""}`}>
               <button 
                 type="button" 
-                className={`nav-item${current === page.id ? " nav-active" : ""}${isDone(page.id, session) ? " nav-done" : ""}`} 
+                className={`nav-item${current === page.id ? " nav-active" : ""}${isDone(page.id, session) ? " nav-done" : ""}`}
                 aria-current={current === page.id ? "page" : undefined} 
                 onClick={() => canNavigate && onNavigate(page.id)}
                 disabled={!canNavigate}
