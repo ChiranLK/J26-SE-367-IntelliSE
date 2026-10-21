@@ -1,0 +1,244 @@
+{
+  "contract_version": "2.0",
+  "input_classification": "VALIDATED_CONTRACT_INPUT",
+  "c1": {
+    "contract_version": "2.0",
+    "evidence_class": "SIMULATED_FIXTURE",
+    "project_id": "PROJECT-GPA-HYBRID-001",
+    "srs_version": "SRS-GPA-2.1",
+    "approval_status": "CLIENT_APPROVED",
+    "approval_reference": "SIMULATED-C1-GPA-CLIENT-APPROVAL-2.1",
+    "approved_by": "simulated-client-representative",
+    "approved_at_utc": "2026-10-10T09:00:00Z",
+    "provenance": {
+      "source_system": "SIMULATED_C1_FIXTURE",
+      "source_document_ref": "SIMULATED-C1-GPA-SRS-DOC-2.1",
+      "quality_report_ref": "SIMULATED-C1-GPA-QUALITY-2.0",
+      "classification_report_ref": "SIMULATED-C1-GPA-FRNFR-2.0"
+    },
+    "requirements": [
+      {
+        "requirement_id": "REQ-GPA-101",
+        "requirement_version": 1,
+        "requirement_type": "FR",
+        "title": "Enter module results",
+        "statement": "A student enters one or more module results, each with a module code, credit value, letter grade and whether it counts toward GPA, adding and removing rows dynamically.",
+        "approval_status": "CLIENT_APPROVED"
+      },
+      {
+        "requirement_id": "REQ-GPA-102",
+        "requirement_version": 1,
+        "requirement_type": "FR",
+        "title": "Calculate credit-weighted GPA",
+        "statement": "The system calculates the credit-weighted GPA of the entered module results using the accepted grading policy.",
+        "approval_status": "CLIENT_APPROVED"
+      },
+      {
+        "requirement_id": "REQ-GPA-103",
+        "requirement_version": 2,
+        "requirement_type": "FR",
+        "title": "Validate module results",
+        "statement": "The system rejects module results with a missing module code, a module code that is not two to four capital letters followed by four digits (e.g. IT1010), a credit value outside 1 to 20, or a grade that is not in the accepted grading policy, and reports field-level errors.",
+        "approval_status": "CLIENT_APPROVED",
+        "constraints": [
+          {
+            "constraint_id": "CON-GPA-103-1",
+            "target": "ModuleResult.moduleCode",
+            "kind": "REQUIRED"
+          },
+          {
+            "constraint_id": "CON-GPA-103-5",
+            "target": "ModuleResult.moduleCode",
+            "kind": "PATTERN",
+            "pattern": "^[A-Z]{2,4}[0-9]{4}$"
+          },
+          {
+            "constraint_id": "CON-GPA-103-2",
+            "target": "ModuleResult.credits",
+            "kind": "RANGE",
+            "minimum": 1,
+            "maximum": 20
+          },
+          {
+            "constraint_id": "CON-GPA-103-3",
+            "target": "ModuleResult.grade",
+            "kind": "ENUM_FROM_POLICY"
+          },
+          {
+            "constraint_id": "CON-GPA-103-4",
+            "target": "ModuleResult.moduleCode",
+            "kind": "UNIQUE_WITHIN_REQUEST"
+          }
+        ]
+      },
+      {
+        "requirement_id": "REQ-GPA-104",
+        "requirement_version": 1,
+        "requirement_type": "FR",
+        "title": "Keep calculation history",
+        "statement": "The system stores each successful GPA calculation and lists previous calculations, newest first.",
+        "approval_status": "CLIENT_APPROVED"
+      },
+      {
+        "requirement_id": "REQ-GPA-105",
+        "requirement_version": 1,
+        "requirement_type": "NFR",
+        "title": "Disclose grading policy",
+        "statement": "Every GPA result and the entry screen disclose the grading policy identifier, version and authority status used for the calculation.",
+        "approval_status": "CLIENT_APPROVED"
+      }
+    ]
+  },
+  "c2": {
+    "contract_version": "2.0",
+    "evidence_class": "SIMULATED_FIXTURE",
+    "project_id": "PROJECT-GPA-HYBRID-001",
+    "srs_version": "SRS-GPA-2.1",
+    "uml_version": "UML-GPA-2.1",
+    "release_status": "VALIDATED",
+    "released_at_utc": "2026-10-11T09:00:00Z",
+    "validation_reports": {
+      "semantic_report_ref": "SIMULATED-C2-GPA-SEMANTIC-2.1",
+      "syntax_report_ref": "SIMULATED-C2-GPA-SYNTAX-2.1",
+      "ui_report_ref": "SIMULATED-C2-GPA-UI-2.1"
+    },
+    "uml_artifacts": [
+      {
+        "uml_id": "UML-GPA-CLASS-201",
+        "diagram_type": "CLASS",
+        "name": "GpaCalculatorClassDiagram",
+        "plantuml_source": "@startuml\nclass ModuleResult {\n  +moduleCode: String\n  +credits: Integer\n  +grade: String\n  +countsTowardGpa: Boolean\n}\nclass GpaCalculation {\n  +id: String\n  +policyId: String\n  +policyVersion: String\n  +totalCredits: Integer\n  +gpa: Number\n  +createdAt: DateTime\n}\nclass GradingPolicy {\n  +gradePoint(grade: String): Number\n}\nclass GpaCalculationService {\n  +calculate(modules: ModuleResult[]): GpaCalculation\n  +listHistory(): GpaCalculation[]\n}\nclass GpaCalculationRepository {\n  +save(calculation: GpaCalculation): GpaCalculation\n  +list(): GpaCalculation[]\n}\nGpaCalculation \"1\" *-- \"1..*\" ModuleResult : contains\nGpaCalculationService --> GradingPolicy : uses\nGpaCalculationService --> GpaCalculationRepository : uses\nGpaCalculationRepository --> GpaCalculation : persists\n@enduml"
+      },
+      {
+        "uml_id": "UML-GPA-USECASE-201",
+        "diagram_type": "USE_CASE",
+        "name": "GpaCalculatorUseCases",
+        "plantuml_source": "@startuml\nactor Student\nStudent --> (Enter module results)\nStudent --> (Calculate GPA)\nStudent --> (View calculation history)\n@enduml"
+      }
+    ],
+    "ui_specification": [
+      {
+        "screen_id": "UI-GPA-SCREEN-201",
+        "title": "GPA Calculator",
+        "requirement_ids": [
+          "REQ-GPA-101",
+          "REQ-GPA-102",
+          "REQ-GPA-103",
+          "REQ-GPA-104",
+          "REQ-GPA-105"
+        ],
+        "components": [
+          {
+            "component_id": "UI-GPA-ROWS",
+            "kind": "DYNAMIC_ROWS",
+            "label": "Module results",
+            "binds_to": "ModuleResult"
+          },
+          {
+            "component_id": "UI-GPA-CODE",
+            "kind": "TEXT_INPUT",
+            "label": "Module code",
+            "binds_to": "ModuleResult.moduleCode"
+          },
+          {
+            "component_id": "UI-GPA-CREDITS",
+            "kind": "NUMBER_INPUT",
+            "label": "Credits",
+            "binds_to": "ModuleResult.credits"
+          },
+          {
+            "component_id": "UI-GPA-GRADE",
+            "kind": "SELECT",
+            "label": "Grade",
+            "binds_to": "ModuleResult.grade"
+          },
+          {
+            "component_id": "UI-GPA-COUNTS",
+            "kind": "CHECKBOX",
+            "label": "Counts toward GPA",
+            "binds_to": "ModuleResult.countsTowardGpa"
+          },
+          {
+            "component_id": "UI-GPA-CALCULATE",
+            "kind": "BUTTON",
+            "label": "Calculate GPA",
+            "binds_to": "GpaCalculationService.calculate"
+          },
+          {
+            "component_id": "UI-GPA-RESULT",
+            "kind": "RESULT_PANEL",
+            "label": "GPA result",
+            "binds_to": "GpaCalculation.gpa"
+          },
+          {
+            "component_id": "UI-GPA-POLICY",
+            "kind": "DISCLOSURE",
+            "label": "Grading policy",
+            "binds_to": "GpaCalculation.policyVersion"
+          },
+          {
+            "component_id": "UI-GPA-HISTORY",
+            "kind": "LIST",
+            "label": "Calculation history",
+            "binds_to": "GpaCalculationService.listHistory"
+          },
+          {
+            "component_id": "UI-GPA-ERRORS",
+            "kind": "ERROR_SUMMARY",
+            "label": "Validation errors"
+          }
+        ]
+      }
+    ],
+    "requirement_uml_anchors": [
+      {
+        "anchor_id": "ANC-GPA-101-A",
+        "requirement_id": "REQ-GPA-101",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "ModuleResult"
+      },
+      {
+        "anchor_id": "ANC-GPA-102-A",
+        "requirement_id": "REQ-GPA-102",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GpaCalculationService"
+      },
+      {
+        "anchor_id": "ANC-GPA-102-B",
+        "requirement_id": "REQ-GPA-102",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GradingPolicy"
+      },
+      {
+        "anchor_id": "ANC-GPA-102-C",
+        "requirement_id": "REQ-GPA-102",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GpaCalculation"
+      },
+      {
+        "anchor_id": "ANC-GPA-103-A",
+        "requirement_id": "REQ-GPA-103",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "ModuleResult"
+      },
+      {
+        "anchor_id": "ANC-GPA-104-A",
+        "requirement_id": "REQ-GPA-104",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GpaCalculationRepository"
+      },
+      {
+        "anchor_id": "ANC-GPA-104-B",
+        "requirement_id": "REQ-GPA-104",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GpaCalculation"
+      },
+      {
+        "anchor_id": "ANC-GPA-105-A",
+        "requirement_id": "REQ-GPA-105",
+        "uml_id": "UML-GPA-CLASS-201",
+        "uml_element": "GpaCalculation"
+      }
+    ]
+  }
+}
