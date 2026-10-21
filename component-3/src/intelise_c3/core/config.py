@@ -91,6 +91,56 @@ class Settings(BaseSettings):
         description="Timeout for experimental TeamSocLo requests in seconds.",
     )
 
+    hybrid_llm_max_input_tokens: int = Field(
+        default=3000,
+        ge=500,
+        le=16000,
+        description="Estimated input-token budget for one bounded hybrid module call; larger prompts are not sent.",
+    )
+    hybrid_llm_max_output_tokens: int = Field(
+        default=4096,
+        ge=256,
+        le=8192,
+        description="Completion-token cap for one bounded hybrid module call.",
+    )
+    hybrid_llm_reasoning_effort: Literal["omit", "none", "minimal", "low", "medium", "high"] = Field(
+        default="low",
+        description=(
+            "Reasoning effort for bounded hybrid module calls. Reasoning models otherwise spend the whole "
+            "output budget on hidden reasoning (observed: 4096/4096 reasoning tokens, no code)."
+        ),
+    )
+    hybrid_llm_frontend_max_input_tokens: int = Field(
+        default=16000,
+        ge=2000,
+        le=64000,
+        description="Estimated input-token budget for one LLM frontend call (contract + UI spec + RAG, or a repair that carries the files back).",
+    )
+    hybrid_llm_frontend_max_output_tokens: int = Field(
+        default=10000,
+        ge=1024,
+        le=32000,
+        description="Completion-token cap for one LLM frontend file-group call (UI code is much longer than a service module).",
+    )
+    hybrid_llm_frontend_timeout_seconds: float = Field(
+        default=480.0,
+        gt=0.0,
+        le=600.0,
+        description="Timeout for one LLM frontend call; the gateway produced ~25 tokens/s in measurements, so 120 s is too short.",
+    )
+    hybrid_llm_cache_dir: Path = Field(
+        default=COMPONENT_ROOT / "runtime" / "llm-cache",
+        description="Result cache for accepted bounded module generations.",
+    )
+
+    @field_validator("hybrid_llm_cache_dir")
+    @classmethod
+    def require_component_llm_cache(cls, value: Path) -> Path:
+        resolved = value.resolve() if value.is_absolute() else (COMPONENT_ROOT / value).resolve()
+        if resolved == COMPONENT_ROOT or not resolved.is_relative_to(COMPONENT_ROOT):
+            raise ValueError("HYBRID_LLM_CACHE_DIR must be a child of component-3/.")
+        return resolved
+
     @field_validator("teamsoclo_model")
     @classmethod
     def normalize_teamsoclo_model(cls, value: str) -> str:
