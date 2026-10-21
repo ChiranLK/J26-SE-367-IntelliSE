@@ -14,9 +14,12 @@ builder, so the rebuild reproduces it. A snapshot that lacks the current
 relation-direction policy version has no supported verification path and is
 rejected rather than guessed at.
 
-Historical RETIRED records cannot be re-derived from the current manifest. They
-are checked for internal consistency and are covered by the recomputed content
-digest, but this module cannot prove their historical authenticity.
+Historical RETIRED records and ``created_in_generation_run_id`` values retained
+on unchanged identities cannot be re-derived from the current manifest. The
+creation field is therefore excluded only from current-manifest rebuild
+equality. It remains covered by the stored graph content digest. Historical
+records are checked for internal consistency, but this module cannot prove
+their historical authenticity.
 
 Verification is read-only: it never mutates a snapshot or the SQLite store.
 """
@@ -34,11 +37,21 @@ from intelise_c3.generation.evidence import canonical_sha256
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
 
 MAX_REPORTED_PROBLEMS = 25
+NON_REBUILDABLE_HISTORY_FIELDS = {"created_in_generation_run_id"}
+
+
+def _rebuild_comparable(
+    value: TraceGraphNode | TraceGraphLink,
+) -> dict[str, object]:
+    return value.model_dump(
+        mode="json",
+        exclude=NON_REBUILDABLE_HISTORY_FIELDS,
+    )
 
 
 def _changed_fields(left: TraceGraphNode | TraceGraphLink, right: TraceGraphNode | TraceGraphLink) -> list[str]:
-    left_data = left.model_dump(mode="json")
-    right_data = right.model_dump(mode="json")
+    left_data = _rebuild_comparable(left)
+    right_data = _rebuild_comparable(right)
     return sorted(
         key for key in left_data if canonical_sha256(left_data[key]) != canonical_sha256(right_data.get(key))
     )
@@ -92,7 +105,9 @@ class GraphEvidenceVerifier:
         for node_id in sorted(set(stored) - set(expected)):
             found.append(f"node-extra:{node_id}")
         for node_id in sorted(set(stored) & set(expected)):
-            if canonical_sha256(stored[node_id]) != canonical_sha256(expected[node_id]):
+            if canonical_sha256(_rebuild_comparable(stored[node_id])) != canonical_sha256(
+                _rebuild_comparable(expected[node_id])
+            ):
                 fields = ",".join(_changed_fields(stored[node_id], expected[node_id])) or "canonical"
                 found.append(f"node-mismatch:{node_id}:{fields}")
         return found
@@ -111,7 +126,9 @@ class GraphEvidenceVerifier:
         for logical_id in sorted(set(stored) - set(expected)):
             found.append(f"link-extra:{logical_id}")
         for logical_id in sorted(set(stored) & set(expected)):
-            if canonical_sha256(stored[logical_id]) != canonical_sha256(expected[logical_id]):
+            if canonical_sha256(
+                _rebuild_comparable(stored[logical_id])
+            ) != canonical_sha256(_rebuild_comparable(expected[logical_id])):
                 fields = ",".join(_changed_fields(stored[logical_id], expected[logical_id])) or "canonical"
                 found.append(f"link-mismatch:{logical_id}:{fields}")
         return found

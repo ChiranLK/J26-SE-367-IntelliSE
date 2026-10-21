@@ -25,11 +25,13 @@ const STATUS_TONE = {
   RETIRED: "neutral",
   // provenance
   TEMPLATE: "info",
-  LOCAL_LLM: "llm",
+  LOCAL_LLM: "real",
+  EXPERIMENTAL_CLAUDE: "warn",
+  EXPERIMENTAL_OPENROUTER: "warn",
   SIMULATED: "sim",
-  MOCK: "sim",
-  MOCKED_TEST_DOUBLE: "sim",
-  REAL_LOCAL_OLLAMA: "llm",
+  MOCK: "mock",
+  MOCKED_TEST_DOUBLE: "mock",
+  REAL_LOCAL_OLLAMA: "real",
 };
 
 export function Badge({ tone = "neutral", children, title }) {
@@ -65,9 +67,9 @@ export function PageHeader({ title, subtitle, badges }) {
   );
 }
 
-export function Card({ title, subtitle, actions, children, tone }) {
+export function Card({ title, subtitle, actions, children, tone, className = "" }) {
   return (
-    <section className={`card${tone ? ` card-${tone}` : ""}`}>
+    <section className={`card${tone ? ` card-${tone}` : ""}${className ? ` ${className}` : ""}`}>
       {title || actions ? (
         <div className="card-head">
           <div>
@@ -79,6 +81,15 @@ export function Card({ title, subtitle, actions, children, tone }) {
       ) : null}
       {children}
     </section>
+  );
+}
+
+export function TechnicalDetails({ summary = "Technical evidence", children }) {
+  return (
+    <details className="technical-details">
+      <summary>{summary}</summary>
+      <div className="technical-details-body">{children}</div>
+    </details>
   );
 }
 
@@ -197,6 +208,16 @@ export function Elapsed({ startedAt }) {
   return <span>{((now - startedAt) / 1000).toFixed(1)} s</span>;
 }
 
+export function Skeleton({ lines = 3, height = 14 }) {
+  return (
+    <div className="skeleton-stack" aria-hidden="true">
+      {Array.from({ length: lines }, (_, index) => (
+        <div key={index} className="skeleton" style={{ height, width: `${100 - index * 12}%` }} />
+      ))}
+    </div>
+  );
+}
+
 export function Loading({ label, startedAt, note }) {
   return (
     <div className="loading" role="status" aria-live="polite">
@@ -268,16 +289,27 @@ export function JsonView({ value, summary = "Raw JSON" }) {
 
 export function ModeBadge({ mode }) {
   return mode === "MOCK" ? (
-    <Badge tone="sim" title="Deterministic test-double model. Pipeline check only.">
+    <Badge tone="mock" title="Deterministic test-double model. Pipeline check only.">
       MOCK model
     </Badge>
+  ) : mode === "SIMULATED_RAG_TEST_DOUBLE" ? (
+    <Badge tone="sim" title="Simulated retrieval test double.">
+      SIMULATED RAG
+    </Badge>
   ) : (
-    <Badge tone="llm" title="Output came from the configured local Ollama model.">
+    <Badge tone="real" title="Output came from the configured local Ollama model.">
       REAL local Ollama
     </Badge>
   );
 }
 
 export function OriginBadge({ origin }) {
-  return origin === "LOCAL_LLM" ? <Badge tone="llm">LOCAL_LLM</Badge> : <Badge tone="info">TEMPLATE</Badge>;
+  if (origin === "LOCAL_LLM") return <Badge tone="real">LOCAL_LLM</Badge>;
+  if (origin === "EXPERIMENTAL_CLAUDE") {
+    return <Badge tone="warn">EXTERNAL LLM</Badge>;
+  }
+  if (origin === "EXPERIMENTAL_OPENROUTER") {
+    return <Badge tone="warn">LEGACY EXTERNAL (disabled)</Badge>;
+  }
+  return <Badge tone="info">TEMPLATE</Badge>;
 }

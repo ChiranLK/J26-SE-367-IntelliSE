@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "ConvergenceState": {
+      "enum": [
+        "CONVERGED",
+        "NON_CONVERGENT",
+        "NOT_ASSESSED"
+      ],
+      "title": "ConvergenceState",
+      "type": "string"
+    },
+    "EvidenceClass": {
+      "description": "Where an upstream/downstream document really came from.",
+      "enum": [
+        "SIMULATED_FIXTURE",
+        "UPSTREAM_COMPONENT_OUTPUT"
+      ],
+      "title": "EvidenceClass",
+      "type": "string"
+    },
+    "ModuleDigest": {
+      "additionalProperties": false,
+      "properties": {
+        "module_digest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Module Digest Sha256",
+          "type": "string"
+        },
+        "module_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Module Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "module_id",
+        "module_digest_sha256"
+      ],
+      "title": "ModuleDigest",
+      "type": "object"
+    },
+    "ReadinessStatus": {
+      "enum": [
+        "READY",
+        "NOT_READY"
+      ],
+      "title": "ReadinessStatus",
+      "type": "string"
+    },
+    "SemanticPreservation": {
+      "enum": [
+        "PRESERVED",
+        "VIOLATED",
+        "UNRESOLVED",
+        "NOT_ASSESSED"
+      ],
+      "title": "SemanticPreservation",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_digest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Artifact Digest Sha256",
+      "type": "string"
+    },
+    "convergence": {
+      "$ref": "#/$defs/ConvergenceState"
+    },
+    "evidence_class": {
+      "$ref": "#/$defs/EvidenceClass"
+    },
+    "evidence_refs": {
+      "default": [],
+      "items": {
+        "maxLength": 120,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "generation_run_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Generation Run Id",
+      "type": "string"
+    },
+    "issued_at_utc": {
+      "maxLength": 40,
+      "minLength": 10,
+      "title": "Issued At Utc",
+      "type": "string"
+    },
+    "modules": {
+      "items": {
+        "$ref": "#/$defs/ModuleDigest"
+      },
+      "maxItems": 60,
+      "minItems": 1,
+      "title": "Modules",
+      "type": "array"
+    },
+    "project_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "revocation_reason": {
+      "anyOf": [
+        {
+          "maxLength": 400,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revocation Reason"
+    },
+    "revoked": {
+      "title": "Revoked",
+      "type": "boolean"
+    },
+    "semantic_preservation": {
+      "$ref": "#/$defs/SemanticPreservation"
+    },
+    "signal_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Signal Id",
+      "type": "string"
+    },
+    "signal_version": {
+      "const": "2.0",
+      "title": "Signal Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ReadinessStatus"
+    }
+  },
+  "required": [
+    "signal_id",
+    "signal_version",
+    "evidence_class",
+    "project_id",
+    "generation_run_id",
+    "artifact_digest_sha256",
+    "modules",
+    "status",
+    "issued_at_utc",
+    "revoked",
+    "semantic_preservation",
+    "convergence"
+  ],
+  "title": "C4ReadinessSignal",
+  "type": "object"
+}

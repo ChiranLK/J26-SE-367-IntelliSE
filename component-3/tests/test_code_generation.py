@@ -30,6 +30,7 @@ from intelise_c3.core.errors import ApplicationError, ErrorDetail
 from intelise_c3.domain.design_context import DesignContext
 from intelise_c3.domain.generation import (
     ArtifactOrigin,
+    GenerationManifest,
     TraceRelationType,
     TraceResolutionStatus,
     TraceReviewStatus,
@@ -54,10 +55,13 @@ from intelise_c3.generation.templates import (
     task_management_templates,
     template_task_service,
 )
+from intelise_c3.rag import create_store
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.code_generation import CodeGenerationService
 from intelise_c3.services.design_understanding import DesignUnderstandingService
 from intelise_c3.services.input_validation import InputValidationService
 from intelise_c3.services.stack_selection import StackSelectionService
+from intelise_c3.traceability.verification import ManifestVerificationService
 
 FIXTURE_PATH = (
     Path(__file__).parent
@@ -216,7 +220,7 @@ def test_valid_local_llm_generation_writes_manifest_and_preserves_identities(
     assert result.manifest.execution_status == "NOT_EXECUTED"
     assert result.manifest.llm_inference is not None
     assert result.manifest.llm_inference.prompt_template_version == (
-        "react-node-task-service-v4"
+            "react-node-task-service-v5-rag"
     )
     assert result.manifest.source.requirement_ids == (
         "REQ-TASK-001",
@@ -333,10 +337,130 @@ def test_run_evidence_binds_inputs_prompt_model_and_artifacts(
     assert evidence.input_hashes.prompt_request_sha256 == canonical_sha256(
         client.requests[0]
     )
-    assert evidence.prompt_template_version == "react-node-task-service-v4"
+    assert evidence.prompt_template_version == "react-node-task-service-v5-rag"
     assert evidence.generator_version == GENERATOR_VERSION
     assert evidence.template_set_version == "react-node-task-scaffold-v2"
     assert evidence.authenticity_claim is False
+
+
+def test_manifest_creation_run_evidence_is_additive_and_historical_safe(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+) -> None:
+    generation, design = task_contexts
+    result = asyncio.run(
+        CodeGenerationService(tmp_path / "workspaces", None).generate(
+            _request(generation, design, mode=GenerationMode.TEMPLATE_ONLY)
+        )
+    )
+    manifest = result.manifest
+
+    assert all(
+        record.created_in_generation_run_id == manifest.generation_run_id
+        for record in manifest.files
+    )
+    assert all(
+        link.created_in_generation_run_id == manifest.generation_run_id
+        for link in manifest.traceability.links
+    )
+
+    historical_payload = manifest.model_dump(mode="json")
+    for record in historical_payload["files"]:
+        record.pop("created_in_generation_run_id", None)
+    for link in historical_payload["traceability"]["links"]:
+        link.pop("created_in_generation_run_id", None)
+    historical = GenerationManifest.model_validate(historical_payload)
+
+    assert all(record.created_in_generation_run_id is None for record in historical.files)
+    assert all(
+        link.created_in_generation_run_id is None
+        for link in historical.traceability.links
+    )
+    assert verify_manifest_evidence(historical)
+
+
+@pytest.mark.parametrize(
+    ("target", "expected_code"),
+    (
+        ("file", "INVALID_FILE_CREATION_RUN_EVIDENCE"),
+        ("link", "INVALID_LINK_CREATION_RUN_EVIDENCE"),
+    ),
+)
+def test_full_generation_rejects_mismatched_creation_run_evidence(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+    target: str,
+    expected_code: str,
+) -> None:
+    generation, design = task_contexts
+    workspace_root = tmp_path / "workspaces"
+    result = asyncio.run(
+        CodeGenerationService(workspace_root, None).generate(
+            _request(generation, design, mode=GenerationMode.TEMPLATE_ONLY)
+        )
+    )
+    manifest = result.manifest
+
+    if target == "file":
+        first = manifest.files[0].model_copy(
+            update={"created_in_generation_run_id": "different-run"}
+        )
+        supplied = manifest.model_copy(update={"files": (first, *manifest.files[1:])})
+    else:
+        first = manifest.traceability.links[0].model_copy(
+            update={"created_in_generation_run_id": "different-run"}
+        )
+        supplied = manifest.model_copy(
+            update={
+                "traceability": manifest.traceability.model_copy(
+                    update={"links": (first, *manifest.traceability.links[1:])}
+                )
+            }
+        )
+
+    with pytest.raises(ApplicationError) as captured:
+        ManifestVerificationService(workspace_root).verify(
+            supplied, result.workspace_relative_path
+        )
+
+    assert captured.value.errors[0].code == expected_code
+
+
+def test_filter_rag_rules_are_applied_to_llm_prompt_and_bound_to_evidence(
+    tmp_path: Path,
+    task_contexts: tuple[GenerationContext, DesignContext],
+) -> None:
+    generation, design = task_contexts
+    client = StubLLMClient(_model_output())
+    runtime = RagRuntime.for_test(create_store("filter", "rules"))
+
+    result = asyncio.run(
+        CodeGenerationService(tmp_path / "workspaces", client, runtime).generate(
+            _request(generation, design)
+        )
+    )
+
+    evidence = result.manifest.run_evidence.rag
+    assert evidence is not None
+    assert evidence.enabled is True
+    assert evidence.backend == "filter"
+    assert evidence.embedding_model is None
+    assert evidence.rule_corpus_sha256 is not None
+    service = next(
+        item
+        for item in evidence.retrievals
+        if item.module_path == "backend/src/services/taskService.js"
+    )
+    assert service.applied_to_prompt is True
+    assert "node-svc-001" in service.retrieved_rule_ids
+    assert "[node-svc-001]" in client.requests[0].messages[1].content
+    assert verify_manifest_evidence(result.manifest)
+
+    altered = service.model_copy(update={"retrieved_rule_ids": ("forged-rule",)})
+    altered_rag = evidence.model_copy(update={"retrievals": (altered,)})
+    altered_evidence = result.manifest.run_evidence.model_copy(update={"rag": altered_rag})
+    altered_manifest = result.manifest.model_copy(update={"run_evidence": altered_evidence})
+    assert not verify_manifest_evidence(altered_manifest)
 
 
 def test_altering_bound_evidence_invalidates_verification(

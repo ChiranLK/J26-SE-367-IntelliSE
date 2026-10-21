@@ -45,10 +45,41 @@ class IntegrationStatus(DomainModel):
     note: str
 
 
+class OpenRouterStatus(DomainModel):
+    """Configuration state only (no network call); the key itself is never exposed."""
+
+    enabled: bool = False
+    key_configured: bool = False
+    model: str | None = None
+
+
+class TeamSocLoStatus(DomainModel):
+    """Configuration state only; the API key itself is never exposed."""
+
+    enabled: bool = False
+    key_configured: bool = False
+    model: str | None = None
+
+
+class OpenRouterCheck(DomainModel):
+    """Result of one explicit, tiny OpenRouter connectivity call (no C1/C2 content)."""
+
+    ok: bool
+    configured_model: str
+    response_model: str
+    upstream_provider: str | None = None
+    reply: str
+    latency_ms: float
+    total_tokens: int | None = None
+
+
 class DemoOverview(DomainModel):
     service_name: str
     api_version: str
+    generation_provider: Literal["ollama", "openrouter"] = "ollama"
     ollama: OllamaStatus
+    openrouter: OpenRouterStatus = OpenRouterStatus()
+    teamsoclo: TeamSocLoStatus = TeamSocLoStatus()
     generated_workspace_root_name: str
     traceability_store_name: str
     integrations: tuple[IntegrationStatus, ...]
@@ -85,6 +116,50 @@ class CodePreviewResponse(DomainModel):
     truncated: bool
     content: str
     execution_claim: Literal["DISPLAY_ONLY_NOT_EXECUTED"] = "DISPLAY_ONLY_NOT_EXECUTED"
+
+
+class CrudDomainSummary(DomainModel):
+    domain_id: str
+    title: str
+    fixture_id: str
+    classification: Literal["SIMULATED_C1_C2_FIXTURE"] = "SIMULATED_C1_C2_FIXTURE"
+    notice: str
+
+
+class CrudDomainCatalog(DomainModel):
+    catalog_version: Literal["1.0"] = "1.0"
+    review_status: Literal["NOT_INDEPENDENTLY_REVIEWED"] = "NOT_INDEPENDENTLY_REVIEWED"
+    domains: tuple[CrudDomainSummary, ...]
+
+
+class PreviewRunRequest(DomainModel):
+    manifest: GenerationManifest
+    workspace_relative_path: Annotated[str, Field(min_length=1, max_length=300)]
+
+
+class PreviewIdRequest(DomainModel):
+    preview_id: Annotated[str, Field(min_length=1, max_length=64)]
+
+
+class PreviewSessionResponse(DomainModel):
+    preview_id: str
+    generation_run_id: str
+    workspace_relative_path: str
+    artifact_digest_sha256: str
+    status: str
+    image_tag: str | None = None
+    container_name: str | None = None
+    ui_port: int | None = None
+    api_port: int | None = None
+    ui_url: str | None = None
+    api_url: str | None = None
+    last_error: str | None = None
+    updated_at_utc: str
+    execution_claim: Literal[
+        "GENERATED_JS_EXECUTES_ONLY_INSIDE_DISPOSABLE_DOCKER_CONTAINER_NOT_ON_HOST"
+    ]
+    runtime_db_claim: Literal["IN_MEMORY"] = "IN_MEMORY"
+    browser_verification_claim: Literal[False] = False
 
 
 class DefectiveBaseline(DomainModel):

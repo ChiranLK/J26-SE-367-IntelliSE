@@ -165,6 +165,38 @@ behavior. See `docs/dynamic-crud-generation-stage1.md` for the supported
 intermediate specification, upstream contract gaps, traceability policy, and
 runtime limitations.
 
+## Generate non-CRUD (behaviour) applications, Stage 0
+
+Designs the CRUD generator refuses (abstract classes, enums, inheritance,
+behaviour methods such as a calculator) can use the explicit behaviour
+generator: `POST /api/v1/behaviour/generation-runs` (dashboard: Design & Stack →
+"Custom / non-CRUD application"). C3 derives classes, `extends`, enums, fields
+and method signatures from the C2 diagram; the model implements one class per
+call (facade last). Each class must pass the conservative JS safety policy, the
+UML interface check and `node --check`; the assembled module is smoke-probed in a
+`node --permission` sandbox, including a metamorphic check that inputs given
+before the computation influence it. No template fallback. Start the result on a
+fresh loopback port with `POST /api/v1/behaviour/apps/start` (files are re-hashed
+against `behaviour-manifest.json` first). Passing the probe is not a correctness
+claim; behaviour runs are not yet linked into the traceability graph.
+
+## Experimental external models (TeamSocLo, OpenRouter)
+
+Both are explicit, disabled-by-default experiments that never act as a fallback
+for local Ollama and are rejected on the default `/api/v1/generation-runs`:
+
+| Provider | Gate | Endpoint | Mode / origin |
+|---|---|---|---|
+| TeamSocLo Claude | `TEAMSOCLO_EXPERIMENT_ENABLED=true` | `/api/v1/experiments/claude-generation` | `EXPERIMENTAL_CLAUDE` |
+| OpenRouter | `OPENROUTER_EXPERIMENT_ENABLED=true` | `/api/v1/experiments/openrouter-generation` (and the behaviour generator with `mode: EXPERIMENTAL_OPENROUTER`) | `EXPERIMENTAL_OPENROUTER` |
+
+OpenRouter uses its OpenAI-compatible `POST {OPENROUTER_BASE_URL}/chat/completions`
+with `OPENROUTER_MODEL` (default `openai/gpt-4o`). Set `OPENROUTER_API_KEY` only in
+the gitignored `.env`; the key is sent only in the `Authorization` header and never
+appears in errors or manifests. Manifests record provider `openrouter`, the
+configured model, the model OpenRouter actually used, the upstream provider and
+token usage. Outputs go to `experiments/` workspaces.
+
 ## Build and inspect living traceability
 
 Task 7 verifies a Task 6 manifest and every referenced generated file before
@@ -233,6 +265,46 @@ npm run dev     # then open http://127.0.0.1:5173
 
 See `docs/ui-research-demo.md` for the three-process Windows start-up, the
 five-minute walkthrough, helper endpoints, and limitations.
+
+## Hybrid rule-governed generation (GPA benchmark) — PP1
+
+`/api/v1/hybrid/*` and the dashboard page **Hybrid GPA Benchmark** combine
+versioned 2.0 C1/C2 contracts (`contracts/schemas/`), a structured Knowledge Base
+(`knowledge-base/`), a deterministic rule base (`generation-rules/`), versioned
+React + Node.js + PostgreSQL templates, the existing best-practice RAG (filtered,
+3–5 chunks, audit-recorded), bounded OpenRouter calls only for rule-unsupported
+custom classes, living traceability, design/architecture verification, scoped
+regeneration and a disposable Docker preview. The GPA policy is a sourced
+transcription of the SLIIT scale labelled `SAMPLE_RESEARCH_POLICY` and must be
+explicitly accepted. Execution is `LOCAL_SANDBOX_PREVIEW` only: CI/CD is
+`DEFERRED_AFTER_PP1`, production deployment `OUT_OF_SCOPE_FOR_PP1`, and real C4
+readiness `PENDING_INTEGRATION`.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\hybrid_gpa_demo.py --isolated   # full scenario, no Docker
+.\.venv\Scripts\python.exe scripts\hybrid_gpa_demo.py --preview    # plus Docker preview
+```
+
+See [docs/hybrid-generation-architecture.md](docs/hybrid-generation-architecture.md)
+and the panel runbook [docs/pp1-demo-runbook.md](docs/pp1-demo-runbook.md).
+
+## Best-practice RAG
+
+Generation supports an offline deterministic `filter` backend and an optional
+real embedding-backed `chroma` backend. The default remains `filter`; Chroma and
+sentence-transformers are installed separately so ordinary C3 setup does not
+silently download an embedding model.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-rag.txt
+$env:RAG_BACKEND = "chroma"
+.\.venv\Scripts\python.exe scripts\rag_demo.py
+```
+
+See [docs/rag-best-practice-retrieval.md](docs/rag-best-practice-retrieval.md)
+for the evidence fields, real-model demo, ablation procedure, and research
+limitations. This is best-practice RAG for generation; it is not yet Component
+4 defect-context RAG.
 
 ## Configuration
 

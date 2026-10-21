@@ -1,0 +1,33 @@
+{
+  "file_id": "KB-COMMON-TRACEABILITY-TYPES",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-TRACE-SCHEMA",
+      "node_types": [
+        "REQUIREMENT", "UML_ELEMENT", "RULE", "KNOWLEDGE_ITEM", "MODULE", "CODE_FILE",
+        "CODE_SYMBOL", "API_OPERATION", "DATABASE_ENTITY", "TEST_SEAM", "C4_TEST",
+        "DEFECT_REPORT", "PATCH_EVENT", "READINESS_SIGNAL", "DEPLOYMENT_EVENT", "ARTIFACT"
+      ],
+      "relations": {
+        "DESIGNED_BY": ["REQUIREMENT", "UML_ELEMENT"],
+        "IMPLEMENTED_BY": ["REQUIREMENT", "MODULE"],
+        "GENERATED_AS": ["UML_ELEMENT", "CODE_SYMBOL"],
+        "PRODUCED": ["RULE", "CODE_FILE"],
+        "CONSTRAINED": ["KNOWLEDGE_ITEM", "CODE_FILE"],
+        "CONTAINS": ["MODULE", "CODE_FILE"],
+        "DEFINES": ["CODE_FILE", "CODE_SYMBOL"],
+        "EXPOSED_BY": ["REQUIREMENT", "API_OPERATION"],
+        "STORED_BY": ["REQUIREMENT", "DATABASE_ENTITY"],
+        "VERIFIED_THROUGH": ["REQUIREMENT", "TEST_SEAM"],
+        "TARGETS": ["TEST_SEAM", "MODULE"],
+        "PART_OF": ["MODULE", "ARTIFACT"],
+        "IMPACTS": ["DEFECT_REPORT", "MODULE"],
+        "REGENERATED": ["PATCH_EVENT", "MODULE"],
+        "AUTHORIZES": ["READINESS_SIGNAL", "ARTIFACT"],
+        "DEPLOYED": ["DEPLOYMENT_EVENT", "ARTIFACT"]
+      },
+      "link_lifecycle": ["ACTIVE", "SUPERSEDED", "EXPIRED"]
+    }
+  ]
+}

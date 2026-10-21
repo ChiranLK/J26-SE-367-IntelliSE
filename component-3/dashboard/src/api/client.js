@@ -4,6 +4,8 @@
 // UI renders as-is (network, timeout, HTTP error with C3's structured errors, or an
 // unreadable success body).
 
+import { recordCall } from "../state/callLog.js";
+
 export const API_PREFIX = "/api/v1";
 
 export class ApiError extends Error {
@@ -31,7 +33,30 @@ function normalizeErrors(payload) {
   return [];
 }
 
-export async function apiRequest(
+// Every real call is logged (method, path, HTTP status, measured duration) so the
+// dashboard timeline can show only what actually happened in this session.
+export async function apiRequest(path, options = {}) {
+  const startedAt = Date.now();
+  const method = options.method ?? "GET";
+  try {
+    const result = await rawApiRequest(path, options);
+    recordCall({ method, path, status: 200, ok: true, durationMs: Date.now() - startedAt, at: new Date().toISOString() });
+    return result;
+  } catch (error) {
+    recordCall({
+      method,
+      path,
+      status: error?.status ?? null,
+      ok: false,
+      errorCode: error?.errors?.[0]?.code ?? error?.kind ?? "ERROR",
+      durationMs: Date.now() - startedAt,
+      at: new Date().toISOString(),
+    });
+    throw error;
+  }
+}
+
+async function rawApiRequest(
   path,
   { method = "GET", body, timeoutMs = 30000, signal } = {},
 ) {

@@ -1,0 +1,10 @@
+{
+  "id": "any-sec-001",
+  "stack": "any",
+  "layer": "any",
+  "category": "security",
+  "priority": 3,
+  "rule": "Never hard-code secrets, tokens or passwords. Read them from environment variables or a secret manager.",
+  "bad_example": "const apiKey = 'sk-live-123456';",
+  "good_example": "const apiKey = process.env.API_KEY;"
+}

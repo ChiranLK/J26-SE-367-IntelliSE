@@ -3,10 +3,12 @@
 from fastapi import APIRouter, Request, status
 
 from intelise_c3.contracts.generation import CodeGenerationRequest, GenerationMode
-from intelise_c3.core.errors import ErrorResponse
+from intelise_c3.core.errors import ApplicationError, ErrorDetail, ErrorResponse
 from intelise_c3.domain.generation import GenerationRunResult
 from intelise_c3.llm.ollama import OllamaLLMClient
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.code_generation import CodeGenerationService
+from intelise_c3.services.design_context_store import DesignContextStore
 
 router = APIRouter(tags=["code-generation"])
 
@@ -44,7 +46,44 @@ async def create_generation_run(
     request: Request,
 ) -> GenerationRunResult:
     """Generate without running, installing, building, or deploying artifacts."""
+    dedicated = {
+        GenerationMode.EXPERIMENTAL_CLAUDE: "/api/v1/experiments/claude-generation",
+        GenerationMode.EXPERIMENTAL_OPENROUTER: "/api/v1/experiments/openrouter-generation",
+    }
+    if generation_request.mode in dedicated:
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="EXPERIMENTAL_MODE_REJECTED",
+                    field="mode",
+                    message=(
+                        f"Experimental {generation_request.mode.value} generation is forbidden on the "
+                        "default research endpoint /api/v1/generation-runs. Use the dedicated "
+                        f"experimental endpoint {dedicated[generation_request.mode]}."
+                    ),
+                )
+            ],
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     settings = request.app.state.settings
+    if (
+        generation_request.mode is GenerationMode.LOCAL_LLM
+        and getattr(settings, "generation_provider", "ollama") == "openrouter"
+    ):
+        raise ApplicationError(
+            [
+                ErrorDetail(
+                    code="LOCAL_OLLAMA_DISABLED",
+                    field="mode",
+                    message=(
+                        "Local Ollama is disabled by GENERATION_PROVIDER=openrouter. "
+                        "Use /api/v1/experiments/openrouter-generation."
+                    ),
+                )
+            ],
+            status_code=status.HTTP_409_CONFLICT,
+        )
     llm_client = (
         OllamaLLMClient(settings)
         if generation_request.mode is GenerationMode.LOCAL_LLM
@@ -53,5 +92,7 @@ async def create_generation_run(
     service = CodeGenerationService(
         workspace_root=settings.generated_workspace_root,
         llm_client=llm_client,
+        rag_runtime=RagRuntime.from_settings(settings),
+        design_context_store=DesignContextStore.from_settings(settings),
     )
     return await service.generate(generation_request)

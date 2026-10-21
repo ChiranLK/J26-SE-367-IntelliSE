@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
 import { CodePreview } from "../components/CodePreview.jsx";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, ModeBadge, PageHeader, SimBanner, SimulatedBadge, Stat, StatusBadge, Table } from "../components/ui.jsx";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, ModeBadge, PageHeader, SimBanner, SimulatedBadge, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
+import { EvidenceChip, FileGrid, PatchDiffPanel, RunningBoard } from "../components/visuals.jsx";
 import { formatBytes, formatDuration, formatTime } from "../lib/format.js";
 import { buildDefectReport, buildScopedRequest } from "../lib/requests.js";
 import { useBackend } from "../state/backend.jsx";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
+import { HybridChangeView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
 const reasonList = (codes) => (codes?.length ? codes.map((code) => <div key={code}><code>{code}</code></div>) : "none");
 
@@ -121,13 +124,64 @@ function PatchedView({ result }) {
   );
 }
 
-function Result({ entry }) {
+function OutcomeBoard({ result, baseline, baselineRunId }) {
+  const preservation = result.preservation;
+  const graph = result.graph_versioning;
+  const handoff = result.c4_retest_handoff;
+  const attempts = result.patch_attempts ?? [];
+  const lastAttempt = attempts[attempts.length - 1];
+  const files = preservation
+    ? preservation.entries.map((entry) => ({
+        path: entry.relative_path,
+        state: !entry.byte_identical ? (entry.selected ? "patched" : "violation") : "identical",
+      }))
+    : (baseline && baseline.generation_run.manifest.generation_run_id === baselineRunId ? baseline.generation_run.manifest.files : []).map((file) => ({
+        path: file.relative_path,
+        state: "untouched",
+      }));
+  const changed = files.filter((file) => file.state === "patched" || file.state === "violation").length;
+  const used = result.metrics.within_request_attempt_count ?? attempts.length;
+  const limit = result.metrics.within_request_attempt_limit;
+  return (
+    <Card className="outcome-board" title="Outcome" subtitle="Everything below is read from this regeneration response; nothing is inferred.">
+      <div className="outcome-headline" data-testid="outcome-headline">
+        <span className="outcome-big">{changed} of {files.length} file{files.length === 1 ? "" : "s"} changed</span>
+        <span className="outcome-graph">
+          {graph ? `graph v${graph.base_graph_version} → v${graph.new_graph_version}` : "graph unchanged"}
+        </span>
+      </div>
+      <div className="chip-row outcome-chips">
+        {lastAttempt ? (
+          lastAttempt.accepted
+            ? <Badge tone="ok">validator: ACCEPTED</Badge>
+            : <Badge tone="bad">validator: REJECTED · {lastAttempt.rejection_code ?? "unknown"}</Badge>
+        ) : <Badge tone="neutral">validator: not reached</Badge>}
+        <Badge tone="neutral">attempts used {used}/{limit ?? "?"}</Badge>
+        <StatusBadge status="PENDING" label={handoff ? `C4 retest ${handoff.retest_status}` : "C4 retest PENDING · no handoff"} />
+        <EvidenceChip kind="none" />
+        <EvidenceChip kind="simulated">SIMULATED defect</EvidenceChip>
+      </div>
+      {files.length ? (
+        <FileGrid files={files} />
+      ) : (
+        <p className="muted small">No file list is available for this run (no patched workspace). Create a baseline and run a regeneration to see the file grid.</p>
+      )}
+      <PatchDiffPanel result={result} />
+    </Card>
+  );
+}
+
+function Result({ entry, baseline }) {
   const { result } = entry;
   const versioning = result.artifact_versioning;
   const graph = result.graph_versioning;
   const preservation = result.preservation;
   const handoff = result.c4_retest_handoff;
-  const mode = result.model_evidence_class === "MOCKED_TEST_DOUBLE" ? "MOCK" : "REAL_LOCAL_OLLAMA";
+  const mode = result.model_evidence_class === "MOCKED_TEST_DOUBLE"
+    ? "MOCK"
+    : result.model_evidence_class === "SIMULATED_RAG_TEST_DOUBLE"
+      ? "SIMULATED_RAG_TEST_DOUBLE"
+      : "REAL_LOCAL_OLLAMA";
   return (
     <div data-testid="regeneration-result">
       <div className="result-head">
@@ -148,13 +202,53 @@ function Result({ entry }) {
         structurally inspected; it has not run any test. c4_testing_claim = {String(result.c4_testing_claim)}.
       </Callout>
 
+      <OutcomeBoard result={result} baseline={baseline} baselineRunId={entry.baselineRunId} />
+
       <div className="stats">
         <Stat label="Patched modules" value={result.patches.length} />
         <Stat label="Unchanged files" value={preservation ? preservation.unchanged_file_count : "–"} tone="ok" />
         <Stat label="Collateral edits" value={preservation ? preservation.collateral_edit_count : "–"} tone={preservation?.collateral_edit_count ? "bad" : undefined} />
         <Stat label="Model calls" value={result.metrics.llm_call_count} />
         <Stat label="Rejected attempts" value={result.metrics.rejected_attempt_count} />
+        <Stat label="Attempt counter" value={`${result.metrics.within_request_attempt_count ?? result.patch_attempts.length}/${result.metrics.within_request_attempt_limit ?? "?"}`} />
       </div>
+
+      <Card title="Trigger C retrieval evidence" subtitle={result.repair_execution_mode === "DETERMINISTIC_TEST_DOUBLE" ? "Deterministic fallback: RAG was not applied." : "RAG A defect context and RAG B best-practice rules actually supplied to the patch prompt."}>
+        <Table
+          dense
+          empty="No retrieval evidence was applied."
+          rowKey={(row) => row.module_path}
+          rows={result.retrieval_evidence ?? []}
+          columns={[
+            { key: "module_path", header: "Impacted module", render: (row) => <code>{row.module_path}</code> },
+            { key: "rag_a_chunk_ids", header: "RAG A chunks", render: (row) => row.rag_a_chunk_ids.length ? row.rag_a_chunk_ids.map((id) => <div key={id}><code>{id}</code></div>) : "not applied" },
+            { key: "rag_b_rule_ids", header: "RAG B rules", render: (row) => row.rag_b_rule_ids.length ? row.rag_b_rule_ids.map((id) => <div key={id}><code>{id}</code></div>) : "not applied" },
+            { key: "applied_to_prompt", header: "Prompt", render: (row) => row.applied_to_prompt ? "applied" : "not applied" },
+          ]}
+        />
+        {result.patch_event ? (
+          <KeyValues items={[
+            { label: "Trigger", value: result.patch_event.trigger },
+            { label: "Defect", value: result.patch_event.defect_ids.join(", ") },
+            { label: "RTM references", value: result.patch_event.rtm_requirement_ids.join(", ") },
+            { label: "Changed files", value: result.patch_event.changed_files.join(", ") },
+            { label: "Changed symbols", value: result.patch_event.changed_symbols.join(", ") || "not supplied" },
+            { label: "Symbol evidence basis", value: result.patch_event.changed_symbol_basis },
+            { label: "Rationale", value: result.patch_event.rationale },
+          ]} />
+        ) : null}
+      </Card>
+
+      {result.human_review_package ? (
+        <Card title="Human-review package" tone="warn">
+          <KeyValues items={[
+            { label: "Reason", value: result.human_review_package.reason_code },
+            { label: "Required action", value: result.human_review_package.required_action },
+            { label: "Source artifact", value: <Hash value={result.human_review_package.source_artifact_digest_sha256} length={24} /> },
+            { label: "Rejected attempts", value: result.human_review_package.rejection_reasons.join(", ") || "none" },
+          ]} />
+        </Card>
+      ) : null}
 
       {versioning ? (
         <div className="grid grid-2">
@@ -277,7 +371,7 @@ function Result({ entry }) {
   );
 }
 
-export default function ScopedRegeneration() {
+function ClassicScopedRegeneration() {
   const { session, set, update } = useSession();
   const { overview } = useBackend();
   const scoped = session.scoped;
@@ -345,8 +439,8 @@ export default function ScopedRegeneration() {
   return (
     <div className="page">
       <PageHeader
-        title="Scoped Regeneration"
-        subtitle="Defect feedback to graph-selected patch scope, using the real FR-C3-06/07 services."
+        title="RAG-Grounded Scoped Regeneration"
+        subtitle="Use traceability evidence to retrieve current defect context and patch only the implicated module."
         badges={
           <>
             <SimulatedBadge>SIMULATED C4 DEFECT</SimulatedBadge>
@@ -360,8 +454,8 @@ export default function ScopedRegeneration() {
       </SimBanner>
 
       <Card
-        title="1 · Simulated C4 defect scenarios"
-        subtitle="GET /api/v1/demo/fixtures/defect-scenarios"
+        title="1 · Select a simulated C4 defect"
+        subtitle="A clearly labelled fixture stands in for the future Component 4 contract."
         actions={<Button onClick={() => loadScenarios.run()} loading={loadScenarios.loading}>{scenarios.length ? "Reload scenarios" : "Load SIMULATED defect fixture"}</Button>}
       >
         <ErrorPanel error={loadScenarios.error} context="Load defect scenarios" />
@@ -407,8 +501,8 @@ export default function ScopedRegeneration() {
       </Card>
 
       <Card
-        title="2 · Simulated defective baseline"
-        subtitle="POST /api/v1/demo/scoped-regeneration/baseline · real generation run and real graph; the service module is a defective test-double output"
+        title="2 · Create the defective baseline"
+        subtitle="The generation run and graph are real; the deliberately defective service output is a test double."
         actions={<Button onClick={() => createBaseline.run()} loading={createBaseline.loading}>{baseline ? "Create a fresh baseline" : "Create baseline"}</Button>}
       >
         {createBaseline.loading ? <Loading label="Generating baseline run and graph" startedAt={createBaseline.startedAt} /> : null}
@@ -417,7 +511,7 @@ export default function ScopedRegeneration() {
           <>
             <div className="result-head">
               <Badge tone="sim">{baseline.classification}</Badge>
-              <Badge tone="sim">{baseline.model_evidence_class}</Badge>
+              <Badge tone={baseline.model_evidence_class === "MOCKED_TEST_DOUBLE" ? "mock" : "sim"}>{baseline.model_evidence_class}</Badge>
             </div>
             <p className="small">{baseline.notice}</p>
             <KeyValues
@@ -437,8 +531,8 @@ export default function ScopedRegeneration() {
       </Card>
 
       <Card
-        title="3 · Impact selection"
-        subtitle="POST /api/v1/impact-selections · read-only, no model call"
+        title="3 · Compute the graph impact set"
+        subtitle="Read-only traceability traversal selects the affected requirements, UML, code, API, database, and test evidence."
         actions={<Button onClick={() => previewImpact.run()} loading={previewImpact.loading} disabled={!request}>Preview impact selection</Button>}
       >
         {!request ? <p className="muted small">Load the defect fixture and create a baseline first.</p> : null}
@@ -448,31 +542,28 @@ export default function ScopedRegeneration() {
         {impact ? <Impact impact={impact} /> : null}
       </Card>
 
-      <Card title="4 · Scoped regeneration" subtitle="Two clearly separated modes. Both call the same pipeline; only the model differs.">
+      <Card className="research-highlight" title="4 · Retrieve evidence and repair the scoped module" subtitle="The research path combines RAG A defect context with RAG B best-practice rules before local-model inference.">
         <div className="mode-grid">
-          <div className="mode-card">
-            <div>
-              <strong>MOCK model</strong> <ModeBadge mode="MOCK" />
-              <p className="muted small">POST /api/v1/demo/scoped-regenerations/mock. A fixed repaired service file stands in for the model. It checks the pipeline only and repairs just the service scenario; other scenarios fail visibly.</p>
-              <Button onClick={() => regenerate.run("MOCK")} loading={regenerate.loading && lastRunMode === "MOCK"} disabled={!request || regenerate.loading || consumed}>Run MOCK regeneration</Button>
-            </div>
-          </div>
-          <div className="mode-card">
+          <div className="mode-card mode-active">
             <div>
               <strong>REAL local Ollama</strong> <ModeBadge mode="REAL_LOCAL_OLLAMA" />
-              <p className="muted small">POST /api/v1/scoped-regenerations. The configured local model proposes the patch. Output quality is unknown and may be rejected by the guards.</p>
+              <p className="muted small">RAG A defect evidence and RAG B rules ground the configured local-model prompt. Output quality is not assumed and may be rejected by deterministic guards.</p>
               <Button onClick={() => regenerate.run("REAL_LOCAL_OLLAMA")} loading={regenerate.loading && lastRunMode === "REAL_LOCAL_OLLAMA"} disabled={!request || regenerate.loading || consumed}>Run REAL Ollama regeneration</Button>
               {!ollamaOk ? <div className="text-warn small">Ollama is not ready: {ollama?.detail ?? "status unknown"}</div> : null}
             </div>
           </div>
         </div>
+        <TechnicalDetails summary="Deterministic pipeline test mode (does not use RAG)">
+          <p className="muted small">A fixed repaired service file can exercise orchestration without calling a model. It must not be presented as AI- or RAG-driven repair.</p>
+          <Button variant="secondary" onClick={() => regenerate.run("MOCK")} loading={regenerate.loading && lastRunMode === "MOCK"} disabled={!request || regenerate.loading || consumed}>Run MOCK regeneration</Button>
+        </TechnicalDetails>
         {consumed ? (
           <Callout tone="info" title="This baseline has been repaired">
             Its graph version advanced, so the defect report is now stale by design. Create a fresh baseline to run another mode.
           </Callout>
         ) : null}
         {regenerate.loading ? (
-          <Loading
+          <RunningBoard
             label={`Running ${lastRunMode} regeneration`}
             startedAt={regenerate.startedAt}
             note={lastRunMode === "REAL_LOCAL_OLLAMA" ? "Synchronous call. Local inference can take from tens of seconds to several minutes." : undefined}
@@ -480,6 +571,15 @@ export default function ScopedRegeneration() {
         ) : null}
         <ErrorPanel error={regenerate.error} context={`${lastRunMode ?? ""} regeneration`} />
       </Card>
+
+      {runs.length === 0 && !regenerate.loading ? (
+        <Card title="Regeneration outcome" subtitle="Nothing has run in this session yet.">
+          <p className="muted small">
+            Next step: load the SIMULATED defect fixture (1), create the defective baseline (2), then run step 4. The outcome board
+            will show the changed file, the diff, the validator verdict and the pending C4 re-test here.
+          </p>
+        </Card>
+      ) : null}
 
       {runs.length ? (
         <>
@@ -499,9 +599,11 @@ export default function ScopedRegeneration() {
               ]}
             />
           </Card>
-          {shown ? <Result entry={shown} /> : null}
+          {shown ? <Result entry={shown} baseline={baseline} /> : null}
         </>
       ) : null}
     </div>
   );
 }
+
+export default withHybridFallback(HybridChangeView, ClassicScopedRegeneration, { crudRunExists: (session) => Boolean(session.generationRun) || (session.scoped?.runs?.length ?? 0) > 0 });

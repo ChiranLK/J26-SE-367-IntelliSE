@@ -100,6 +100,27 @@ class SQLiteTraceabilityStore:
         row = self._get_row(graph_id, version)
         return TraceGraphSnapshot.model_validate(json.loads(row[0]))
 
+    def find_by_run_id(
+        self, generation_run_id: str
+    ) -> tuple[str, int, GenerationManifest] | None:
+        """Return the newest (graph_id, version, manifest) persisted for a run, if any."""
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT graph_id, graph_version, manifest_json FROM graph_snapshots
+                WHERE generation_run_id = ?
+                ORDER BY graph_version DESC LIMIT 1
+                """,
+                (generation_run_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return (
+            row["graph_id"],
+            int(row["graph_version"]),
+            GenerationManifest.model_validate_json(row["manifest_json"]),
+        )
+
     def get_manifest(self, graph_id: str, version: int) -> GenerationManifest:
         row = self._get_row(graph_id, version)
         return GenerationManifest.model_validate(json.loads(row[1]))

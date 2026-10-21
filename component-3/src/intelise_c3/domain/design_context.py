@@ -3,6 +3,8 @@
 from enum import StrEnum
 from typing import Literal
 
+from pydantic import SerializerFunctionWrapHandler, model_serializer
+
 from intelise_c3.domain.generation_context import (
     DomainModel,
     NormalizedRequirement,
@@ -55,13 +57,39 @@ class ParsedMethod(DomainModel):
     visibility: Visibility
 
 
+class ParsedElementKind(StrEnum):
+    """Kind of classifier declared in a class diagram."""
+
+    CLASS = "CLASS"
+    ENUM = "ENUM"
+
+
 class ParsedClass(DomainModel):
-    """Class structure extracted from one released C2 UML artifact."""
+    """Class or enum structure extracted from one released C2 UML artifact.
+
+    ``kind``, ``is_abstract`` and ``values`` are omitted from serialized output
+    while they hold their defaults, so canonical digests of designs that use
+    only plain classes are identical to those produced before the fields existed.
+    """
 
     source_uml_id: str
     name: str
     attributes: tuple[ParsedAttribute, ...]
     methods: tuple[ParsedMethod, ...]
+    kind: ParsedElementKind = ParsedElementKind.CLASS
+    is_abstract: bool = False
+    values: tuple[str, ...] = ()
+
+    @model_serializer(mode="wrap")
+    def _omit_default_extensions(self, handler: SerializerFunctionWrapHandler) -> dict:
+        data = handler(self)
+        if self.kind is ParsedElementKind.CLASS:
+            data.pop("kind", None)
+        if not self.is_abstract:
+            data.pop("is_abstract", None)
+        if not self.values:
+            data.pop("values", None)
+        return data
 
 
 class ParsedRelationship(DomainModel):

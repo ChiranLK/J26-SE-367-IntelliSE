@@ -1,0 +1,713 @@
+{
+  "$defs": {
+    "C1ApprovalStatusV2": {
+      "enum": [
+        "CLIENT_APPROVED",
+        "PENDING_CLIENT_APPROVAL",
+        "REJECTED",
+        "NEEDS_HUMAN_REVIEW"
+      ],
+      "title": "C1ApprovalStatusV2",
+      "type": "string"
+    },
+    "C1PackageV2": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_reference": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Approval Reference",
+          "type": "string"
+        },
+        "approval_status": {
+          "$ref": "#/$defs/C1ApprovalStatusV2"
+        },
+        "approved_at_utc": {
+          "maxLength": 40,
+          "minLength": 10,
+          "title": "Approved At Utc",
+          "type": "string"
+        },
+        "approved_by": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Approved By",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "2.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "evidence_class": {
+          "$ref": "#/$defs/EvidenceClass"
+        },
+        "project_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/C1Provenance"
+        },
+        "requirements": {
+          "items": {
+            "$ref": "#/$defs/C1RequirementV2"
+          },
+          "maxItems": 200,
+          "minItems": 1,
+          "title": "Requirements",
+          "type": "array"
+        },
+        "srs_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Srs Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "evidence_class",
+        "project_id",
+        "srs_version",
+        "approval_status",
+        "approval_reference",
+        "approved_by",
+        "approved_at_utc",
+        "provenance",
+        "requirements"
+      ],
+      "title": "C1PackageV2",
+      "type": "object"
+    },
+    "C1Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "classification_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Classification Report Ref",
+          "type": "string"
+        },
+        "quality_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Quality Report Ref",
+          "type": "string"
+        },
+        "source_document_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Source Document Ref",
+          "type": "string"
+        },
+        "source_system": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Source System",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_system",
+        "source_document_ref",
+        "quality_report_ref",
+        "classification_report_ref"
+      ],
+      "title": "C1Provenance",
+      "type": "object"
+    },
+    "C1RequirementV2": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/C1ApprovalStatusV2"
+        },
+        "constraints": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RequirementConstraint"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "requirement_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "requirement_type": {
+          "enum": [
+            "FR",
+            "NFR"
+          ],
+          "title": "Requirement Type",
+          "type": "string"
+        },
+        "requirement_version": {
+          "minimum": 1,
+          "title": "Requirement Version",
+          "type": "integer"
+        },
+        "statement": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requirement_id",
+        "requirement_version",
+        "requirement_type",
+        "title",
+        "statement",
+        "approval_status"
+      ],
+      "title": "C1RequirementV2",
+      "type": "object"
+    },
+    "C2PackageV2": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "2.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "evidence_class": {
+          "$ref": "#/$defs/EvidenceClass"
+        },
+        "project_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "release_status": {
+          "$ref": "#/$defs/C2ReleaseStatusV2"
+        },
+        "released_at_utc": {
+          "maxLength": 40,
+          "minLength": 10,
+          "title": "Released At Utc",
+          "type": "string"
+        },
+        "requirement_uml_anchors": {
+          "items": {
+            "$ref": "#/$defs/RequirementUmlAnchorV2"
+          },
+          "maxItems": 400,
+          "minItems": 1,
+          "title": "Requirement Uml Anchors",
+          "type": "array"
+        },
+        "srs_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Srs Version",
+          "type": "string"
+        },
+        "ui_specification": {
+          "items": {
+            "$ref": "#/$defs/UiScreenV2"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Ui Specification",
+          "type": "array"
+        },
+        "uml_artifacts": {
+          "items": {
+            "$ref": "#/$defs/UmlArtifactV2"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Uml Artifacts",
+          "type": "array"
+        },
+        "uml_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Uml Version",
+          "type": "string"
+        },
+        "validation_reports": {
+          "$ref": "#/$defs/C2ValidationReports"
+        }
+      },
+      "required": [
+        "contract_version",
+        "evidence_class",
+        "project_id",
+        "srs_version",
+        "uml_version",
+        "release_status",
+        "released_at_utc",
+        "validation_reports",
+        "uml_artifacts",
+        "ui_specification",
+        "requirement_uml_anchors"
+      ],
+      "title": "C2PackageV2",
+      "type": "object"
+    },
+    "C2ReleaseStatusV2": {
+      "enum": [
+        "VALIDATED",
+        "DRAFT",
+        "FAILED",
+        "NEEDS_HUMAN_REVIEW"
+      ],
+      "title": "C2ReleaseStatusV2",
+      "type": "string"
+    },
+    "C2ValidationReports": {
+      "additionalProperties": false,
+      "properties": {
+        "semantic_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Semantic Report Ref",
+          "type": "string"
+        },
+        "syntax_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Syntax Report Ref",
+          "type": "string"
+        },
+        "ui_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Ui Report Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "semantic_report_ref",
+        "syntax_report_ref",
+        "ui_report_ref"
+      ],
+      "title": "C2ValidationReports",
+      "type": "object"
+    },
+    "ConstraintKind": {
+      "enum": [
+        "REQUIRED",
+        "RANGE",
+        "PATTERN",
+        "ENUM_FROM_POLICY",
+        "UNIQUE_WITHIN_REQUEST"
+      ],
+      "title": "ConstraintKind",
+      "type": "string"
+    },
+    "EvidenceClass": {
+      "description": "Where an upstream/downstream document really came from.",
+      "enum": [
+        "SIMULATED_FIXTURE",
+        "UPSTREAM_COMPONENT_OUTPUT"
+      ],
+      "title": "EvidenceClass",
+      "type": "string"
+    },
+    "HumanOverride": {
+      "additionalProperties": false,
+      "description": "Explicit, version-bound and auditable override. FAILED inputs can never be overridden.",
+      "properties": {
+        "approval_reference": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Approval Reference",
+          "type": "string"
+        },
+        "approved_at_utc": {
+          "maxLength": 40,
+          "minLength": 10,
+          "title": "Approved At Utc",
+          "type": "string"
+        },
+        "approved_by": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Approved By",
+          "type": "string"
+        },
+        "bound_project_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Bound Project Id",
+          "type": "string"
+        },
+        "bound_srs_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Bound Srs Version",
+          "type": "string"
+        },
+        "bound_uml_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Bound Uml Version",
+          "type": "string"
+        },
+        "override_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Override Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 600,
+          "minLength": 10,
+          "title": "Reason",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/HumanOverrideScope"
+        }
+      },
+      "required": [
+        "override_id",
+        "scope",
+        "reason",
+        "approved_by",
+        "approval_reference",
+        "bound_project_id",
+        "bound_srs_version",
+        "bound_uml_version",
+        "approved_at_utc"
+      ],
+      "title": "HumanOverride",
+      "type": "object"
+    },
+    "HumanOverrideScope": {
+      "enum": [
+        "C2_NEEDS_HUMAN_REVIEW_RELEASE"
+      ],
+      "title": "HumanOverrideScope",
+      "type": "string"
+    },
+    "InputClassification": {
+      "enum": [
+        "VALIDATED_CONTRACT_INPUT",
+        "PROVISIONAL_DEMO_INPUT"
+      ],
+      "title": "InputClassification",
+      "type": "string"
+    },
+    "RequirementConstraint": {
+      "additionalProperties": false,
+      "description": "Structured acceptance constraint supplied by C1 (proposed field, pending C1 confirmation).",
+      "properties": {
+        "constraint_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ConstraintKind"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "target": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "target",
+        "kind"
+      ],
+      "title": "RequirementConstraint",
+      "type": "object"
+    },
+    "RequirementUmlAnchorV2": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Anchor Id",
+          "type": "string"
+        },
+        "requirement_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "uml_element": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Uml Element",
+          "type": "string"
+        },
+        "uml_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Uml Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "requirement_id",
+        "uml_id",
+        "uml_element"
+      ],
+      "title": "RequirementUmlAnchorV2",
+      "type": "object"
+    },
+    "UiComponentKind": {
+      "enum": [
+        "DYNAMIC_ROWS",
+        "TEXT_INPUT",
+        "NUMBER_INPUT",
+        "SELECT",
+        "CHECKBOX",
+        "BUTTON",
+        "RESULT_PANEL",
+        "LIST",
+        "DISCLOSURE",
+        "ERROR_SUMMARY"
+      ],
+      "title": "UiComponentKind",
+      "type": "string"
+    },
+    "UiComponentV2": {
+      "additionalProperties": false,
+      "properties": {
+        "binds_to": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Binds To"
+        },
+        "component_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Component Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/UiComponentKind"
+        },
+        "label": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "component_id",
+        "kind",
+        "label"
+      ],
+      "title": "UiComponentV2",
+      "type": "object"
+    },
+    "UiScreenV2": {
+      "additionalProperties": false,
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/$defs/UiComponentV2"
+          },
+          "maxItems": 60,
+          "minItems": 1,
+          "title": "Components",
+          "type": "array"
+        },
+        "requirement_ids": {
+          "items": {
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Requirement Ids",
+          "type": "array"
+        },
+        "screen_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Screen Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "screen_id",
+        "title",
+        "requirement_ids",
+        "components"
+      ],
+      "title": "UiScreenV2",
+      "type": "object"
+    },
+    "UmlArtifactV2": {
+      "additionalProperties": false,
+      "properties": {
+        "diagram_type": {
+          "enum": [
+            "CLASS",
+            "USE_CASE"
+          ],
+          "title": "Diagram Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "plantuml_source": {
+          "maxLength": 40000,
+          "minLength": 1,
+          "title": "Plantuml Source",
+          "type": "string"
+        },
+        "uml_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Uml Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uml_id",
+        "diagram_type",
+        "name",
+        "plantuml_source"
+      ],
+      "title": "UmlArtifactV2",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "c1": {
+      "$ref": "#/$defs/C1PackageV2"
+    },
+    "c2": {
+      "$ref": "#/$defs/C2PackageV2"
+    },
+    "contract_version": {
+      "const": "2.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "human_override": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HumanOverride"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "input_classification": {
+      "$ref": "#/$defs/InputClassification"
+    }
+  },
+  "required": [
+    "contract_version",
+    "input_classification",
+    "c1",
+    "c2"
+  ],
+  "title": "HybridInputPackage",
+  "type": "object"
+}

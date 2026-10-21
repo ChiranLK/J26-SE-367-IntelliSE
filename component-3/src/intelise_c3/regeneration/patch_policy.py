@@ -23,6 +23,19 @@ REPOSITORY_PATH = "backend/src/repositories/taskRepository.js"
 
 MAX_PATCH_CHARACTERS = 30000
 
+_OBJECT_METHOD = re.compile(
+    r"\b(?P<name>[A-Za-z_$][\w$]*)\s*:\s*(?:async\s*)?"
+    r"\([^)]*\)\s*=>\s*\{"
+)
+_DECLARED_METHOD = re.compile(
+    r"\b(?:async\s+)?(?P<name>[A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{"
+)
+_CONTROL_FLOW_NAMES = frozenset({"catch", "for", "if", "switch", "while", "with"})
+_GUARD_CHECK = re.compile(
+    r"\brepository\.(?:findById|findOne)\s*\([^)]*\)"
+    r"[\s\S]{0,500}?(?:\bfail\s*\(|\bthrow\b)"
+)
+
 
 @dataclass(frozen=True)
 class PatchableModule:
@@ -102,6 +115,60 @@ class _RepairArtifact(BaseModel):
     content: Annotated[str, Field(min_length=1, max_length=MAX_PATCH_CHARACTERS)]
 
 
+def _matching_brace(source: str, opening_index: int) -> int | None:
+    """Return a method body's closing brace using a deliberately narrow scan."""
+    depth = 0
+    for index in range(opening_index, len(source)):
+        character = source[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _method_bodies(source: str) -> dict[str, tuple[str, ...]]:
+    """Extract common generated JS method forms; this is not a JS parser."""
+    bodies: dict[str, list[str]] = {}
+    starts: set[int] = set()
+    for pattern in (_OBJECT_METHOD, _DECLARED_METHOD):
+        for match in pattern.finditer(source):
+            name = match.group("name")
+            if name in _CONTROL_FLOW_NAMES or match.start() in starts:
+                continue
+            prefix = source[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\bfunction\s+$", prefix):
+                continue
+            opening = source.find("{", match.start(), match.end())
+            closing = _matching_brace(source, opening)
+            if closing is None:
+                continue
+            starts.add(match.start())
+            bodies.setdefault(name, []).append(source[opening + 1 : closing])
+    return {name: tuple(items) for name, items in bodies.items()}
+
+
+def _guard_counts_by_method(source: str) -> dict[str, int]:
+    return {
+        name: sum(len(_GUARD_CHECK.findall(body)) for body in bodies)
+        for name, bodies in _method_bodies(source).items()
+    }
+
+
+def _removed_guard_methods(current_source: str, patched_source: str) -> tuple[str, ...]:
+    original = _guard_counts_by_method(current_source)
+    patched = _guard_counts_by_method(patched_source)
+    return tuple(
+        sorted(
+            name
+            for name in original.keys() & patched.keys()
+            if patched[name] < original[name]
+        )
+    )
+
+
 def validate_repair_output(
     output_text: str,
     *,
@@ -177,6 +244,13 @@ def validate_repair_output(
             "The proposed module breaks its required interface. "
             + (f"Forbidden: {', '.join(forbidden)}. " if forbidden else "")
             + (f"Missing: {', '.join(missing)}." if missing else ""),
+        )
+    removed_guards = _removed_guard_methods(current_source, parsed.content)
+    if removed_guards:
+        raise PatchRejection(
+            PatchRejectionCode.PATCH_REMOVED_GUARD_CHECK,
+            "The proposed module removes an existing repository existence guard "
+            "from method(s): " + ", ".join(removed_guards) + ".",
         )
     normalized = parsed.content.rstrip() + "\n"
     if normalized == current_source.rstrip() + "\n":

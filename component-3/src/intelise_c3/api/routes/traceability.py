@@ -12,8 +12,12 @@ from intelise_c3.core.errors import ErrorResponse
 from intelise_c3.domain.traceability import (
     GraphChangeReport,
     GraphUpdateResult,
+    ImpactSet,
+    RequirementTraceChain,
+    RtmExport,
     TraceGraphSnapshot,
     TraceabilityEvaluationReport,
+    TraceabilityMetricsReport,
 )
 from intelise_c3.services.traceability import TraceabilityService
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
@@ -116,3 +120,144 @@ def evaluate_graph(
     request: Request,
 ) -> TraceabilityEvaluationReport:
     return _service(request).evaluate(graph_id, version, payload.ground_truth)
+
+
+@router.get(
+    "/graphs/{graph_id}/chains/{requirement_id}",
+    response_model=RequirementTraceChain,
+    responses=_ERRORS,
+    summary="Get the end-to-end trace chain for a requirement from the latest graph",
+)
+def get_latest_chain(
+    graph_id: str,
+    requirement_id: str,
+    request: Request,
+) -> RequirementTraceChain:
+    return _service(request).chain(graph_id, requirement_id)
+
+
+@router.get(
+    "/graphs/{graph_id}/versions/{version}/chains/{requirement_id}",
+    response_model=RequirementTraceChain,
+    responses=_ERRORS,
+    summary="Get the end-to-end trace chain for a requirement from a specific graph version",
+)
+def get_versioned_chain(
+    graph_id: str,
+    version: int,
+    requirement_id: str,
+    request: Request,
+) -> RequirementTraceChain:
+    return _service(request).chain(graph_id, requirement_id, version=version)
+
+
+@router.get(
+    "/graphs/{graph_id}/impact/{requirement_id}",
+    response_model=ImpactSet,
+    responses=_ERRORS,
+    summary="Get the impacted downstream nodes and files for a requirement from the latest graph",
+)
+def get_latest_impact_set(
+    graph_id: str,
+    requirement_id: str,
+    request: Request,
+) -> ImpactSet:
+    return _service(request).impact_set(graph_id, requirement_id)
+
+
+@router.get(
+    "/graphs/{graph_id}/versions/{version}/impact/{requirement_id}",
+    response_model=ImpactSet,
+    responses=_ERRORS,
+    summary="Get the impacted downstream nodes and files for a requirement from a specific graph version",
+)
+def get_versioned_impact_set(
+    graph_id: str,
+    version: int,
+    requirement_id: str,
+    request: Request,
+) -> ImpactSet:
+    return _service(request).impact_set(graph_id, requirement_id, version=version)
+
+
+@router.get(
+    "/graphs/{graph_id}/modules/{module_identifier}/requirements",
+    response_model=tuple[str, ...],
+    responses=_ERRORS,
+    summary="Reverse lookup of requirement IDs for a code module from the latest graph",
+)
+def get_latest_module_requirements(
+    graph_id: str,
+    module_identifier: str,
+    request: Request,
+) -> tuple[str, ...]:
+    return _service(request).requirements_for_module(graph_id, module_identifier)
+
+
+@router.get(
+    "/graphs/{graph_id}/versions/{version}/modules/{module_identifier}/requirements",
+    response_model=tuple[str, ...],
+    responses=_ERRORS,
+    summary="Reverse lookup of requirement IDs for a code module from a specific graph version",
+)
+def get_versioned_module_requirements(
+    graph_id: str,
+    version: int,
+    module_identifier: str,
+    request: Request,
+) -> tuple[str, ...]:
+    return _service(request).requirements_for_module(graph_id, module_identifier, version=version)
+
+
+@router.get(
+    "/graphs/{graph_id}/rtm",
+    response_model=RtmExport,
+    responses=_ERRORS,
+    summary="Export the Requirements Traceability Matrix as JSON and table from the latest graph",
+)
+def get_latest_rtm(
+    graph_id: str,
+    request: Request,
+) -> RtmExport:
+    return _service(request).export_rtm(graph_id)
+
+
+@router.get(
+    "/graphs/{graph_id}/versions/{version}/rtm",
+    response_model=RtmExport,
+    responses=_ERRORS,
+    summary="Export the Requirements Traceability Matrix as JSON and table from a specific graph version",
+)
+def get_versioned_rtm(
+    graph_id: str,
+    version: int,
+    request: Request,
+) -> RtmExport:
+    return _service(request).export_rtm(graph_id, version=version)
+
+
+@router.get(
+    "/graphs/{graph_id}/metrics",
+    response_model=TraceabilityMetricsReport,
+    responses=_ERRORS,
+    summary="Retrieve the living traceability metrics report for the latest graph",
+)
+def get_latest_metrics(
+    graph_id: str,
+    request: Request,
+) -> TraceabilityMetricsReport:
+    return _service(request).metrics(graph_id)
+
+
+@router.get(
+    "/graphs/{graph_id}/versions/{version}/metrics",
+    response_model=TraceabilityMetricsReport,
+    responses=_ERRORS,
+    summary="Retrieve the living traceability metrics report for a specific graph version",
+)
+def get_versioned_metrics(
+    graph_id: str,
+    version: int,
+    request: Request,
+) -> TraceabilityMetricsReport:
+    return _service(request).metrics(graph_id, version=version)

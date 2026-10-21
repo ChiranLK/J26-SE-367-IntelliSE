@@ -30,9 +30,23 @@ from intelise_c3.domain.traceability import (
     GraphLifecycleStatus,
     GraphNodeType,
     GroundTruthLink,
+    ImpactSet,
     RequirementCoverageStatus,
+    RequirementTraceChain,
     ResearchGroundTruth,
+    RtmExport,
     SourceVersionTransitionEvidence,
+    TraceabilityMetricsReport,
+)
+from intelise_c3.traceability.queries import (
+    chain,
+    compute_metrics_report,
+    detect_orphans_and_gaps,
+    export_rtm,
+    impact_set,
+    requirements_for_module,
+    validate_no_orphans,
+    validate_upstream_anchors,
 )
 from intelise_c3.generation.evidence import compute_evidence_digest
 from intelise_c3.main import create_app
@@ -94,6 +108,7 @@ def _with_recomputed_evidence(manifest, *, files=None, traceability=None, source
         template_set_version=evidence.template_set_version,
         llm_inference=manifest.llm_inference,
         artifact_digest_sha256=artifact_digest,
+        rag_evidence=evidence.rag,
     )
     return manifest.model_copy(
         update={
@@ -190,6 +205,29 @@ def test_identical_manifest_build_is_deterministic(tmp_path: Path) -> None:
 
     assert first == second
     assert first.graph_content_digest_sha256 == second.graph_content_digest_sha256
+
+
+def test_creation_run_metadata_is_version_aware(tmp_path: Path) -> None:
+    result, _ = _generated_run(tmp_path / "workspaces")
+    build = TraceabilityGraphBuilder().build(result.manifest)
+
+    assert all(
+        node.created_in_generation_run_id == result.manifest.generation_run_id
+        for node in build.nodes
+    )
+    assert all(
+        link.created_in_generation_run_id == result.manifest.generation_run_id
+        for link in build.links
+    )
+
+    historical_payload = build.model_dump(mode="json")
+    for node in historical_payload["nodes"]:
+        node.pop("created_in_generation_run_id", None)
+    for link in historical_payload["links"]:
+        link.pop("created_in_generation_run_id", None)
+    historical = type(build).model_validate(historical_payload)
+    assert all(node.created_in_generation_run_id is None for node in historical.nodes)
+    assert all(link.created_in_generation_run_id is None for link in historical.links)
 
 
 def test_current_generator_emits_only_valid_relation_directions(tmp_path: Path) -> None:
@@ -774,3 +812,432 @@ def test_graph_creation_and_retrieval_api_round_trip(
             assert retrieved.json() == body
     finally:
         get_settings.cache_clear()
+
+
+def test_chain_query_retrieves_full_typed_chain(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    res_chain = service.chain(snapshot.graph_id, "REQ-TASK-001")
+    assert isinstance(res_chain, RequirementTraceChain)
+    assert res_chain.requirement_id == "REQ-TASK-001"
+    assert res_chain.requirement_node_id == "REQUIREMENT:REQ-TASK-001"
+    assert len(res_chain.uml_nodes) > 0
+    assert len(res_chain.code_modules) > 0
+    assert len(res_chain.api_operations) > 0
+    assert len(res_chain.database_artifacts) > 0
+    assert len(res_chain.test_hooks) > 0
+    assert len(res_chain.links) > 0
+
+
+def test_impact_set_query_returns_affected_nodes_and_modules(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    impact = service.impact_set(snapshot.graph_id, "REQ-TASK-001")
+    assert isinstance(impact, ImpactSet)
+    assert impact.requirement_id == "REQ-TASK-001"
+    assert len(impact.affected_node_ids) > 0
+    assert len(impact.code_node_ids) > 0
+    assert len(impact.api_node_ids) > 0
+    # The Task MVP SQL artifact is design-only and its mapping is
+    # REVIEW_REQUIRED, so the existing scoped-impact policy must not claim it
+    # as automatically affected.
+    assert impact.database_node_ids == ()
+    assert len(impact.test_hook_node_ids) > 0
+    assert len(impact.module_paths) > 0
+
+
+def test_requirements_for_module_reverse_lookup(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    # Pick the primary task service file
+    service_file = next(
+        f for f in result.manifest.files
+        if "Service" in f.relative_path or "service" in f.relative_path
+    )
+    reqs_by_file_id = service.requirements_for_module(
+        snapshot.graph_id, service_file.file_id
+    )
+    reqs_by_path = service.requirements_for_module(
+        snapshot.graph_id, service_file.relative_path
+    )
+
+    assert len(reqs_by_file_id) > 0
+    assert reqs_by_file_id == reqs_by_path
+    assert "REQ-TASK-001" in reqs_by_file_id
+
+
+def test_rtm_export_generates_json_and_table(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    rtm = service.export_rtm(snapshot.graph_id)
+    assert isinstance(rtm, RtmExport)
+    assert rtm.graph_id == snapshot.graph_id
+    assert rtm.graph_version == 1
+    assert len(rtm.rows) == len(result.manifest.source.requirement_ids)
+    assert rtm.rows[0].requirement_id == "REQ-TASK-001"
+    assert len(rtm.rows[0].uml_elements) > 0
+    assert len(rtm.rows[0].code_modules) > 0
+    assert "| Requirement | UML Elements |" in rtm.table_markdown
+    assert "REQ-TASK-001" in rtm.table_markdown
+
+
+def test_orphan_detection_and_validation(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    # Normal valid graph has 0 orphan downstream nodes
+    diagnostics = detect_orphans_and_gaps(snapshot)
+    assert len(diagnostics["orphan_node_ids"]) == 0
+    validate_no_orphans(snapshot)
+
+    # Create an artificially injected orphan CODE_MODULE node
+    orphan_node = snapshot.nodes[0].model_copy(
+        update={
+            "node_id": "CODE_MODULE:FILE-ORPHAN-TEST",
+            "node_type": GraphNodeType.CODE_MODULE,
+            "source_identity": "FILE-ORPHAN-TEST",
+            "label": "orphan-test.py",
+            "attributes": {"artifact_type": "BUSINESS_LOGIC", "relative_path": "backend/src/orphan.py"},
+        }
+    )
+    orphan_snapshot = snapshot.model_copy(
+        update={"nodes": (*snapshot.nodes, orphan_node)}
+    )
+
+    orphan_diag = detect_orphans_and_gaps(orphan_snapshot)
+    assert "CODE_MODULE:FILE-ORPHAN-TEST" in orphan_diag["orphan_node_ids"]
+    orphan_metrics = compute_metrics_report(orphan_snapshot)
+    assert {
+        diagnostic.code for diagnostic in orphan_metrics.diagnostics
+    } == {"ORPHAN_DOWNSTREAM_NODE"}
+
+    with pytest.raises(ApplicationError) as captured:
+        validate_no_orphans(orphan_snapshot)
+    assert captured.value.errors[0].code == "ORPHAN_GRAPH_NODE"
+
+    missing_requirement_snapshot = snapshot.model_copy(
+        update={
+            "nodes": tuple(
+                node
+                for node in snapshot.nodes
+                if node.node_id != "REQUIREMENT:REQ-TASK-001"
+            )
+        }
+    )
+    gap_metrics = compute_metrics_report(missing_requirement_snapshot)
+    assert "REQ-TASK-001" in gap_metrics.coverage_gaps
+    assert "REQUIREMENT_COVERAGE_GAP" in {
+        diagnostic.code for diagnostic in gap_metrics.diagnostics
+    }
+
+
+def test_negative_cases_and_explicit_error_codes(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, workspace = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    # 1. Unknown requirement id
+    with pytest.raises(ApplicationError) as req_err:
+        service.chain(snapshot.graph_id, "UNKNOWN-REQ-999")
+    assert req_err.value.errors[0].code == "UNKNOWN_REQUIREMENT_ID"
+
+    # 2. Missing REQ->UML anchor
+    manifest_without_anchor = result.manifest.model_copy(
+        update={
+            "source": result.manifest.source.model_copy(
+                update={"requirement_uml_anchors": ()}
+            )
+        }
+    )
+    with pytest.raises(ApplicationError) as anchor_err:
+        validate_upstream_anchors(manifest_without_anchor)
+    assert anchor_err.value.errors[0].code == "MISSING_REQ_UML_ANCHOR"
+
+    # 3. Empty requirements list
+    manifest_empty_reqs = result.manifest.model_copy(
+        update={
+            "source": result.manifest.source.model_copy(
+                update={"requirement_ids": ()}
+            )
+        }
+    )
+    with pytest.raises(ApplicationError) as empty_err:
+        TraceabilityGraphBuilder().build(manifest_empty_reqs)
+    assert empty_err.value.errors[0].code == "EMPTY_REQUIREMENTS_LIST"
+
+    # 4. Stale artifact digest / hash mismatch
+    (workspace / "README.md").write_text("tampered content\n", encoding="utf-8")
+    with pytest.raises(ApplicationError) as hash_err:
+        _create(service, result)
+    assert hash_err.value.errors[0].code == "ARTIFACT_HASH_MISMATCH"
+
+
+def test_api_routes_for_queries_and_rtm(tmp_path: Path) -> None:
+    root = tmp_path / "api-workspaces-queries"
+    result, _ = _generated_run(root)
+    get_settings.cache_clear()
+    try:
+        application = create_app()
+        application.state.settings = SimpleNamespace(
+            generated_workspace_root=root,
+            traceability_store_path=tmp_path / "api-traceability-q.sqlite3",
+        )
+        with TestClient(application) as api_client:
+            created = api_client.post(
+                "/api/v1/traceability/graphs",
+                json=GraphCreateRequest(
+                    manifest=result.manifest,
+                    workspace_relative_path=result.workspace_relative_path,
+                ).model_dump(mode="json"),
+            )
+            assert created.status_code == 201
+            graph_id = created.json()["graph_id"]
+
+            chain_resp = api_client.get(
+                f"/api/v1/traceability/graphs/{graph_id}/chains/REQ-TASK-001"
+            )
+            assert chain_resp.status_code == 200
+            assert chain_resp.json()["requirement_id"] == "REQ-TASK-001"
+
+            impact_resp = api_client.get(
+                f"/api/v1/traceability/graphs/{graph_id}/impact/REQ-TASK-001"
+            )
+            assert impact_resp.status_code == 200
+            assert impact_resp.json()["requirement_id"] == "REQ-TASK-001"
+
+            rtm_resp = api_client.get(
+                f"/api/v1/traceability/graphs/{graph_id}/rtm"
+            )
+            assert rtm_resp.status_code == 200
+            assert len(rtm_resp.json()["rows"]) == 3
+    finally:
+        get_settings.cache_clear()
+
+
+def test_regression_one_requirement_change_only_affects_its_chain(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    old_result, _ = _generated_run(root)
+    new_result, new_workspace = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    old_snapshot = _create(service, old_result)
+
+    # In v1, record all three requirement chains
+    v1_c1 = service.chain(old_snapshot.graph_id, "REQ-TASK-001", version=1)
+    v1_c2 = service.chain(old_snapshot.graph_id, "REQ-TASK-002", version=1)
+    v1_c3 = service.chain(old_snapshot.graph_id, "REQ-TASK-003", version=1)
+
+    # Create an updated manifest where only REQ-TASK-001 gains a new dedicated module
+    records = {record.relative_path: record for record in new_result.manifest.files}
+    added_path = new_workspace / "docs/req1-extra-doc.txt"
+    added_path.parent.mkdir(parents=True, exist_ok=True)
+    added_path.write_text("REQ-TASK-001 specific update.\n", encoding="utf-8", newline="\n")
+    added_bytes = added_path.read_bytes()
+    added_record = GeneratedFileRecord(
+        file_id="FILE-REQ1-EXTRA",
+        relative_path="docs/req1-extra-doc.txt",
+        module_identity="req1-extra",
+        artifact_type=GeneratedArtifactType.DOCUMENTATION,
+        origin=ArtifactOrigin.TEMPLATE,
+        sha256=sha256(added_bytes).hexdigest(),
+        size_bytes=len(added_bytes),
+        requirement_ids=("REQ-TASK-001",),
+    )
+    records[added_record.relative_path] = added_record
+
+    # Add an IMPLEMENTS link specifically for REQ-TASK-001 from this new module
+    from intelise_c3.domain.generation import TraceabilityLink, TraceLinkProvenance
+    extra_link = TraceabilityLink(
+        link_id="LINK-REQ1-EXTRA-DOC",
+        source_entity_type=TraceEntityType.FILE,
+        source_id="FILE-REQ1-EXTRA",
+        relation_type=TraceRelationType.IMPLEMENTS,
+        target_entity_type=TraceEntityType.REQUIREMENT,
+        target_id="REQ-TASK-001",
+        resolution_status=TraceResolutionStatus.RESOLVED,
+        review_status=TraceReviewStatus.NOT_REQUIRED,
+        provenance=TraceLinkProvenance(
+            evidence_kind="DETERMINISTIC_MAPPING_RULE",
+            mapping_rule_id="C3_REQ1_EXTRA_MAPPING",
+            evidence_refs=("FILE-REQ1-EXTRA",),
+            details="Extra doc specifically implementing REQ-TASK-001",
+        ),
+    )
+
+    updated_manifest = _with_recomputed_evidence(
+        new_result.manifest,
+        files=tuple(records.values()),
+        traceability=new_result.manifest.traceability.model_copy(
+            update={"links": (*new_result.manifest.traceability.links, extra_link)}
+        ),
+    )
+    _write_manifest(new_workspace, updated_manifest)
+
+    update = service.update(
+        old_snapshot.graph_id,
+        GraphUpdateRequest(
+            manifest=updated_manifest,
+            workspace_relative_path=new_result.workspace_relative_path,
+            base_graph_version=1,
+        ),
+    )
+
+    assert update.snapshot.graph_version == 2
+
+    # In v2:
+    v2_c1 = service.chain(old_snapshot.graph_id, "REQ-TASK-001", version=2)
+    v2_c2 = service.chain(old_snapshot.graph_id, "REQ-TASK-002", version=2)
+    v2_c3 = service.chain(old_snapshot.graph_id, "REQ-TASK-003", version=2)
+
+    # 1. REQ-TASK-001 chain MUST change
+    assert v2_c1 != v1_c1
+    assert "CODE_MODULE:FILE-REQ1-EXTRA" in {n.node_id for n in v2_c1.code_modules}
+    added_node = next(
+        node
+        for node in update.snapshot.nodes
+        if node.node_id == "CODE_MODULE:FILE-REQ1-EXTRA"
+    )
+    assert (
+        added_node.created_in_generation_run_id
+        == updated_manifest.generation_run_id
+    )
+    preserved_requirement = next(
+        node
+        for node in update.snapshot.nodes
+        if node.node_id == "REQUIREMENT:REQ-TASK-002"
+        and node.lifecycle_status is GraphLifecycleStatus.ACTIVE
+    )
+    assert (
+        preserved_requirement.created_in_generation_run_id
+        == old_result.manifest.generation_run_id
+    )
+
+    # 2. REQ-TASK-002 chain MUST be byte-identical
+    assert v2_c2.model_dump_json() == v1_c2.model_dump_json()
+
+    # 3. REQ-TASK-003 chain MUST be byte-identical
+    assert v2_c3.model_dump_json() == v1_c3.model_dump_json()
+
+
+def test_metrics_report_with_gpa_oracle(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    result, _ = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    snapshot = _create(service, result)
+
+    # 1. Base metrics without oracle
+    metrics_base = service.metrics(snapshot.graph_id)
+    assert isinstance(metrics_base, TraceabilityMetricsReport)
+    assert metrics_base.total_requirements == 3
+    assert metrics_base.covered_requirements == 3
+    assert metrics_base.coverage_rate == 1.0
+    assert metrics_base.orphan_rate == 0.0
+
+    # 2. Evaluate against the GPA oracle fixture
+    gpa_truth_path = (
+        Path(__file__).parent
+        / "fixtures"
+        / "simulated"
+        / "gpa_researcher_ground_truth.json"
+    )
+    gpa_truth = ResearchGroundTruth.model_validate(
+        json.loads(gpa_truth_path.read_text(encoding="utf-8"))
+    )
+
+    # For testing the GPA oracle directly: build a GPA graph from the GPA input package
+    from intelise_c3.contracts.provisional_input import ProvisionalInputPackage
+    from intelise_c3.services.input_validation import InputValidationService
+    from intelise_c3.services.design_understanding import DesignUnderstandingService
+    from intelise_c3.services.stack_selection import StackSelectionService
+    from intelise_c3.contracts.stack_selection import StackSelectionRequest
+    from intelise_c3.contracts.generation import CodeGenerationRequest, GenerationMode, ProvisionalStackApproval, ProvisionalApprovalStatus
+    from intelise_c3.scripts.generate_task_mvp import build_simulated_stack_criteria
+
+    gpa_pkg_path = Path(__file__).parent / "fixtures" / "simulated" / "gpa_input_package.json"
+    gpa_payload = json.loads(gpa_pkg_path.read_text(encoding="utf-8"))
+    gpa_pkg = ProvisionalInputPackage.model_validate(gpa_payload)
+    gpa_gen_ctx = InputValidationService().validate(gpa_pkg)
+    gpa_design_ctx = DesignUnderstandingService().build(gpa_gen_ctx)
+    criteria = build_simulated_stack_criteria()
+    gpa_stack_report = StackSelectionService().select(
+        StackSelectionRequest(design_context=gpa_design_ctx, criteria=criteria)
+    )
+    gpa_req = CodeGenerationRequest(
+        generation_context=gpa_gen_ctx,
+        design_context=gpa_design_ctx,
+        stack_selection_report=gpa_stack_report,
+        stack_approval=ProvisionalStackApproval(
+            status=ProvisionalApprovalStatus.APPROVED_FOR_MVP_GENERATION,
+            approval_reference="SIMULATED-GPA-APPROVAL",
+            approved_by="LOCAL-RESEARCHER-EXPERIMENT",
+            acknowledges_provisional_policy=True,
+        ),
+        mode=GenerationMode.TEMPLATE_ONLY,
+        workspace_name="gpa-calc-manual",
+    )
+    import asyncio
+    gpa_result = asyncio.run(CodeGenerationService(root, None).generate(gpa_req))
+    gpa_snapshot = _create(service, gpa_result)
+
+    gpa_metrics = service.metrics(gpa_snapshot.graph_id, oracle=gpa_truth)
+    assert gpa_metrics.oracle_dataset_id == "SIMULATED-RESEARCHER-GROUND-TRUTH-GPA-PROJECT"
+    assert gpa_metrics.oracle_link_count == 3
+    assert gpa_metrics.true_positives == 3
+    assert gpa_metrics.false_positives == 0
+    assert gpa_metrics.false_negatives == 0
+    assert gpa_metrics.precision == 1.0
+    assert gpa_metrics.recall == 1.0
+    assert gpa_metrics.f1_score == 1.0
+    assert "hand-labelled oracle" in gpa_metrics.oracle_honesty_note
+    assert "3 expected links" in gpa_metrics.oracle_honesty_note
+
+
+def test_metrics_preservation_rate_after_regeneration(tmp_path: Path) -> None:
+    root = tmp_path / "workspaces"
+    old_result, _ = _generated_run(root)
+    new_result, new_workspace = _generated_run(root)
+    service = _service(root, tmp_path / "graphs.sqlite3")
+    old_snapshot = _create(service, old_result)
+
+    records = {record.relative_path: record for record in new_result.manifest.files}
+    added_path = new_workspace / "docs/note.txt"
+    added_path.parent.mkdir(parents=True, exist_ok=True)
+    added_path.write_text("Note\n", encoding="utf-8")
+    added_bytes = added_path.read_bytes()
+    added_record = GeneratedFileRecord(
+        file_id="FILE-NOTE",
+        relative_path="docs/note.txt",
+        module_identity="note",
+        artifact_type=GeneratedArtifactType.DOCUMENTATION,
+        origin=ArtifactOrigin.TEMPLATE,
+        sha256=sha256(added_bytes).hexdigest(),
+        size_bytes=len(added_bytes),
+    )
+    records[added_record.relative_path] = added_record
+    updated_manifest = _with_recomputed_evidence(new_result.manifest, files=tuple(records.values()))
+    _write_manifest(new_workspace, updated_manifest)
+
+    update = service.update(
+        old_snapshot.graph_id,
+        GraphUpdateRequest(
+            manifest=updated_manifest,
+            workspace_relative_path=new_result.workspace_relative_path,
+            base_graph_version=1,
+        ),
+    )
+    metrics = service.metrics(old_snapshot.graph_id, version=2, change_report=update.change_report)
+    assert metrics.preservation_rate == 1.0

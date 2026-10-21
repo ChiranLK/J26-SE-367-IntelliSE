@@ -9,14 +9,18 @@
       "scenario_id": "SIM-SCN-001-service-update-missing-task",
       "description": "Update of a non-existent task is not rejected with 404 (injected defect in the mocked baseline service).",
       "expected_status": "SELECTED",
-      "expected_modules": ["backend/src/services/taskService.js"],
+      "expected_modules": [
+        "backend/src/services/taskService.js"
+      ],
       "defects": [
         {
           "defect_id": "SIM-DEF-001",
           "category": "BUSINESS_LOGIC",
           "severity": "HIGH",
           "title": "PATCH of an unknown task id does not return TASK_NOT_FOUND",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-UPDATE-MISSING-TASK-404",
@@ -24,8 +28,13 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "api_operation_ids": ["API-OP-TASK-UPDATE"],
-          "location": {"relative_path": "backend/src/services/taskService.js", "symbol": "update"},
+          "api_operation_ids": [
+            "API-OP-TASK-UPDATE"
+          ],
+          "location": {
+            "relative_path": "backend/src/services/taskService.js",
+            "symbol": "update"
+          },
           "evidence": {
             "observed_behavior": "update(unknown-id, {completed: true}) resolves instead of throwing an error with statusCode 404 and code TASK_NOT_FOUND.",
             "expected_behavior": "update must confirm the task exists first and fail with statusCode 404 and code TASK_NOT_FOUND."
@@ -38,14 +47,18 @@
       "scenario_id": "SIM-SCN-002-controller-with-location",
       "description": "API contract defect narrowed to the controller by a graph-compatible location claim.",
       "expected_status": "SELECTED",
-      "expected_modules": ["backend/src/controllers/taskController.js"],
+      "expected_modules": [
+        "backend/src/controllers/taskController.js"
+      ],
       "defects": [
         {
           "defect_id": "SIM-DEF-002",
           "category": "API_CONTRACT",
           "severity": "MEDIUM",
           "title": "PATCH response status differs from the declared contract",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-PATCH-STATUS",
@@ -53,18 +66,24 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "api_operation_ids": ["API-OP-TASK-UPDATE"],
-          "location": {"relative_path": "backend/src/controllers/taskController.js", "symbol": "update"},
+          "api_operation_ids": [
+            "API-OP-TASK-UPDATE"
+          ],
+          "location": {
+            "relative_path": "backend/src/controllers/taskController.js",
+            "symbol": "update"
+          },
           "evidence": {
             "observed_behavior": "SIMULATED: PATCH returns an unexpected payload shape.",
             "expected_behavior": "SIMULATED: PATCH returns the updated Task."
-          }
+          },
+          "explanation": "SIMULATED explanation: PATCH response status differs from the declared contract."
         }
       ]
     },
     {
-      "scenario_id": "SIM-SCN-003-controller-without-location",
-      "description": "The same API defect without a location is too broad for automatic scope.",
+      "scenario_id": "SIM-SCN-003-controller-unresolvable-location",
+      "description": "The same API defect with a location that does not resolve to a manifest module is too broad for automatic scope.",
       "expected_status": "REVIEW_REQUIRED",
       "expected_modules": [],
       "defects": [
@@ -73,7 +92,9 @@
           "category": "API_CONTRACT",
           "severity": "MEDIUM",
           "title": "PATCH response status differs from the declared contract",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-PATCH-STATUS",
@@ -81,11 +102,17 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "api_operation_ids": ["API-OP-TASK-UPDATE"],
+          "api_operation_ids": [
+            "API-OP-TASK-UPDATE"
+          ],
           "evidence": {
             "observed_behavior": "SIMULATED: PATCH returns an unexpected payload shape.",
             "expected_behavior": "SIMULATED: PATCH returns the updated Task."
-          }
+          },
+          "location": {
+            "relative_path": "backend/src/controllers/unresolvable.js"
+          },
+          "explanation": "SIMULATED explanation: PATCH response status differs from the declared contract."
         }
       ]
     },
@@ -93,14 +120,18 @@
       "scenario_id": "SIM-SCN-004-repository-seam",
       "description": "Data-access defect identified through the injected repository test seam.",
       "expected_status": "SELECTED",
-      "expected_modules": ["backend/src/repositories/taskRepository.js"],
+      "expected_modules": [
+        "backend/src/repositories/taskRepository.js"
+      ],
       "defects": [
         {
           "defect_id": "SIM-DEF-004",
           "category": "DATA_ACCESS",
           "severity": "MEDIUM",
           "title": "Repository remove reports an unexpected result",
-          "affected_requirement_ids": ["REQ-TASK-003"],
+          "affected_requirement_ids": [
+            "REQ-TASK-003"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-REPOSITORY-REMOVE",
@@ -111,7 +142,11 @@
           "evidence": {
             "observed_behavior": "SIMULATED: remove(id) does not report whether a task was removed.",
             "expected_behavior": "SIMULATED: remove(id) reports the removal outcome."
-          }
+          },
+          "location": {
+            "relative_path": "backend/src/repositories/taskRepository.js"
+          },
+          "explanation": "SIMULATED explanation: Repository remove reports an unexpected result."
         }
       ]
     },
@@ -126,7 +161,9 @@
           "category": "UI_BEHAVIOR",
           "severity": "LOW",
           "title": "Delete button does not refresh the list",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-UI-DELETE-REFRESH",
@@ -134,11 +171,14 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "location": {"relative_path": "frontend/src/components/TaskList.jsx"},
+          "location": {
+            "relative_path": "frontend/src/components/TaskList.jsx"
+          },
           "evidence": {
             "observed_behavior": "SIMULATED: list stays stale after delete.",
             "expected_behavior": "SIMULATED: list refreshes after delete."
-          }
+          },
+          "explanation": "SIMULATED explanation: Delete button does not refresh the list."
         }
       ]
     },
@@ -153,7 +193,9 @@
           "category": "SECURITY",
           "severity": "CRITICAL",
           "title": "Input handling weakness reported",
-          "affected_requirement_ids": ["REQ-TASK-001"],
+          "affected_requirement_ids": [
+            "REQ-TASK-001"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-SECURITY-INPUT",
@@ -164,7 +206,11 @@
           "evidence": {
             "observed_behavior": "SIMULATED: unsafe input accepted.",
             "expected_behavior": "SIMULATED: unsafe input rejected."
-          }
+          },
+          "location": {
+            "relative_path": "backend/src/services/taskService.js"
+          },
+          "explanation": "SIMULATED explanation: Input handling weakness reported."
         }
       ]
     },
@@ -179,7 +225,9 @@
           "category": "API_CONTRACT",
           "severity": "MEDIUM",
           "title": "OpenAPI response description is wrong",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-OPENAPI-CONTRACT",
@@ -187,12 +235,17 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "api_operation_ids": ["API-OP-TASK-DELETE"],
-          "location": {"relative_path": "api/openapi.yaml"},
+          "api_operation_ids": [
+            "API-OP-TASK-DELETE"
+          ],
+          "location": {
+            "relative_path": "api/openapi.yaml"
+          },
           "evidence": {
             "observed_behavior": "SIMULATED: contract mismatch in the OpenAPI file.",
             "expected_behavior": "SIMULATED: contract matches implementation."
-          }
+          },
+          "explanation": "SIMULATED explanation: OpenAPI response description is wrong."
         }
       ]
     },
@@ -200,14 +253,18 @@
       "scenario_id": "SIM-SCN-008-misleading-location",
       "description": "The C4 location names the controller, but only the service has typed requirement and test support; the graph wins over the claim.",
       "expected_status": "SELECTED",
-      "expected_modules": ["backend/src/services/taskService.js"],
+      "expected_modules": [
+        "backend/src/services/taskService.js"
+      ],
       "defects": [
         {
           "defect_id": "SIM-DEF-008",
           "category": "BUSINESS_LOGIC",
           "severity": "HIGH",
           "title": "Unknown task update is accepted",
-          "affected_requirement_ids": ["REQ-TASK-002"],
+          "affected_requirement_ids": [
+            "REQ-TASK-002"
+          ],
           "failing_tests": [
             {
               "test_case_id": "SIM-TC-UPDATE-MISSING-TASK-404",
@@ -215,7 +272,9 @@
               "hook_ref": "backend/tests/taskService.test.js"
             }
           ],
-          "location": {"relative_path": "backend/src/controllers/taskController.js"},
+          "location": {
+            "relative_path": "backend/src/controllers/taskController.js"
+          },
           "evidence": {
             "observed_behavior": "SIMULATED: unknown task update accepted.",
             "expected_behavior": "SIMULATED: unknown task update rejected with 404."

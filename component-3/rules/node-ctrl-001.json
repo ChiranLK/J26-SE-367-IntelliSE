@@ -1,0 +1,10 @@
+{
+  "id": "node-ctrl-001",
+  "stack": "node",
+  "layer": "controller",
+  "category": "layering",
+  "priority": 3,
+  "rule": "Route handlers must stay thin: parse the request, call a service, return the response. No database calls in handlers.",
+  "bad_example": "router.get('/gpa-records', async (req, res) => res.json(await db.query('SELECT * FROM gpa_records')));",
+  "good_example": "router.get('/gpa-records', async (req, res) => res.json(await service.list()));"
+}

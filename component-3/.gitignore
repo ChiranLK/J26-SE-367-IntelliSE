@@ -10,6 +10,7 @@ dist/
 
 # Test and coverage artifacts
 .pytest_cache/
+.pytest-*/
 .coverage
 htmlcov/
 
@@ -41,3 +42,11 @@ runtime-preview/__pycache__/
 
 # Disposable Stage 2 Docker validation workspaces
 .stage2-validation/
+
+# Disposable browser preview build contexts (orchestrated via Docker only)
+runtime/
+runtime/preview/
+runtime/dashboard-session/
+
+# Local Chroma best-practice index (rebuildable from tracked rule cards)
+rag_db/

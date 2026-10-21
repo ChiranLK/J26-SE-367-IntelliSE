@@ -207,6 +207,19 @@ def test_three_domains_have_distinct_paths_routes_tables_and_digests(tmp_path: P
     } == {("students",), ("books", "members"), ("inventory_items",)}
 
 
+def test_reusable_frontend_styles_align_boolean_fields_and_support_mobile(tmp_path: Path) -> None:
+    result, workspace = _generate(tmp_path, "student_management")
+    styles = (workspace / "frontend/src/styles.css").read_text(encoding="utf-8")
+    form = (workspace / "frontend/src/components/StudentForm.jsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert result.manifest.generation_run_id
+    assert 'className="boolean-field"' in form
+    assert ".boolean-field { display: flex; align-items: center;" in styles
+    assert "@media (max-width: 640px)" in styles
+
+
 def test_dynamic_manifest_preserves_source_ids_and_review_required_links(tmp_path: Path) -> None:
     result, _workspace = _generate(tmp_path, "student_management")
     manifest = result.manifest

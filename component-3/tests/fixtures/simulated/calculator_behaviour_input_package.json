@@ -1,0 +1,167 @@
+{
+  "contract_version": "1.0",
+  "c1": {
+    "contract_version": "1.0",
+    "project_id": "PROJ-CALC-DEMO",
+    "srs_version": "SRS-CALC-1",
+    "approval_status": "APPROVED",
+    "approval_provenance_ref": "PP1-DEMO-APPROVAL-PRAMODYA-2026-10-21",
+    "validation_report_ref": "PP1-DEMO-VALIDATION-REF",
+    "design_uml_version_ref": null,
+    "requirements": [
+      {
+        "requirement_id": "88c3ca5f-bc98-4d0f-b74c-f005e82326b7",
+        "title": "User shall be able to add two numbers.",
+        "status": "APPROVED",
+        "requirement_type": "FR"
+      },
+      {
+        "requirement_id": "0247538c-81d7-4703-a5bc-5fe2201bc5e7",
+        "title": "User shall be able to subtract one number from another.",
+        "status": "APPROVED",
+        "requirement_type": "FR"
+      },
+      {
+        "requirement_id": "6d0d8610-8d7c-4a11-8f52-2f4ef0f8a64a",
+        "title": "User shall be able to multiply 2 numbers.",
+        "status": "APPROVED",
+        "requirement_type": "FR"
+      },
+      {
+        "requirement_id": "7a69f30e-58f2-4b6c-a15b-ec2e1f78ab6a",
+        "title": "User shall be able to divide one number by another.",
+        "status": "APPROVED",
+        "requirement_type": "FR"
+      },
+      {
+        "requirement_id": "aaa6437d-4988-4c8f-8ce6-21b632ef228b",
+        "title": "User shall be able to clear the input and start a new calculation.",
+        "status": "APPROVED",
+        "requirement_type": "FR"
+      },
+      {
+        "requirement_id": "866a1f50-561d-42e9-bc2c-f1a8ad040236",
+        "title": "Calculation results shall appear within one second.",
+        "status": "APPROVED",
+        "requirement_type": "NFR"
+      },
+      {
+        "requirement_id": "891fb249-e92e-4977-af3f-5b102a907d08",
+        "title": "The calculator shall operate on Windows and Linux.",
+        "status": "APPROVED",
+        "requirement_type": "NFR"
+      },
+      {
+        "requirement_id": "45c56e78-aa63-4dba-b9be-a4911edbb561",
+        "title": "The calculator shall support 100 concurrent users.",
+        "status": "APPROVED",
+        "requirement_type": "NFR"
+      }
+    ]
+  },
+  "c2": {
+    "contract_version": "1.0",
+    "project_id": "PROJ-CALC-DEMO",
+    "source_srs_version": "SRS-CALC-1",
+    "uml_version": "UML-CALC-1",
+    "release_status": "VALIDATED",
+    "validation_state": "PASSED",
+    "validation_report_ref": "PP1-DEMO-C2-REPORT",
+    "uml_elements": [
+      {
+        "uml_id": "UML-DIAGRAM-CLASS",
+        "element_type": "CLASS_DIAGRAM",
+        "name": "Class diagram",
+        "plantuml_source": "@startuml\nskinparam classAttributeIconSize 0\nabstract class Operation {\n  - symbol : String\n}\n\nclass Addition {\n  + calculate(firstNumber : double, secondNumber : double) : double\n}\n\nclass Subtraction {\n  + calculate(firstNumber : double, secondNumber : double) : double\n}\n\nclass Multiplication {\n  + calculate(firstNumber : double, secondNumber : double) : double\n}\n\nclass Division {\n  + calculate(firstNumber : double, secondNumber : double) : double\n}\n\nclass Calculation {\n  - firstNumber : double\n  - secondNumber : double\n  - result : double\n  - status : String\n  + calculate() : void\n}\n\nenum CalculationStatus {\n  SUCCESS\n  ERROR\n}\n\nclass History {\n  - totalCount : int\n  + addCalculation(calculation : Calculation) : void\n}\n\nclass Calculator {\n  - displayValue : double\n  - history : History\n  + enterNumber(number : double) : void\n  + selectOperation(operation : Operation) : void\n  + calculateResult() : void\n  + clearHistory() : void\n}\n\nOperation <|-- Addition\nOperation <|-- Subtraction\nOperation <|-- Multiplication\nOperation <|-- Division\nCalculation \"1\" -- \"1\" Operation : uses\nHistory \"1\" *-- \"0..*\" Calculation : contains\nCalculator \"1\" -- \"1\" History : has\nCalculation \"1\" -- \"1\" CalculationStatus : has\n\n@enduml\n"
+      },
+      {
+        "uml_id": "UML-CLASS-Operation",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Operation",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Addition",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Addition",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Subtraction",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Subtraction",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Multiplication",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Multiplication",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Division",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Division",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Calculation",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Calculation",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-ENUM-CalculationStatus",
+        "element_type": "ENUM_ELEMENT",
+        "name": "CalculationStatus",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-History",
+        "element_type": "CLASS_ELEMENT",
+        "name": "History",
+        "plantuml_source": null
+      },
+      {
+        "uml_id": "UML-CLASS-Calculator",
+        "element_type": "CLASS_ELEMENT",
+        "name": "Calculator",
+        "plantuml_source": null
+      }
+    ],
+    "ui_artifacts": [
+      {
+        "ui_id": "UI-1",
+        "artifact_type": "UI_REFERENCE",
+        "source_ref": "PP1-DEMO-UI-PLACEHOLDER"
+      }
+    ],
+    "requirement_uml_anchors": [
+      {
+        "anchor_id": "ANCHOR-88c3ca5f-bc98-4d0f-b74c-f005e82326b7-Addition",
+        "requirement_id": "88c3ca5f-bc98-4d0f-b74c-f005e82326b7",
+        "uml_id": "UML-CLASS-Addition"
+      },
+      {
+        "anchor_id": "ANCHOR-0247538c-81d7-4703-a5bc-5fe2201bc5e7-Subtraction",
+        "requirement_id": "0247538c-81d7-4703-a5bc-5fe2201bc5e7",
+        "uml_id": "UML-CLASS-Subtraction"
+      },
+      {
+        "anchor_id": "ANCHOR-6d0d8610-8d7c-4a11-8f52-2f4ef0f8a64a-Multiplication",
+        "requirement_id": "6d0d8610-8d7c-4a11-8f52-2f4ef0f8a64a",
+        "uml_id": "UML-CLASS-Multiplication"
+      },
+      {
+        "anchor_id": "ANCHOR-7a69f30e-58f2-4b6c-a15b-ec2e1f78ab6a-Division",
+        "requirement_id": "7a69f30e-58f2-4b6c-a15b-ec2e1f78ab6a",
+        "uml_id": "UML-CLASS-Division"
+      },
+      {
+        "anchor_id": "ANCHOR-aaa6437d-4988-4c8f-8ce6-21b632ef228b-Calculator",
+        "requirement_id": "aaa6437d-4988-4c8f-8ce6-21b632ef228b",
+        "uml_id": "UML-CLASS-Calculator"
+      }
+    ]
+  }
+}

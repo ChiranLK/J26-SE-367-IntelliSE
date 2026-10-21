@@ -1,0 +1,19 @@
+{
+  "file_id": "KB-STACK-ANGULAR-NODE",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-STACK-ANGULAR-NODEJS",
+      "stack_id": "angular-nodejs",
+      "frontend": "ANGULAR",
+      "backend": "NODE_JS",
+      "hybrid_generator_status": "NOT_IMPLEMENTED",
+      "architecture_item": "KB-ARCH-NODE-LAYERED",
+      "rag_stack_tokens": {
+        "frontend": "angular",
+        "backend": "node"
+      },
+      "unsupported_behavior": "UNSUPPORTED: no hybrid template set exists; C3 must not substitute another stack."
+    }
+  ]
+}

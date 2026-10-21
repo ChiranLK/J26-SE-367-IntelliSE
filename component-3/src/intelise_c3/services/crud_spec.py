@@ -14,7 +14,11 @@ from intelise_c3.domain.crud_spec import (
     CrudOperation,
     CrudScalarType,
 )
-from intelise_c3.domain.design_context import DesignContext, ParsedClass
+from intelise_c3.domain.design_context import (
+    DesignContext,
+    ParsedClass,
+    ParsedElementKind,
+)
 
 CRUD_SPEC_POLICY_VERSION = "C3_CRUD_SPEC_POLICY_V1"
 
@@ -56,6 +60,18 @@ class CrudApplicationSpecBuilder:
                 "design_context.classes",
                 "CRUD generation requires unique class names.",
             )
+
+        for item in design.classes:
+            if item.is_abstract or item.kind is not ParsedElementKind.CLASS:
+                declared = "enum" if item.kind is ParsedElementKind.ENUM else "abstract class"
+                self._fail(
+                    "UNSUPPORTED_CRUD_CLASS_KIND",
+                    f"design_context.classes.{item.name}",
+                    (
+                        f"Stage 1 CRUD generation supports only concrete classes; "
+                        f"'{item.name}' is declared as an {declared}."
+                    ),
+                )
 
         persists = []
         uses = []

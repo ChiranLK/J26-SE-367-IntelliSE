@@ -925,7 +925,7 @@ def test_marker_like_identifiers_cannot_alter_prompt_boundaries(tmp_path: Path) 
     assert json.loads(region.strip())  # the untrusted block is still one well-formed JSON value
 
 
-def test_prompt_version_is_v2_and_recorded_runs_are_distinguishable() -> None:
+def test_prompt_version_is_v3_rag_and_recorded_runs_are_distinguishable() -> None:
     from intelise_c3.prompts.scoped_repair import REPAIR_PROMPT_VERSION
 
-    assert REPAIR_PROMPT_VERSION == "task-scoped-repair-v2"
+    assert REPAIR_PROMPT_VERSION == "task-scoped-repair-v3-rag-a-b"

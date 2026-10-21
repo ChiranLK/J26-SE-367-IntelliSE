@@ -1,0 +1,22 @@
+{
+  "id": "any-db-001",
+  "stack": "any",
+  "layer": "database",
+  "category": "schema-design",
+  "priority": 3,
+  "rule": "Use forward-only numbered migrations; mirror approved validation ranges as CHECK constraints and model composition as a child table with an ON DELETE CASCADE foreign key.",
+  "bad_example": "CREATE TABLE modules (credits INTEGER); -- no constraints, no foreign key",
+  "good_example": "credits INTEGER NOT NULL CHECK (credits BETWEEN 1 AND 20), calculation_id UUID NOT NULL REFERENCES gpa_calculations(id) ON DELETE CASCADE",
+  "document_id": "DOC-POSTGRES",
+  "artifact_types": [
+    "DATABASE"
+  ],
+  "modules": [
+    "db.schema"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases PostgreSQL documentation: constraints"
+}

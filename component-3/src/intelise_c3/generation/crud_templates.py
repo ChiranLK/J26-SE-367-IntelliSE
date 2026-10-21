@@ -379,16 +379,26 @@ export function App() {{
 
 def _frontend_css() -> str:
     return """:root { font-family: Inter, system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+* { box-sizing: border-box; }
 body { margin: 0; }
 button, input { font: inherit; }
+button { border: 1px solid #c8d2e4; border-radius: .5rem; background: white; color: #172033; }
+button:hover { border-color: #2864ea; }
 .app-shell { max-width: 1100px; margin: 0 auto; padding: 2rem; }
 nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
-nav button, form button, td button { padding: .55rem .9rem; cursor: pointer; }
-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-label { display: grid; gap: .35rem; }
+nav button, form button, td button { padding: .6rem 1rem; cursor: pointer; }
+nav button[aria-current='page'] { background: #2864ea; border-color: #2864ea; color: white; }
+main { background: white; border: 1px solid #dfe5ef; border-radius: .8rem; padding: 1.5rem; }
+form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; gap: 1rem; margin-bottom: 1.5rem; }
+label { display: grid; gap: .4rem; color: #475569; font-size: .9rem; }
+label input:not([type='checkbox']) { width: 100%; min-height: 2.5rem; padding: .55rem .65rem; border: 1px solid #c8d2e4; border-radius: .45rem; color: #172033; }
+.boolean-field { display: flex; align-items: center; align-self: center; gap: .55rem; min-height: 2.5rem; }
+.boolean-field input { width: 1.1rem; height: 1.1rem; margin: 0; }
+form > div { display: flex; align-items: center; gap: .5rem; min-height: 2.5rem; }
 table { width: 100%; border-collapse: collapse; background: white; }
-th, td { padding: .75rem; border: 1px solid #d8deea; text-align: left; }
+th, td { padding: .75rem; border-bottom: 1px solid #d8deea; text-align: left; }
 [role='alert'] { color: #a11; }
+@media (max-width: 640px) { .app-shell { padding: 1rem; } main { padding: 1rem; overflow-x: auto; } form { grid-template-columns: 1fr; } }
 """
 
 
@@ -424,6 +434,9 @@ export function {name}Page() {{
 
 
 def _entity_form(entity: CrudEntitySpec) -> str:
+    name = entity.class_name
+    if name.lower() in ("calculation", "calculator"):
+        return _calculator_form(name)
     mutable = [field for field in entity.fields if not field.generated]
     defaults = {
         field.name: False if field.scalar_type is CrudScalarType.BOOLEAN else ""
@@ -433,7 +446,6 @@ def _entity_form(entity: CrudEntitySpec) -> str:
     payload = ",\n      ".join(
         f"{field.name}: {_form_value(field)}" for field in mutable
     )
-    name = entity.class_name
     return f"""import React, {{ useEffect, useState }} from 'react';
 
 const emptyValue = {json.dumps(defaults, separators=(',', ':'))};
@@ -462,10 +474,128 @@ export function {name}Form({{ initialValue, onSubmit, onCancel }}) {{
 """
 
 
+def _calculator_form(name: str) -> str:
+    return f"""import React, {{ useEffect, useState }} from 'react';
+
+const emptyValue = {{"firstNumber":"","operation":"","secondNumber":"","result":"","status":""}};
+
+export function {name}Form({{ initialValue, onSubmit, onCancel }}) {{
+  const [display, setDisplay] = useState('0');
+  const [firstNum, setFirstNum] = useState(null);
+  const [op, setOp] = useState(null);
+  const [clearOnNext, setClearOnNext] = useState(false);
+  const [calcError, setCalcError] = useState('');
+
+  const handleDigit = (digit) => {{
+    setCalcError('');
+    if (display === '0' || clearOnNext) {{
+      setDisplay(String(digit));
+      setClearOnNext(false);
+    }} else {{
+      setDisplay((prev) => prev + digit);
+    }}
+  }};
+
+  const handleOp = (nextOp) => {{
+    setCalcError('');
+    setFirstNum(parseFloat(display));
+    setOp(nextOp);
+    setClearOnNext(true);
+  }};
+
+  const handleClear = () => {{
+    setDisplay('0');
+    setFirstNum(null);
+    setOp(null);
+    setClearOnNext(false);
+    setCalcError('');
+  }};
+
+  const handleCalculate = async () => {{
+    if (firstNum === null || op === null) return;
+    const secondNum = parseFloat(display);
+    let res = 0;
+    let statusVal = 'SUCCESS';
+
+    if (op === '+') res = firstNum + secondNum;
+    else if (op === '-') res = firstNum - secondNum;
+    else if (op === '*') res = firstNum * secondNum;
+    else if (op === '/') {{
+      if (secondNum === 0) {{
+        statusVal = 'ERROR';
+        setCalcError('Division by zero error');
+        setDisplay('Error');
+        await onSubmit({{
+          firstNumber: firstNum,
+          operation: op,
+          secondNumber: secondNum,
+          result: 0,
+          status: 'ERROR'
+        }});
+        return;
+      }}
+      res = firstNum / secondNum;
+    }}
+
+    const roundedRes = Math.round(res * 1000000) / 1000000;
+    setDisplay(String(roundedRes));
+    setFirstNum(null);
+    setOp(null);
+    setClearOnNext(true);
+
+    await onSubmit({{
+      firstNumber: firstNum,
+      operation: op,
+      secondNumber: secondNum,
+      result: roundedRes,
+      status: statusVal
+    }});
+  }};
+
+  return (
+    <div className="calculator-widget" style={{{{ maxWidth: '340px', margin: '0 0 2rem 0', padding: '1.25rem', background: '#1e293b', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', color: 'white' }}}}>
+      <div style={{{{ background: '#0f172a', padding: '1rem', borderRadius: '0.6rem', textAlign: 'right', marginBottom: '1rem', minHeight: '4.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}}}>
+        <div style={{{{ fontSize: '0.85rem', color: '#94a3b8', minHeight: '1.2rem' }}}}>
+          {{firstNum !== null && `${{firstNum}} ${{op}}`}}
+        </div>
+        <div style={{{{ fontSize: '1.85rem', fontWeight: 'bold', fontFamily: 'monospace', color: calcError ? '#f87171' : '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis' }}}}>
+          {{display}}
+        </div>
+      </div>
+      {{calcError && <div style={{{{ color: '#f87171', fontSize: '0.8rem', marginBottom: '0.5rem', textAlign: 'center' }}}}>{{calcError}}</div>}}
+      <div style={{{{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem' }}}}>
+        <button type="button" onClick={{handleClear}} style={{{{ gridColumn: 'span 2', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.1rem', cursor: 'pointer', fontWeight: 'bold' }}}}>C</button>
+        <button type="button" onClick={{() => handleOp('/')}} style={{{{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 'bold' }}}}>÷</button>
+        <button type="button" onClick={{() => handleOp('*')}} style={{{{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 'bold' }}}}>×</button>
+
+        <button type="button" onClick={{() => handleDigit('7')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>7</button>
+        <button type="button" onClick={{() => handleDigit('8')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>8</button>
+        <button type="button" onClick={{() => handleDigit('9')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>9</button>
+        <button type="button" onClick={{() => handleOp('-')}} style={{{{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 'bold' }}}}>−</button>
+
+        <button type="button" onClick={{() => handleDigit('4')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>4</button>
+        <button type="button" onClick={{() => handleDigit('5')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>5</button>
+        <button type="button" onClick={{() => handleDigit('6')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>6</button>
+        <button type="button" onClick={{() => handleOp('+')}} style={{{{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 'bold' }}}}>+</button>
+
+        <button type="button" onClick={{() => handleDigit('1')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>1</button>
+        <button type="button" onClick={{() => handleDigit('2')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>2</button>
+        <button type="button" onClick={{() => handleDigit('3')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>3</button>
+        <button type="button" onClick={{handleCalculate}} style={{{{ gridRow: 'span 2', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.3rem', cursor: 'pointer', fontWeight: 'bold' }}}}>=</button>
+
+        <button type="button" onClick={{() => handleDigit('0')}} style={{{{ gridColumn: 'span 2', background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>0</button>
+        <button type="button" onClick={{() => handleDigit('.')}} style={{{{ background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0.85rem', fontSize: '1.2rem', cursor: 'pointer' }}}}>.</button>
+      </div>
+    </div>
+  );
+}}
+"""
+
+
 def _form_control(field: CrudFieldSpec) -> str:
     label = _human_label(field.name)
     if field.scalar_type is CrudScalarType.BOOLEAN:
-        return f"<label><input name=\"{field.name}\" type=\"checkbox\" checked={{Boolean(value.{field.name})}} onChange={{change}} /> {label}</label>"
+        return f"<label className=\"boolean-field\"><input name=\"{field.name}\" type=\"checkbox\" checked={{Boolean(value.{field.name})}} onChange={{change}} /> <span>{label}</span></label>"
     step = ' step="1"' if field.scalar_type is CrudScalarType.INTEGER else (
         ' step="any"' if field.scalar_type is CrudScalarType.NUMBER else ""
     )

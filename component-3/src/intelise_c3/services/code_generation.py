@@ -27,9 +27,11 @@ from intelise_c3.domain.generation import (
     DatabaseColumnIdentity,
     DatabaseArtifactReference,
     DatabaseTableIdentity,
+    GeneratedArtifactType,
     GeneratedFileRecord,
     GenerationManifest,
     GenerationRunResult,
+    RagRetrievalEvidence,
     RunEvidence,
     SourceIdentitySnapshot,
     StackApprovalEvidence,
@@ -82,9 +84,12 @@ from intelise_c3.generation.templates import (
 from intelise_c3.llm.client import LLMClient
 from intelise_c3.prompts.code_generation import (
     MODEL_GENERATED_PATH,
+    build_dynamic_crud_service_prompt,
     build_task_service_prompt,
 )
 from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
+from intelise_c3.services.design_context_store import DesignContextStore
+from intelise_c3.rag.runtime import RagRuntime
 
 _REQUIRED_SERVICE_PATTERNS = {
     "export function createTaskService(repository)": re.compile(
@@ -158,16 +163,32 @@ class _ModelGeneratedArtifact(BaseModel):
         return value
 
 
+#: Explicit experimental external-model modes and the origin recorded for their output.
+EXPERIMENTAL_MODE_ORIGINS = {
+    GenerationMode.EXPERIMENTAL_CLAUDE: ArtifactOrigin.EXPERIMENTAL_CLAUDE,
+    GenerationMode.EXPERIMENTAL_OPENROUTER: ArtifactOrigin.EXPERIMENTAL_OPENROUTER,
+}
+
+
 class CodeGenerationService:
     """Authorize, generate, validate, and write without executing artifacts."""
 
-    def __init__(self, workspace_root: Path, llm_client: LLMClient | None) -> None:
+    def __init__(
+        self,
+        workspace_root: Path,
+        llm_client: LLMClient | None,
+        rag_runtime: RagRuntime | None = None,
+        design_context_store: DesignContextStore | None = None,
+    ) -> None:
         self._workspace_root = workspace_root
         self._llm_client = llm_client
+        self._design_context_store = design_context_store
+        self._rag_runtime = rag_runtime or RagRuntime.disabled()
 
     async def generate(self, request: CodeGenerationRequest) -> GenerationRunResult:
         """Create one isolated workspace or fail without template fallback."""
         self._validate_authorization(request)
+        rag = self._rag_runtime.new_run()
         legacy_task = self._is_legacy_task_design(request.design_context)
         crud_spec = (
             None
@@ -187,11 +208,60 @@ class CodeGenerationService:
                         "LOCAL_LLM mode requires the configured local Ollama client.",
                         status.HTTP_503_SERVICE_UNAVAILABLE,
                     )
-                prompt_request = build_task_service_prompt(request.design_context)
+                best_practices = rag.retrieve(
+                    module_path=MODEL_GENERATED_PATH,
+                    task=(
+                        "Generate a Node.js service with injected repository dependencies, "
+                        "validated input, consistent errors, and mockable test seams. "
+                        "Accepted requirements: "
+                        + "; ".join(
+                            requirement.title
+                            for requirement in request.design_context.requirements
+                        )
+                    ),
+                    stack="node",
+                    layer="service",
+                    applied_to_prompt=True,
+                )
+                prompt_request = build_task_service_prompt(
+                    request.design_context,
+                    best_practice_block=best_practices,
+                )
                 llm_result = await self._llm_client.generate(prompt_request)
                 service_artifact = self._parse_model_artifact(llm_result.output_text)
                 llm_metadata = llm_result.metadata
                 service_origin = ArtifactOrigin.LOCAL_LLM
+            elif request.mode in EXPERIMENTAL_MODE_ORIGINS:
+                if self._llm_client is None:
+                    self._fail(
+                        f"{request.mode.value}_CLIENT_REQUIRED",
+                        "mode",
+                        f"{request.mode.value} mode requires its configured external-model client.",
+                        status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                best_practices = rag.retrieve(
+                    module_path=MODEL_GENERATED_PATH,
+                    task=(
+                        "Generate a Node.js service with injected repository dependencies, "
+                        "validated input, consistent errors, and mockable test seams. "
+                        "Accepted requirements: "
+                        + "; ".join(
+                            requirement.title
+                            for requirement in request.design_context.requirements
+                        )
+                    ),
+                    stack="node",
+                    layer="service",
+                    applied_to_prompt=True,
+                )
+                prompt_request = build_task_service_prompt(
+                    request.design_context,
+                    best_practice_block=best_practices,
+                )
+                llm_result = await self._llm_client.generate(prompt_request)
+                service_artifact = self._parse_model_artifact(llm_result.output_text)
+                llm_metadata = llm_result.metadata
+                service_origin = EXPERIMENTAL_MODE_ORIGINS[request.mode]
             else:
                 service_artifact = template_task_service()
                 service_origin = ArtifactOrigin.TEMPLATE
@@ -221,11 +291,82 @@ class CodeGenerationService:
             api_references = rendered.api_references
             database_references = rendered.database_references
             test_seams = rendered.test_seams
-            service_origin = ArtifactOrigin.TEMPLATE
             generator_version = DYNAMIC_GENERATOR_VERSION
             template_set_version = DYNAMIC_TEMPLATE_SET_VERSION
             mapping_policy_version = DYNAMIC_TRACEABILITY_MAPPING_POLICY_VERSION
             manifest_spec = crud_spec
+
+            if request.mode in EXPERIMENTAL_MODE_ORIGINS:
+                if self._llm_client is None:
+                    self._fail(
+                        f"{request.mode.value}_CLIENT_REQUIRED",
+                        "mode",
+                        f"{request.mode.value} mode requires its configured external-model client.",
+                        status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                entity = crud_spec.entities[0]
+                stem = entity.variable_name
+                service_path = f"backend/src/services/{stem}Service.js"
+                template_service = next(
+                    a for a in artifacts if a.relative_path == service_path
+                )
+                best_practices = rag.retrieve(
+                    module_path=service_path,
+                    task=(
+                        f"Generate a Node.js service for {entity.class_name} with injected repository "
+                        "dependencies, validated input, consistent errors, and mockable test seams."
+                    ),
+                    stack="node",
+                    layer="service",
+                    applied_to_prompt=True,
+                )
+                prompt_request = build_dynamic_crud_service_prompt(
+                    crud_spec,
+                    entity,
+                    request.design_context,
+                    best_practice_block=best_practices,
+                )
+                llm_result = await self._llm_client.generate(prompt_request)
+                from intelise_c3.regeneration.dynamic_patch_policy import build_patchable_modules
+                patch_modules = build_patchable_modules(crud_spec)
+                required_patterns = (
+                    patch_modules[service_path].required_interface
+                    if service_path in patch_modules
+                    else None
+                )
+                service_artifact = self._parse_model_artifact(
+                    llm_result.output_text,
+                    expected_path=service_path,
+                    template_base=template_service,
+                    required_patterns=required_patterns,
+                )
+                llm_metadata = llm_result.metadata
+                service_origin = EXPERIMENTAL_MODE_ORIGINS[request.mode]
+
+                artifacts_list = []
+                for art in artifacts:
+                    if art.relative_path == service_path:
+                        artifacts_list.append(service_artifact)
+                    else:
+                        artifacts_list.append(art)
+                artifacts = tuple(artifacts_list)
+            else:
+                service_origin = ArtifactOrigin.TEMPLATE
+
+        skip_paths = set()
+        if prompt_request is not None:
+            if legacy_task:
+                skip_paths.add(MODEL_GENERATED_PATH)
+            elif crud_spec:
+                skip_paths.add(
+                    f"backend/src/services/{crud_spec.entities[0].variable_name}Service.js"
+                )
+
+        self._record_template_retrievals(
+            rag,
+            artifacts,
+            skip_paths=skip_paths,
+        )
 
         self._validate_artifact_set(
             artifacts,
@@ -248,9 +389,20 @@ class CodeGenerationService:
             template_set_version=template_set_version,
             mapping_policy_version=mapping_policy_version,
             crud_spec=manifest_spec,
+            rag_evidence=rag.evidence(),
         )
-        relative_workspace = PurePosixPath(request.workspace_name) / run_id
+        if request.mode in EXPERIMENTAL_MODE_ORIGINS:
+            workspace_prefix = (
+                PurePosixPath(request.workspace_name)
+                if str(request.workspace_name).startswith("experiments/")
+                else PurePosixPath("experiments") / request.workspace_name
+            )
+            relative_workspace = workspace_prefix / run_id
+        else:
+            relative_workspace = PurePosixPath(request.workspace_name) / run_id
         self._write_workspace(relative_workspace, artifacts, manifest)
+        if self._design_context_store is not None:
+            self._design_context_store.save(request.design_context)
         return GenerationRunResult(
             workspace_relative_path=relative_workspace.as_posix(),
             manifest_relative_path=(
@@ -271,6 +423,38 @@ class CodeGenerationService:
             and tuple(attribute.name for attribute in task.attributes)
             == ("id", "title", "completed")
         )
+
+    @staticmethod
+    def _record_template_retrievals(
+        rag: RagRuntime,
+        artifacts: tuple[TemplateArtifact, ...],
+        *,
+        skip_paths: set[str],
+    ) -> None:
+        """Audit retrieval for deterministic modules without claiming prompt use."""
+        mapping = {
+            GeneratedArtifactType.FRONTEND: ("react", "ui"),
+            GeneratedArtifactType.API: ("node", "api"),
+            GeneratedArtifactType.CONTROLLER: ("node", "controller"),
+            GeneratedArtifactType.BUSINESS_LOGIC: ("node", "service"),
+            GeneratedArtifactType.REPOSITORY: ("node", "repository"),
+            GeneratedArtifactType.DATABASE: ("node", "database"),
+            GeneratedArtifactType.TEST: ("node", "test_seam"),
+        }
+        for artifact in sorted(artifacts, key=lambda item: item.relative_path):
+            if artifact.relative_path in skip_paths or artifact.artifact_type not in mapping:
+                continue
+            stack, layer = mapping[artifact.artifact_type]
+            rag.retrieve(
+                module_path=artifact.relative_path,
+                task=(
+                    f"Generate {artifact.module_identity} as the {layer} module at "
+                    f"{artifact.relative_path}."
+                ),
+                stack=stack,
+                layer=layer,
+                applied_to_prompt=False,
+            )
 
     def _validate_authorization(self, request: CodeGenerationRequest) -> None:
         generation = request.generation_context
@@ -344,7 +528,12 @@ class CodeGenerationService:
                 )
             )
 
-        requirement_ids = {item.requirement_id for item in design.requirements}
+        # NFRs may be unanchored; FR and untyped (legacy) requirements may not.
+        requirement_ids = {
+            item.requirement_id
+            for item in design.requirements
+            if item.requirement_type != "NFR"
+        }
         anchored_ids = {
             anchor.requirement_id for anchor in design.requirement_uml_anchors
         }
@@ -436,31 +625,50 @@ class CodeGenerationService:
         if errors:
             raise ApplicationError(errors, status_code=status.HTTP_409_CONFLICT)
 
-    def _parse_model_artifact(self, output_text: str) -> TemplateArtifact:
+    def _parse_model_artifact(
+        self,
+        output_text: str,
+        *,
+        expected_path: str = MODEL_GENERATED_PATH,
+        template_base: TemplateArtifact | None = None,
+        required_patterns: dict[str, re.Pattern[str]] | None = None,
+    ) -> TemplateArtifact:
+        cleaned = output_text.strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            cleaned = "\n".join(lines).strip()
+
         try:
-            payload = json.loads(output_text)
+            payload = json.loads(cleaned)
             parsed = _ModelGeneratedArtifact.model_validate(payload)
         except (json.JSONDecodeError, ValidationError, ValueError) as exception:
-            raise ApplicationError(
-                [
-                    ErrorDetail(
-                        code="INVALID_GENERATED_MODEL_OUTPUT",
-                        field="ollama.response",
-                        message=(
-                            "Local Ollama output must be one non-empty structured "
-                            "business-logic artifact."
-                        ),
-                    )
-                ],
-                status_code=status.HTTP_502_BAD_GATEWAY,
-            ) from exception
+            if "export function " in cleaned or cleaned.startswith("export "):
+                parsed = _ModelGeneratedArtifact(path=expected_path, content=cleaned)
+            else:
+                raise ApplicationError(
+                    [
+                        ErrorDetail(
+                            code="INVALID_GENERATED_MODEL_OUTPUT",
+                            field="model.response",
+                            message=(
+                                "Model output must be one non-empty structured "
+                                "business-logic artifact."
+                            ),
+                        )
+                    ],
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                ) from exception
 
         self._validate_relative_path(parsed.path)
-        if parsed.path != MODEL_GENERATED_PATH:
+        if parsed.path != expected_path:
             self._fail(
                 "GENERATED_PATH_NOT_ALLOWED",
-                "ollama.response.path",
-                f"The model may generate only '{MODEL_GENERATED_PATH}'.",
+                "model.response.path",
+                f"The model may generate only '{expected_path}'.",
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         safety = inspect_javascript_safety(
@@ -469,7 +677,7 @@ class CodeGenerationService:
         if not safety.accepted:
             self._fail(
                 "UNSAFE_GENERATED_CONTENT",
-                "ollama.response.content",
+                "model.response.content",
                 (
                     "The generated module is rejected by the conservative lexical "
                     f"safety policy ({safety.describe()}). This is not a JavaScript "
@@ -477,15 +685,20 @@ class CodeGenerationService:
                 ),
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
+        patterns_to_check = (
+            required_patterns
+            if required_patterns is not None
+            else _REQUIRED_SERVICE_PATTERNS
+        )
         missing_interfaces = tuple(
             label
-            for label, pattern in _REQUIRED_SERVICE_PATTERNS.items()
+            for label, pattern in patterns_to_check.items()
             if pattern.search(parsed.content) is None
         )
         if missing_interfaces:
             self._fail(
                 "INVALID_GENERATED_MODULE",
-                "ollama.response.content",
+                "model.response.content",
                 (
                     "The generated module does not implement the exact injected "
                     "repository service interface. Missing: "
@@ -495,7 +708,7 @@ class CodeGenerationService:
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
 
-        template_metadata = template_task_service()
+        template_metadata = template_base or template_task_service()
         return TemplateArtifact(
             relative_path=parsed.path,
             module_identity=template_metadata.module_identity,
@@ -507,6 +720,11 @@ class CodeGenerationService:
             api_operation_ids=template_metadata.api_operation_ids,
             database_entity_ids=template_metadata.database_entity_ids,
             test_seam_ids=template_metadata.test_seam_ids,
+            explicit_trace_bindings=template_metadata.explicit_trace_bindings,
+            requirement_ids=template_metadata.requirement_ids,
+            uml_ids=template_metadata.uml_ids,
+            design_anchor_ids=template_metadata.design_anchor_ids,
+            ui_artifact_ids=template_metadata.ui_artifact_ids,
         )
 
     def _validate_artifact_set(
@@ -598,6 +816,7 @@ class CodeGenerationService:
         template_set_version: str,
         mapping_policy_version: str,
         crud_spec: CrudApplicationSpec | None,
+        rag_evidence: RagRetrievalEvidence,
     ) -> GenerationManifest:
         source = request.design_context
         requirement_ids = tuple(item.requirement_id for item in source.requirements)
@@ -613,7 +832,13 @@ class CodeGenerationService:
             encoded = content.encode("utf-8")
             origin = (
                 service_origin
-                if artifact.relative_path == MODEL_GENERATED_PATH
+                if (
+                    artifact.relative_path == MODEL_GENERATED_PATH
+                    or (
+                        service_origin != ArtifactOrigin.TEMPLATE
+                        and artifact.artifact_type == GeneratedArtifactType.BUSINESS_LOGIC
+                    )
+                )
                 else ArtifactOrigin.TEMPLATE
             )
             if artifact.explicit_trace_bindings:
@@ -689,6 +914,7 @@ class CodeGenerationService:
                     api_operation_ids=artifact.api_operation_ids,
                     database_entity_ids=artifact.database_entity_ids,
                     test_seam_ids=artifact.test_seam_ids,
+                    created_in_generation_run_id=run_id,
                 )
             )
 
@@ -732,6 +958,7 @@ class CodeGenerationService:
             template_set_version=template_set_version,
             llm_inference=llm_metadata,
             artifact_digest_sha256=digest.hexdigest(),
+            rag_evidence=rag_evidence,
         )
         return GenerationManifest(
             generation_run_id=run_id,
@@ -782,6 +1009,7 @@ class CodeGenerationService:
                 prompt_template_version=prompt_template_version,
                 generator_version=generator_version,
                 template_set_version=template_set_version,
+                rag=rag_evidence,
                 evidence_digest_sha256=evidence_digest,
             ),
             trust_boundary=(
@@ -965,6 +1193,7 @@ class CodeGenerationService:
                         evidence_refs=refs,
                         details=details,
                     ),
+                    created_in_generation_run_id=run_id,
                 )
             )
 

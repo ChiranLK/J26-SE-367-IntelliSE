@@ -15,6 +15,8 @@ from intelise_c3.domain.llm import LLMInferenceMetadata
 class ArtifactOrigin(StrEnum):
     TEMPLATE = "TEMPLATE"
     LOCAL_LLM = "LOCAL_LLM"
+    EXPERIMENTAL_CLAUDE = "EXPERIMENTAL_CLAUDE"
+    EXPERIMENTAL_OPENROUTER = "EXPERIMENTAL_OPENROUTER"
 
 
 class GeneratedArtifactType(StrEnum):
@@ -104,6 +106,9 @@ class GeneratedFileRecord(DomainModel):
     api_operation_ids: tuple[str, ...] = ()
     database_entity_ids: tuple[str, ...] = ()
     test_seam_ids: tuple[str, ...] = ()
+    # Added after manifest v2.0 was introduced. Optional keeps historical
+    # manifests parseable; new generation runs always populate it.
+    created_in_generation_run_id: str | None = None
 
 
 class ApiOperationIdentity(DomainModel):
@@ -171,6 +176,8 @@ class TraceabilityLink(DomainModel):
     resolution_status: TraceResolutionStatus
     review_status: TraceReviewStatus
     provenance: TraceLinkProvenance
+    # Optional only for historical manifest compatibility.
+    created_in_generation_run_id: str | None = None
 
 
 class TraceabilityEvidence(DomainModel):
@@ -189,6 +196,24 @@ class CanonicalInputHashes(DomainModel):
     prompt_request_sha256: str | None
 
 
+class RagModuleRetrieval(DomainModel):
+    module_path: str
+    task: str
+    stack: str
+    layer: str
+    retrieved_rule_ids: tuple[str, ...]
+    applied_to_prompt: bool
+
+
+class RagRetrievalEvidence(DomainModel):
+    evidence_version: Literal["1.0"] = "1.0"
+    enabled: bool
+    backend: Literal["off", "filter", "chroma"]
+    embedding_model: str | None
+    rule_corpus_sha256: str | None
+    retrievals: tuple[RagModuleRetrieval, ...]
+
+
 class RunEvidence(DomainModel):
     evidence_schema_version: Literal["1.0"] = "1.0"
     canonicalization: Literal["C3_CANONICAL_JSON_V1"] = "C3_CANONICAL_JSON_V1"
@@ -197,6 +222,7 @@ class RunEvidence(DomainModel):
     prompt_template_version: str | None
     generator_version: str
     template_set_version: str
+    rag: RagRetrievalEvidence | None = None
     evidence_digest_sha256: str
     authenticity_claim: Literal[False] = False
 

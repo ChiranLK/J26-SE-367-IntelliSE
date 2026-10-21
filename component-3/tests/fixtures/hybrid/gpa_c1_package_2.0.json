@@ -1,0 +1,82 @@
+{
+  "contract_version": "2.0",
+  "evidence_class": "SIMULATED_FIXTURE",
+  "project_id": "PROJECT-GPA-HYBRID-001",
+  "srs_version": "SRS-GPA-2.0",
+  "approval_status": "CLIENT_APPROVED",
+  "approval_reference": "SIMULATED-C1-GPA-CLIENT-APPROVAL-2.0",
+  "approved_by": "simulated-client-representative",
+  "approved_at_utc": "2026-10-01T09:00:00Z",
+  "provenance": {
+    "source_system": "SIMULATED_C1_FIXTURE",
+    "source_document_ref": "SIMULATED-C1-GPA-SRS-DOC-2.0",
+    "quality_report_ref": "SIMULATED-C1-GPA-QUALITY-2.0",
+    "classification_report_ref": "SIMULATED-C1-GPA-FRNFR-2.0"
+  },
+  "requirements": [
+    {
+      "requirement_id": "REQ-GPA-101",
+      "requirement_version": 1,
+      "requirement_type": "FR",
+      "title": "Enter module results",
+      "statement": "A student enters one or more module results, each with a module code, credit value, letter grade and whether it counts toward GPA, adding and removing rows dynamically.",
+      "approval_status": "CLIENT_APPROVED"
+    },
+    {
+      "requirement_id": "REQ-GPA-102",
+      "requirement_version": 1,
+      "requirement_type": "FR",
+      "title": "Calculate credit-weighted GPA",
+      "statement": "The system calculates the credit-weighted GPA of the entered module results using the accepted grading policy.",
+      "approval_status": "CLIENT_APPROVED"
+    },
+    {
+      "requirement_id": "REQ-GPA-103",
+      "requirement_version": 1,
+      "requirement_type": "FR",
+      "title": "Validate module results",
+      "statement": "The system rejects module results with a missing module code, a credit value outside 1 to 20, or a grade that is not in the accepted grading policy, and reports field-level errors.",
+      "approval_status": "CLIENT_APPROVED",
+      "constraints": [
+        {
+          "constraint_id": "CON-GPA-103-1",
+          "target": "ModuleResult.moduleCode",
+          "kind": "REQUIRED"
+        },
+        {
+          "constraint_id": "CON-GPA-103-2",
+          "target": "ModuleResult.credits",
+          "kind": "RANGE",
+          "minimum": 1,
+          "maximum": 20
+        },
+        {
+          "constraint_id": "CON-GPA-103-3",
+          "target": "ModuleResult.grade",
+          "kind": "ENUM_FROM_POLICY"
+        },
+        {
+          "constraint_id": "CON-GPA-103-4",
+          "target": "ModuleResult.moduleCode",
+          "kind": "UNIQUE_WITHIN_REQUEST"
+        }
+      ]
+    },
+    {
+      "requirement_id": "REQ-GPA-104",
+      "requirement_version": 1,
+      "requirement_type": "FR",
+      "title": "Keep calculation history",
+      "statement": "The system stores each successful GPA calculation and lists previous calculations, newest first.",
+      "approval_status": "CLIENT_APPROVED"
+    },
+    {
+      "requirement_id": "REQ-GPA-105",
+      "requirement_version": 1,
+      "requirement_type": "NFR",
+      "title": "Disclose grading policy",
+      "statement": "Every GPA result and the entry screen disclose the grading policy identifier, version and authority status used for the calculation.",
+      "approval_status": "CLIENT_APPROVED"
+    }
+  ]
+}

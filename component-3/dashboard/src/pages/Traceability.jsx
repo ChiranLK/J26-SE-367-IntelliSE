@@ -1,13 +1,25 @@
 import { useMemo, useState } from "react";
 import { api } from "../api/endpoints.js";
-import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, PageHeader, Stat, StatusBadge, Table } from "../components/ui.jsx";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, PageHeader, Skeleton, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
+import { ChainVisual, EvidenceChip } from "../components/visuals.jsx";
 import { buildGraphCreateRequest } from "../lib/requests.js";
 import { activeLinks, attentionLinks, buildRequirementChains, labelFor, linkNeedsAttention, nodeIndex, summarizeGraph } from "../lib/traceGraph.js";
 import { formatTime } from "../lib/format.js";
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
+import { HybridTraceView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
 const MAX_VERSIONS_FETCHED = 12;
+
+export function downloadText(filename, text, mimeType) {
+  const anchor = document.createElement("a");
+  anchor.download = filename;
+  anchor.href = `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
 
 export function versionSummary(snapshot) {
   const summary = summarizeGraph(snapshot);
@@ -77,7 +89,7 @@ function Evidence({ selected, nodes }) {
   );
 }
 
-export default function Traceability({ navigate }) {
+function ClassicTraceability({ navigate }) {
   const { session, set } = useSession();
   const stored = session.generationRun;
   const graphState = session.graph;
@@ -85,12 +97,15 @@ export default function Traceability({ navigate }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("ATTENTION");
   const [relation, setRelation] = useState("ALL");
+  const [chainRequirementId, setChainRequirementId] = useState(null);
+  const [impact, setImpact] = useState(null);
 
   const build = useAction(async () => {
     const created = await api.createGraph(buildGraphCreateRequest(stored.run));
     const versions = await fetchVersionSummaries(created.graph_id, created.graph_version);
     set("graph", { snapshot: created, versions, fetchedAt: new Date().toISOString() });
     setSelected(null);
+    setImpact(null);
   });
 
   const refresh = useAction(async () => {
@@ -99,10 +114,40 @@ export default function Traceability({ navigate }) {
     set("graph", { snapshot: latest, versions, fetchedAt: new Date().toISOString() });
   });
 
+  const evidence = useAction(async () => {
+    const [rtm, metrics] = await Promise.all([
+      api.graphRtm(snapshot.graph_id, snapshot.graph_version),
+      api.graphMetrics(snapshot.graph_id, snapshot.graph_version),
+    ]);
+    set("graph", { ...graphState, rtm, metrics, evidenceFetchedAt: new Date().toISOString() });
+  });
+
+  const computeImpact = useAction(async () => {
+    const requirementId = shownChain.requirement.source_identity;
+    const report = await api.graphImpact(snapshot.graph_id, snapshot.graph_version, requirementId);
+    setImpact({ requirementNodeId: shownChain.requirement.node_id, report });
+  });
+
   const summary = useMemo(() => (snapshot ? summarizeGraph(snapshot) : null), [snapshot]);
   const nodes = useMemo(() => (snapshot ? nodeIndex(snapshot) : new Map()), [snapshot]);
   const chains = useMemo(() => (snapshot ? buildRequirementChains(snapshot) : []), [snapshot]);
   const attention = useMemo(() => (snapshot ? attentionLinks(snapshot) : []), [snapshot]);
+  const shownChain = chains.find((chain) => chain.requirement.node_id === chainRequirementId) ?? chains[0] ?? null;
+  // Highlight source: the impact computed on this page for the shown requirement, else
+  // the impact preview already computed on the Scoped Regeneration page (same graph).
+  const scopedImpact = session.scoped?.impact?.report;
+  const impactIds = useMemo(() => {
+    if (impact && shownChain && impact.requirementNodeId === shownChain.requirement.node_id) {
+      return { ids: new Set(impact.report.affected_node_ids), source: "computed" };
+    }
+    if (snapshot && scopedImpact && scopedImpact.graph_id === snapshot.graph_id) {
+      return { ids: new Set(scopedImpact.selected_modules.map((module) => module.node_id)), source: "scoped" };
+    }
+    return null;
+  }, [impact, shownChain, snapshot, scopedImpact]);
+  const impactedInChain = shownChain && impactIds
+    ? [shownChain.requirement, ...shownChain.design.map((e) => e.node), ...shownChain.code.map((e) => e.node), ...shownChain.api.map((e) => e.node), ...shownChain.database.map((e) => e.node), ...shownChain.tests.map((e) => e.node)].filter((node) => impactIds.ids.has(node.node_id)).length
+    : 0;
   const relations = useMemo(() => (snapshot ? Object.keys(summary.linkCountsByRelation).sort() : []), [snapshot, summary]);
   const shownLinks = useMemo(() => {
     if (!snapshot) return [];
@@ -115,7 +160,7 @@ export default function Traceability({ navigate }) {
     <div className="page">
       <PageHeader
         title="Living Traceability"
-        subtitle="The real C3 graph for the current generation run: requirement → UML → code → API → database → test hook."
+        subtitle="A persistent, versioned evidence graph from requirement → UML → code → API → database → test hook."
         badges={<Badge tone="info">REAL C3 API</Badge>}
       />
 
@@ -127,8 +172,8 @@ export default function Traceability({ navigate }) {
       ) : null}
 
       <Card
-        title="Build graph"
-        subtitle="POST /api/v1/traceability/graphs (the backend verifies the manifest and workspace hashes first)"
+        title="Build a verified graph snapshot"
+        subtitle="The backend verifies manifest, workspace hashes, artifact digest, and run evidence before accepting the graph."
         actions={<Button onClick={() => build.run()} loading={build.loading} disabled={!stored}>{snapshot ? "Rebuild graph (adds a version)" : "Build traceability graph"}</Button>}
       >
         {stored ? <p className="small">Source run <code>{stored.run.manifest.generation_run_id}</code> · {stored.mode}</p> : null}
@@ -189,6 +234,98 @@ export default function Traceability({ navigate }) {
               ) : null}
             </Card>
           </div>
+
+          <Card
+            title="RTM export and trace diagnostics"
+            subtitle="Read-only reports from the persisted graph version; diagnostics report gaps without blocking existing flows."
+            actions={(
+              <Button variant="secondary" onClick={() => evidence.run()} loading={evidence.loading}>
+                Load RTM and diagnostics
+              </Button>
+            )}
+          >
+            <ErrorPanel error={evidence.error} context="RTM and trace diagnostics" />
+            {graphState.rtm && graphState.metrics ? (
+              <>
+                <div className="stats">
+                  <Stat label="RTM requirements" value={graphState.rtm.rows.length} />
+                  <Stat label="Requirement coverage" value={`${(graphState.metrics.coverage_rate * 100).toFixed(1)}%`} tone={graphState.metrics.coverage_gaps.length ? "warn" : "ok"} />
+                  <Stat label="Orphan nodes" value={graphState.metrics.orphan_node_count} tone={graphState.metrics.orphan_node_count ? "warn" : "ok"} />
+                </div>
+                <div className="button-row">
+                  <Button
+                    variant="secondary"
+                    onClick={() => downloadText(
+                      `rtm-${snapshot.graph_id}-v${snapshot.graph_version}.json`,
+                      `${JSON.stringify(graphState.rtm, null, 2)}\n`,
+                      "application/json",
+                    )}
+                  >
+                    Export RTM JSON
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => downloadText(
+                      `rtm-${snapshot.graph_id}-v${snapshot.graph_version}.md`,
+                      `${graphState.rtm.table_markdown}\n`,
+                      "text/markdown",
+                    )}
+                  >
+                    Export RTM table
+                  </Button>
+                </div>
+                {graphState.metrics.diagnostics.length ? graphState.metrics.diagnostics.map((diagnostic) => (
+                  <Callout key={diagnostic.code} tone="warn" title={diagnostic.code}>
+                    {diagnostic.message} Affected identities: {diagnostic.affected_ids.join(", ")}.
+                  </Callout>
+                )) : (
+                  <Callout tone="ok" title="No orphan or coverage-gap diagnostics">
+                    This deterministic report found no active orphan downstream nodes or uncovered requirements in graph v{snapshot.graph_version}.
+                  </Callout>
+                )}
+              </>
+            ) : <p className="muted small">Load the reports to inspect and export the RTM for this exact graph version.</p>}
+          </Card>
+
+          <Card
+            title="Trace chain"
+            subtitle="Requirement → UML → code → API → database → test hook for the selected requirement. Click a node for its link evidence."
+            actions={<EvidenceChip kind="real">REAL C3 API</EvidenceChip>}
+          >
+            {shownChain ? (
+              <>
+                <div className="chip-row chain-picker">
+                  {chains.map((chain) => (
+                    <button
+                      key={chain.requirement.node_id}
+                      type="button"
+                      className={`chip chip-button${chain.requirement.node_id === shownChain.requirement.node_id ? " chip-active" : ""}`}
+                      onClick={() => setChainRequirementId(chain.requirement.node_id)}
+                    >
+                      {chain.requirement.source_identity}
+                    </button>
+                  ))}
+                </div>
+                <ChainVisual chain={shownChain} impactIds={impactIds?.ids} onSelect={setSelected} needsAttention={linkNeedsAttention} />
+                <div className="button-row">
+                  <Button variant="secondary" onClick={() => computeImpact.run()} loading={computeImpact.loading}>
+                    Compute impact set for {shownChain.requirement.source_identity}
+                  </Button>
+                  {impactIds ? (
+                    <span className="small" data-testid="impact-summary">
+                      {impactIds.source === "computed"
+                        ? `Impact set (GET …/impact/${shownChain.requirement.source_identity}): ${impact.report.affected_node_ids.length} node(s), ${impact.report.module_paths.length} module(s); ${impactedInChain} highlighted in this chain.`
+                        : `Highlighting the module(s) selected by the Scoped Regeneration impact preview (${impactedInChain} in this chain).`}
+                    </span>
+                  ) : <span className="muted small">No impact set computed yet; highlighted nodes will glow.</span>}
+                </div>
+                {computeImpact.loading ? <Skeleton lines={2} /> : null}
+                <ErrorPanel error={computeImpact.error} context="Impact set" />
+              </>
+            ) : (
+              <p className="muted small">This graph has no active requirement nodes, so there is no chain to draw.</p>
+            )}
+          </Card>
 
           <Card title="Requirement traceability chains" subtitle="✓ resolved link · ⚠ unresolved or review required. Click a chip for its evidence.">
             <Table
@@ -263,9 +400,13 @@ export default function Traceability({ navigate }) {
           <div className="button-row">
             <Button onClick={() => navigate("scoped")}>Continue to Scoped Regeneration</Button>
           </div>
-          <JsonView value={snapshot} summary="Full graph snapshot as returned by the API" />
+          <TechnicalDetails summary="Graph snapshot and machine-readable evidence">
+            <JsonView value={snapshot} summary="Open full graph JSON" />
+          </TechnicalDetails>
         </>
       ) : null}
     </div>
   );
 }
+
+export default withHybridFallback(HybridTraceView, ClassicTraceability, { crudRunExists: (session) => Boolean(session.generationRun) });

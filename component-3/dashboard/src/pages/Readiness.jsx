@@ -1,10 +1,13 @@
 import { Badge, Callout, Card, PageHeader, StatusBadge, Table } from "../components/ui.jsx";
 import { deriveReadiness } from "../lib/readiness.js";
 import { useSession } from "../state/session.jsx";
+import { HybridReadinessView } from "../components/HybridViews.jsx";
+import { withHybridFallback } from "../components/withHybridFallback.jsx";
 
-export default function Readiness() {
+function ClassicReadiness() {
   const { session } = useSession();
   const readiness = deriveReadiness(session);
+  const preview = session.preview;
 
   return (
     <div className="page">
@@ -45,6 +48,23 @@ export default function Readiness() {
           {readiness.deployment.blockers.map((item) => (<li key={item}>{item}</li>))}
         </ul>
       </Card>
+
+      <Card title="Local application preview" subtitle="A disposable Docker preview is separate from deployment approval.">
+        {preview?.status === "RUNNING" ? (
+          <div className="result-head">
+            <StatusBadge status="SATISFIED" label="LOCAL PREVIEW RUNNING" />
+            <a className="btn btn-primary" href={preview.ui_url} target="_blank" rel="noreferrer">Open Generated UI</a>
+            <code>{preview.ui_url}</code>
+          </div>
+        ) : (
+          <p className="muted small">No local preview is running. Build and start one from Code Generation.</p>
+        )}
+        <Callout tone="info">
+          Running a generated application locally does not change C4 retest status and cannot make deployment READY.
+        </Callout>
+      </Card>
     </div>
   );
 }
+
+export default withHybridFallback(HybridReadinessView, ClassicReadiness, { crudRunExists: (session) => Boolean(session.generationRun), title: "Readiness", emptyInsteadOfClassic: true });

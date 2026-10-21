@@ -1,104 +1,45 @@
-import { Badge, Button, Callout, Card, ErrorPanel, KeyValues, Loading, PageHeader, StatusBadge, Table } from "../components/ui.jsx";
-import { formatTime } from "../lib/format.js";
+import { ErrorPanel, Loading, PageHeader } from "../components/ui.jsx";
 import { useBackend } from "../state/backend.jsx";
-import { useSession } from "../state/session.jsx";
 
-const WORKFLOW = [
-  { id: "inputs", label: "1. C1/C2 inputs validated", done: (s) => Boolean(s.validation?.ok) },
-  { id: "design", label: "2. Design parsed, stack selected and approved", done: (s) => s.approval?.status === "APPROVED_FOR_MVP_GENERATION" },
-  { id: "generation", label: "3. Code generated (not executed)", done: (s) => Boolean(s.generationRun) },
-  { id: "traceability", label: "4. Living traceability graph built", done: (s) => Boolean(s.graph) },
-  { id: "scoped", label: "5. Scoped regeneration from a SIMULATED defect", done: (s) => s.scoped.runs.length > 0 },
-  { id: "readiness", label: "6. Readiness (C4 retest PENDING, deployment BLOCKED)", done: () => false },
+// Where Component 3 sits between the other InteliSE components (from the proposal's architecture).
+const FLOW = [
+  { id: "c1", tag: "C1", title: "Requirements", text: "What the app must do", here: false },
+  { id: "c2", tag: "C2", title: "Design", text: "How the app is designed", here: false },
+  { id: "c3", tag: "C3", title: "This component", text: "Builds the app and keeps every part linked to its requirement", here: true },
+  { id: "c4", tag: "C4", title: "Testing", text: "Tests the app and reports defects back", here: false },
 ];
 
-export default function Overview({ navigate }) {
-  const { health, overview, error, loading, refresh, checkedAt } = useBackend();
-  const { session } = useSession();
-  const ollama = overview?.ollama;
+export default function Overview() {
+  const { error, loading } = useBackend();
 
   return (
     <div className="page">
       <PageHeader
-        title="Overview"
-        subtitle="InteliSE Component 3: living requirement traceability and defect-feedback-driven scoped regeneration."
-        badges={
-          <>
-            <Badge tone="sim">C1/C2 inputs SIMULATED</Badge>
-            <Badge tone="sim">C4 defects SIMULATED</Badge>
-          </>
-        }
+        title="Component 3 Research Dashboard"
+        subtitle="Generate traceable software and maintain living requirement links."
       />
 
-      <Callout tone="info" title="What this dashboard is">
-        This is the C3 research demo interface. Every button calls the real Component 3 FastAPI
-        service. It is not the React application that Component 3 generates, and it never
-        executes generated code.
-      </Callout>
+      <section className="research-hero">
+        <div>
+          <span className="eyebrow">INTELISE · COMPONENT 3</span>
+          <h2>From approved design evidence to a traceable application</h2>
+          <p>Component 3 takes the approved requirements (C1) and the released design (C2), builds the application, and keeps a living link from every requirement to its design, code, API, database and test hook.</p>
+        </div>
+        <ol className="hero-flow" aria-label="Where Component 3 fits" data-testid="hero-flow">
+          {FLOW.map((item) => (
+            <li key={item.id} className={`hero-flow-item${item.here ? " hero-flow-here" : ""}`}>
+              <span className="hero-flow-tag">{item.tag}</span>
+              <span className="hero-flow-body">
+                <strong>{item.title}</strong>
+                <small>{item.text}</small>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      {loading ? <Loading label="Checking the Component 3 API and local Ollama" /> : null}
-      <ErrorPanel error={error} context="API status" />
-
-      <div className="grid grid-2">
-        <Card
-          title="Backend and local model"
-          subtitle={checkedAt ? `Last checked ${formatTime(new Date(checkedAt).toISOString())}` : undefined}
-          actions={<Button variant="secondary" onClick={refresh} loading={loading}>Re-check</Button>}
-        >
-          <KeyValues
-            items={[
-              { label: "FastAPI service", value: loading ? <StatusBadge status="NOT_RUN" label="checking…" /> : health ? <StatusBadge status="SATISFIED" label={`${health.service_name} · ${health.status}`} /> : <StatusBadge status="BLOCKED" label="unreachable" /> },
-              { label: "API version", value: health?.api_version },
-              { label: "Ollama endpoint", value: ollama?.base_url },
-              { label: "Configured local model", value: ollama ? <code>{ollama.configured_model}</code> : undefined },
-              {
-                label: "Ollama status",
-                value: ollama ? (
-                  <StatusBadge
-                    status={ollama.reachable && ollama.model_installed ? "SATISFIED" : "BLOCKED"}
-                    label={ollama.reachable ? (ollama.model_installed ? "reachable · model installed" : "reachable · model missing") : "unreachable"}
-                  />
-                ) : undefined,
-              },
-              { label: "Probe detail", value: ollama?.detail },
-              { label: "Workspace root", value: overview?.generated_workspace_root_name },
-              { label: "Graph store file", value: overview?.traceability_store_name },
-            ]}
-          />
-          {ollama && !(ollama.reachable && ollama.model_installed) ? (
-            <Callout tone="warn" title="Local-model steps are unavailable">
-              LOCAL_LLM generation and REAL_LOCAL_OLLAMA repair need Ollama running with the
-              configured model. TEMPLATE and MOCK modes still work.
-            </Callout>
-          ) : null}
-        </Card>
-
-        <Card title="Workflow progress" subtitle="Ticks come from real responses received in this session.">
-          <ol className="workflow">
-            {WORKFLOW.map((step) => (
-              <li key={step.id}>
-                <button type="button" className="link-button" onClick={() => navigate(step.id)}>
-                  {step.label}
-                </button>
-                <StatusBadge status={step.done(session) ? "SATISFIED" : "NOT_RUN"} label={step.done(session) ? "done" : "not run"} />
-              </li>
-            ))}
-          </ol>
-        </Card>
-      </div>
-
-      <Card title="Component integration status" subtitle="Reported by the API. Upstream and C4 evidence is not real.">
-        <Table
-          rowKey={(row) => row.component}
-          rows={overview?.integrations ?? []}
-          empty={error ? "Unavailable while the API is unreachable." : "Waiting for the API."}
-          columns={[
-            { key: "component", header: "Component" },
-            { key: "state", header: "State", render: (row) => <StatusBadge status={row.state === "LOCAL_REAL" ? "SATISFIED" : row.state === "SIMULATED_FIXTURE" ? "SIMULATED" : row.state} label={row.state.replaceAll("_", " ")} /> },
-            { key: "note", header: "Note" },
-          ]}
-        />
-      </Card>
+      {loading ? <Loading label="Checking Component 3 services" /> : null}
+      <ErrorPanel error={error} context="Service status" />
     </div>
   );
 }

@@ -20,12 +20,16 @@ from intelise_c3.contracts.demo import (
     DemoOverview,
     IntegrationStatus,
     OllamaStatus,
+    OpenRouterStatus,
+    TeamSocLoStatus,
     SimulatedFixture,
     WorkspaceRunRequest,
 )
 from intelise_c3.contracts.generation import GenerationMode
 from intelise_c3.contracts.traceability import GraphCreateRequest
-from intelise_c3.core.config import Settings
+from intelise_c3.core.config import COMPONENT_ROOT, Settings
+from intelise_c3.rag.runtime import RagRuntime
+from intelise_c3.contracts.demo import CrudDomainCatalog, CrudDomainSummary
 from intelise_c3.core.errors import ApplicationError, ErrorDetail
 from intelise_c3.domain.generation import GenerationManifest, GenerationRunResult
 from intelise_c3.scripts.generate_task_mvp import (
@@ -40,6 +44,7 @@ from intelise_c3.scripts.scoped_regeneration_experiment import (
     model_output,
 )
 from intelise_c3.services.code_generation import CodeGenerationService
+from intelise_c3.services.design_context_store import DesignContextStore
 from intelise_c3.services.traceability import TraceabilityService
 from intelise_c3.traceability.builder import TraceabilityGraphBuilder
 from intelise_c3.traceability.store import SQLiteTraceabilityStore
@@ -49,7 +54,27 @@ MAX_PREVIEW_BYTES = 120_000
 OLLAMA_PROBE_TIMEOUT_SECONDS = 2.0
 DEMO_BASELINE_WORKSPACE_NAME = "demo-defective-baseline"
 
-FIXTURE_IDS = ("input-package", "defect-scenarios", "stack-criteria")
+SIMULATED_CRUD_ROOT = COMPONENT_ROOT / "tests" / "fixtures" / "simulated"
+CRUD_DOMAIN_FIXTURES: dict[str, tuple[str, str]] = {
+    "student_management": (
+        "Student Management",
+        "student_management_input_package.json",
+    ),
+    "library_management": (
+        "Library Management",
+        "library_management_input_package.json",
+    ),
+    "inventory_management": (
+        "Inventory Management",
+        "inventory_management_input_package.json",
+    ),
+}
+FIXTURE_IDS = (
+    "input-package",
+    *CRUD_DOMAIN_FIXTURES.keys(),
+    "defect-scenarios",
+    "stack-criteria",
+)
 
 _INTEGRATIONS = (
     IntegrationStatus(
@@ -121,18 +146,79 @@ def probe_ollama(settings: Settings) -> OllamaStatus:
     )
 
 
+def openrouter_status(settings: Settings) -> OpenRouterStatus:
+    """Report configuration only: never the key, and no network call."""
+    return OpenRouterStatus(
+        enabled=bool(getattr(settings, "openrouter_experiment_enabled", False)),
+        key_configured=bool((getattr(settings, "openrouter_api_key", None) or "").strip()),
+        model=getattr(settings, "openrouter_model", None),
+    )
+
+
+def teamsoclo_status(settings: Settings) -> TeamSocLoStatus:
+    """Report TeamSocLo configuration without exposing or calling with the key."""
+    return TeamSocLoStatus(
+        enabled=bool(getattr(settings, "teamsoclo_experiment_enabled", False)),
+        key_configured=bool((getattr(settings, "teamsoclo_api_key", None) or "").strip()),
+        model=getattr(settings, "teamsoclo_model", None),
+    )
+
+
 def build_overview(settings: Settings) -> DemoOverview:
+    provider = getattr(settings, "generation_provider", "ollama")
+    if provider == "openrouter":
+        ollama = OllamaStatus(
+            base_url="disabled",
+            configured_model="disabled",
+            reachable=False,
+            model_installed=None,
+            detail="Local Ollama is disabled by GENERATION_PROVIDER=openrouter; no probe was made.",
+            checked_at_utc=datetime.now(UTC).isoformat(),
+        )
+    else:
+        ollama = probe_ollama(settings)
     return DemoOverview(
         service_name=settings.service_name,
         api_version=settings.api_version,
-        ollama=probe_ollama(settings),
+        generation_provider=provider,
+        ollama=ollama,
+        openrouter=openrouter_status(settings),
+        teamsoclo=teamsoclo_status(settings),
         generated_workspace_root_name=settings.generated_workspace_root.name,
         traceability_store_name=settings.traceability_store_path.name,
         integrations=_INTEGRATIONS,
     )
 
 
+def build_crud_domain_catalog() -> CrudDomainCatalog:
+    return CrudDomainCatalog(
+        domains=tuple(
+            CrudDomainSummary(
+                domain_id=domain_id,
+                title=title,
+                fixture_id=domain_id,
+                notice=(
+                    f"SIMULATED C1/C2 package for {title}. It is not approved Component 1 "
+                    "or Component 2 output."
+                ),
+            )
+            for domain_id, (title, _filename) in CRUD_DOMAIN_FIXTURES.items()
+        )
+    )
+
+
 def load_fixture(fixture_id: str) -> SimulatedFixture:
+    if fixture_id in CRUD_DOMAIN_FIXTURES:
+        title, filename = CRUD_DOMAIN_FIXTURES[fixture_id]
+        return SimulatedFixture(
+            fixture_id=fixture_id,
+            classification="SIMULATED_C1_C2_FIXTURE",
+            notice=(
+                f"SIMULATED C1/C2 package for {title}. It is not approved Component 1 "
+                "or Component 2 output."
+            ),
+            payload=json.loads((SIMULATED_CRUD_ROOT / filename).read_text(encoding="utf-8")),
+        )
     if fixture_id == "input-package":
         return SimulatedFixture(
             fixture_id=fixture_id,
@@ -298,7 +384,12 @@ async def create_defective_baseline(settings: Settings) -> DefectiveBaseline:
         update={"workspace_name": DEMO_BASELINE_WORKSPACE_NAME}
     )
     client = SimulatedModelClient([model_output(SERVICE_PATH, buggy_source)])
-    run = await CodeGenerationService(settings.generated_workspace_root, client).generate(request)
+    run = await CodeGenerationService(
+        settings.generated_workspace_root,
+        client,
+        RagRuntime.from_settings(settings),
+        DesignContextStore.from_settings(settings),
+    ).generate(request)
     traceability = TraceabilityService(
         verifier=ManifestVerificationService(settings.generated_workspace_root),
         builder=TraceabilityGraphBuilder(),
@@ -327,3 +418,61 @@ def mock_repair_client() -> SimulatedModelClient:
     """Deterministic MOCK repair model: always answers with the repaired service fixture."""
     repaired = (FIXTURE_DIRECTORY / "repaired_task_service.js").read_text(encoding="utf-8")
     return SimulatedModelClient([model_output(SERVICE_PATH, repaired)])
+
+
+def switch_inference_engine(
+    engine: str,
+    colab_tunnel_url: str | None = None,
+    custom_model: str | None = None,
+) -> None:
+    """Update .env configuration and automatically control the in-process bridge."""
+    from intelise_c3.services.colab_bridge_service import ColabBridgeManager
+
+    env_path = COMPONENT_ROOT / ".env"
+    existing_env: dict[str, str] = {}
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                existing_env[k.strip()] = v.strip()
+
+    target_engine = engine.strip().upper()
+    if target_engine == "LOCAL":
+        ColabBridgeManager.stop()
+        updates = {
+            "OLLAMA_BASE_URL": "http://127.0.0.1:11434",
+            "OLLAMA_MODEL": custom_model or "qwen2.5-coder:3b",
+        }
+    elif target_engine == "COLAB":
+        tunnel_target = colab_tunnel_url or existing_env.get("COLAB_TUNNEL_URL")
+        if tunnel_target:
+            ColabBridgeManager.start_or_update(tunnel_target)
+        updates = {
+            "OLLAMA_BASE_URL": "http://127.0.0.1:11435",
+            "OLLAMA_MODEL": custom_model or "qwen2.5-coder:7b",
+        }
+        if colab_tunnel_url:
+            updates["COLAB_TUNNEL_URL"] = colab_tunnel_url
+    else:
+        return
+
+    lines = []
+    keys_found = set()
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                k, _ = stripped.split("=", 1)
+                k = k.strip()
+                if k in updates:
+                    lines.append(f"{k}={updates[k]}")
+                    keys_found.add(k)
+                    continue
+            lines.append(line)
+
+    for k, v in updates.items():
+        if k not in keys_found:
+            lines.append(f"{k}={v}")
+
+    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

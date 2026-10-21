@@ -11,6 +11,7 @@ re-testing can establish that, and it is ``PENDING``.
 """
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from difflib import unified_diff
 from hashlib import sha256
@@ -42,6 +43,7 @@ from intelise_c3.domain.scoped_regeneration import (
     FilePreservationEntry,
     GraphVersionEvidence,
     HashPreservationReport,
+    HumanReviewPackage,
     ImpactSelectionReport,
     ImpactSelectionStatus,
     ModulePatchRecord,
@@ -52,6 +54,8 @@ from intelise_c3.domain.scoped_regeneration import (
     RegenerationStatus,
     ScopedRegenerationResult,
     SelectedModule,
+    TriggerCPatchEvent,
+    TriggerCRetrievalEvidence,
 )
 from intelise_c3.domain.structural_verification import (
     StructuralFindingStatus,
@@ -75,6 +79,14 @@ from intelise_c3.regeneration.patch_policy import (
     PatchRejection,
     validate_repair_output,
 )
+from intelise_c3.rag.defect_context import (
+    DefectContextGraph,
+    DefectContextStore,
+    RetrievedDefectContext,
+    get_defect_context,
+    index_defect_context,
+)
+from intelise_c3.rag.runtime import RagRuntime
 from intelise_c3.services.crud_spec import CrudApplicationSpecBuilder
 from intelise_c3.services.structural_verification import StructuralVerificationService
 from intelise_c3.services.traceability import TraceabilityService
@@ -87,7 +99,9 @@ REGENERATOR_VERSION = "c3-scoped-regeneration-v1"
 GENERATION_MODE = "SCOPED_REGENERATION"
 DEFAULT_ATTEMPT_LIMIT = 2
 
-ModelEvidenceClass = Literal["REAL_LOCAL_OLLAMA", "MOCKED_TEST_DOUBLE"]
+ModelEvidenceClass = Literal[
+    "REAL_LOCAL_OLLAMA", "SIMULATED_RAG_TEST_DOUBLE", "MOCKED_TEST_DOUBLE"
+]
 
 
 class _Prepared:
@@ -106,6 +120,13 @@ class _Prepared:
         self.patchable_modules = patchable_modules
 
 
+@dataclass(frozen=True)
+class _ModuleRetrieval:
+    defect_context: tuple[RetrievedDefectContext, ...]
+    best_practice_rules: str
+    evidence: TriggerCRetrievalEvidence
+
+
 class ScopedRegenerationService:
     """Verify, select, patch, version, and hand off without claiming repair."""
 
@@ -116,6 +137,10 @@ class ScopedRegenerationService:
         llm_client: LLMClient | None,
         *,
         model_evidence_class: ModelEvidenceClass,
+        defect_context_store: DefectContextStore | None = None,
+        rag_runtime: RagRuntime | None = None,
+        rag_a_backend: str = "off",
+        rag_a_embedding_model: str | None = None,
         attempt_limit: int = DEFAULT_ATTEMPT_LIMIT,
         clock: Callable[[], datetime] | None = None,
         id_factory: Callable[[], str] | None = None,
@@ -131,6 +156,10 @@ class ScopedRegenerationService:
         self._selector = ImpactSelector(PATCHABLE_PATHS)
         self._llm = llm_client
         self._model_evidence_class = model_evidence_class
+        self._defect_context_store = defect_context_store
+        self._rag_runtime = rag_runtime
+        self._rag_a_backend = rag_a_backend
+        self._rag_a_embedding_model = rag_a_embedding_model
         self._attempt_limit = attempt_limit
         self._clock = clock or (lambda: datetime.now(UTC))
         self._id_factory = id_factory or (lambda: str(uuid4()))
@@ -184,8 +213,35 @@ class ScopedRegenerationService:
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
+        retrievals = self._retrieve_patch_evidence(request, prepared)
+        if retrievals is None:
+            instruction = (
+                "No fresh graph-scoped defect-context chunks were available. Re-index "
+                "the current verified artifact and ask Component 4 to re-verify the "
+                "current version before a researcher retries automatic patching."
+            )
+            return self._terminal(
+                RegenerationStatus.REVIEW_REQUIRED,
+                (RegenerationReasonCode.INSUFFICIENT_DEFECT_CONTEXT,),
+                impact,
+                started,
+                escalation=EscalationRecord(
+                    reason_code=RegenerationReasonCode.INSUFFICIENT_DEFECT_CONTEXT.value,
+                    required_action=instruction,
+                    attempts_made=0,
+                    attempt_limit=self._attempt_limit,
+                ),
+                human_review=self._human_review(
+                    request,
+                    prepared,
+                    (),
+                    RegenerationReasonCode.INSUFFICIENT_DEFECT_CONTEXT.value,
+                    instruction,
+                ),
+            )
+
         attempts, patches_content, accepted_metadata, prompts = await self._patch_modules(
-            request, prepared
+            request, prepared, retrievals
         )
         if len(patches_content) != len(impact.selected_modules):
             last = next((item for item in reversed(attempts) if not item.accepted), None)
@@ -221,10 +277,32 @@ class ScopedRegenerationService:
                     attempts_made=len(attempts),
                     attempt_limit=self._attempt_limit,
                 ),
+                retrieval_evidence=tuple(item.evidence for item in retrievals.values()),
+                human_review=self._human_review(
+                    request,
+                    prepared,
+                    attempts,
+                    (
+                        last.rejection_code.value
+                        if last is not None and last.rejection_code is not None
+                        else RegenerationReasonCode.PATCH_ATTEMPTS_EXHAUSTED.value
+                    ),
+                    (
+                        "No valid in-scope patch was produced within the within-request "
+                        "attempt limit. Review the defect report and rejected attempts."
+                    ),
+                ),
             )
 
         return self._materialize(
-            request, prepared, attempts, patches_content, accepted_metadata, prompts, started
+            request,
+            prepared,
+            attempts,
+            patches_content,
+            accepted_metadata,
+            prompts,
+            retrievals,
+            started,
         )
 
     # -------------------------------------------------------- verified input
@@ -250,7 +328,8 @@ class ScopedRegenerationService:
             self._fail(
                 "DEFECT_REPORT_DIGEST_MISMATCH",
                 "defect_report.source_artifact_digest_sha256",
-                "The defect report artifact digest does not match the verified run.",
+                "The defect report artifact digest does not match the verified run; "
+                "request re-verification of the current artifact before retrying.",
             )
         build = self._builder.build(manifest)
         snapshot = self._traceability.latest(build.graph_id)
@@ -324,10 +403,119 @@ class ScopedRegenerationService:
 
     # --------------------------------------------------------------- patching
 
+    def _retrieve_patch_evidence(
+        self,
+        request: ScopedRegenerationRequest,
+        prepared: _Prepared,
+    ) -> dict[str, _ModuleRetrieval] | None:
+        # The deterministic demonstration client is deliberately not represented as
+        # an AI/RAG repair. It keeps the legacy pipeline usable as a fallback demo.
+        if self._model_evidence_class == "MOCKED_TEST_DOUBLE":
+            return {
+                module.relative_path: _ModuleRetrieval(
+                    defect_context=(),
+                    best_practice_rules="",
+                    evidence=TriggerCRetrievalEvidence(
+                        module_path=module.relative_path,
+                        rag_a_backend="not_applied_deterministic_test_double",
+                        rag_a_embedding_model=None,
+                        rag_a_chunk_ids=(),
+                        rag_b_backend="not_applied_deterministic_test_double",
+                        rag_b_embedding_model=None,
+                        rag_b_rule_ids=(),
+                        applied_to_prompt=False,
+                    ),
+                )
+                for module in prepared.impact.selected_modules
+            }
+        if self._defect_context_store is None or self._rag_runtime is None:
+            return None
+
+        graph = DefectContextGraph(
+            snapshot=prepared.snapshot,
+            manifest=request.manifest,
+            workspace_root=self._workspace_root,
+            workspace_relative_path=request.workspace_relative_path,
+            store=self._defect_context_store,
+            # Retrieve the full graph-scoped candidate set, then keep the top four
+            # chunks for each selected module. A global top-k could otherwise let a
+            # related module crowd the actual patch target out of the prompt.
+            top_k=10_000,
+        )
+        index_defect_context(graph)
+        try:
+            contexts = get_defect_context(request.defect_report, graph)
+        except ApplicationError as exception:
+            if exception.errors[0].code == "DEFECT_CONTEXT_MODULE_NOT_IN_GRAPH":
+                detail = exception.errors[0]
+                raise ApplicationError(
+                    [
+                        ErrorDetail(
+                            code=detail.code,
+                            field=detail.field,
+                            message=(
+                                detail.message
+                                + " Request re-verification of the current artifact "
+                                "and module identity before retrying."
+                            ),
+                        )
+                    ],
+                    status_code=exception.status_code,
+                ) from None
+            raise
+        rag_b = self._rag_runtime.new_run()
+        bundles: dict[str, _ModuleRetrieval] = {}
+        defects = {item.defect_id: item for item in request.defect_report.defects}
+        for module in prepared.impact.selected_modules:
+            module_context = tuple(
+                item for item in contexts if item.source_module == module.relative_path
+            )[:4]
+            if not module_context:
+                return None
+            module_defects = tuple(defects[item] for item in module.defect_ids)
+            task = " ".join(
+                (item.explanation or "").strip() for item in module_defects
+            ).strip()
+            rules = rag_b.retrieve(
+                module_path=module.relative_path,
+                task=task,
+                stack="node",
+                layer=self._module_layer(module.relative_path),
+                applied_to_prompt=True,
+            )
+            rag_b_record = rag_b.evidence().retrievals[-1]
+            bundles[module.relative_path] = _ModuleRetrieval(
+                defect_context=module_context,
+                best_practice_rules=rules,
+                evidence=TriggerCRetrievalEvidence(
+                    module_path=module.relative_path,
+                    rag_a_backend=self._rag_a_backend,
+                    rag_a_embedding_model=self._rag_a_embedding_model,
+                    rag_a_chunk_ids=tuple(item.chunk_id for item in module_context),
+                    rag_b_backend=rag_b.backend,
+                    rag_b_embedding_model=rag_b.embedding_model,
+                    rag_b_rule_ids=rag_b_record.retrieved_rule_ids,
+                    applied_to_prompt=True,
+                ),
+            )
+        return bundles
+
+    @staticmethod
+    def _module_layer(relative_path: str) -> str:
+        for directory, layer in (
+            ("/controllers/", "controller"),
+            ("/services/", "service"),
+            ("/repositories/", "repository"),
+        ):
+            if directory in f"/{relative_path}":
+                return layer
+        return "api"
+
     async def _patch_modules(
         self,
         request: ScopedRegenerationRequest,
         prepared: _Prepared,
+        retrievals: dict[str, _ModuleRetrieval],
     ) -> tuple[
         tuple[PatchAttemptRecord, ...],
         dict[str, tuple[str, str, int]],
@@ -352,6 +540,8 @@ class ScopedRegenerationService:
                     module=policy,
                     current_source=current,
                     defects=module_defects,
+                    defect_context=retrievals[module.relative_path].defect_context,
+                    best_practice_rules=retrievals[module.relative_path].best_practice_rules,
                     previous_rejection=rejection,
                 )
                 prompts.append(prompt)
@@ -411,6 +601,7 @@ class ScopedRegenerationService:
         patched: dict[str, tuple[str, str, int]],
         accepted_metadata: list[LLMInferenceMetadata],
         prompts: list[LLMInferenceRequest],
+        retrievals: dict[str, _ModuleRetrieval],
         started: float,
     ) -> ScopedRegenerationResult:
         source = request.manifest
@@ -429,6 +620,7 @@ class ScopedRegenerationService:
                     "sha256": sha256(patch_bytes[record.relative_path]).hexdigest(),
                     "size_bytes": len(patch_bytes[record.relative_path]),
                     "origin": ArtifactOrigin.LOCAL_LLM,
+                    "created_in_generation_run_id": new_run_id,
                 }
             )
             if record.relative_path in patch_bytes
@@ -438,11 +630,29 @@ class ScopedRegenerationService:
         new_manifest = self._new_manifest(
             source, new_run_id, new_records, accepted_metadata, prompts
         )
+        retrieval_evidence = tuple(
+            retrievals[path].evidence for path in sorted(retrievals)
+        )
+        patch_event = self._patch_event(
+            request,
+            prepared,
+            selected_paths,
+            source.artifact_digest_sha256,
+            new_manifest.artifact_digest_sha256,
+            retrieval_evidence,
+        )
 
         new_dir = self._new_directory(new_relative)
         try:
             self._write_workspace(
-                prepared.workspace, new_dir, source, patch_bytes, new_manifest, request, impact
+                prepared.workspace,
+                new_dir,
+                source,
+                patch_bytes,
+                new_manifest,
+                request,
+                impact,
+                patch_event,
             )
             self._verifier.verify(new_manifest, new_relative.as_posix())
             preservation = self._preservation(new_dir, source, selected_paths)
@@ -592,6 +802,9 @@ class ScopedRegenerationService:
             escalation=None,
             discarded_workspace_relative_path=None,
             metrics=self._metrics(started, attempts, patch_records, preservation),
+            repair_execution_mode=self._execution_mode(),
+            retrieval_evidence=retrieval_evidence,
+            patch_event=patch_event,
         )
 
     def _new_manifest(
@@ -682,6 +895,7 @@ class ScopedRegenerationService:
         new_manifest: GenerationManifest,
         request: ScopedRegenerationRequest,
         impact: ImpactSelectionReport,
+        patch_event: TriggerCPatchEvent,
     ) -> None:
         try:
             new_dir.mkdir(parents=False, exist_ok=False)
@@ -706,6 +920,7 @@ class ScopedRegenerationService:
                 "model_evidence_class": self._model_evidence_class,
                 "c4_retest_status": "PENDING",
                 "impact_selection": impact.model_dump(mode="json"),
+                "trigger_c_patch_event": patch_event.model_dump(mode="json"),
             }
             for name, payload in (
                 ("regeneration-record.json", lineage),
@@ -791,6 +1006,78 @@ class ScopedRegenerationService:
 
     # ----------------------------------------------------------- terminal data
 
+    def _patch_event(
+        self,
+        request: ScopedRegenerationRequest,
+        prepared: _Prepared,
+        selected_paths: set[str],
+        old_digest: str,
+        new_digest: str,
+        retrievals: tuple[TriggerCRetrievalEvidence, ...],
+    ) -> TriggerCPatchEvent:
+        defects = request.defect_report.defects
+        symbols = tuple(
+            sorted(
+                {
+                    item.location.symbol
+                    for item in defects
+                    if item.location is not None and item.location.symbol
+                }
+            )
+        )
+        requirements = tuple(
+            sorted({req for item in defects for req in item.affected_requirement_ids})
+        )
+        return TriggerCPatchEvent(
+            defect_report_id=request.defect_report.defect_report_id,
+            defect_ids=tuple(sorted(item.defect_id for item in defects)),
+            rtm_requirement_ids=requirements,
+            retrievals=retrievals,
+            changed_files=tuple(sorted(selected_paths)),
+            changed_symbols=symbols,
+            rationale=(
+                "Patch restricted to graph-selected modules for defect evidence "
+                f"{', '.join(sorted(item.defect_id for item in defects))} and RTM "
+                f"requirements {', '.join(requirements)}; independent C4 re-verification "
+                "remains required."
+            ),
+            source_artifact_digest_sha256=old_digest,
+            new_artifact_digest_sha256=new_digest,
+            graph_version_before=prepared.snapshot.graph_version,
+            graph_version_after=prepared.snapshot.graph_version + 1,
+        )
+
+    @staticmethod
+    def _human_review(
+        request: ScopedRegenerationRequest,
+        prepared: _Prepared,
+        attempts: tuple[PatchAttemptRecord, ...],
+        reason: str,
+        instruction: str,
+    ) -> HumanReviewPackage:
+        rejection_reasons = tuple(
+            item.rejection_code.value
+            for item in attempts
+            if item.rejection_code is not None
+        )
+        return HumanReviewPackage(
+            reason_code=reason,
+            required_action=instruction,
+            defect_report=request.defect_report.model_dump(mode="json"),
+            attempted_patches=attempts,
+            rejection_reasons=rejection_reasons,
+            source_generation_run_id=request.manifest.generation_run_id,
+            source_artifact_digest_sha256=request.manifest.artifact_digest_sha256,
+            source_graph_version=prepared.snapshot.graph_version,
+        )
+
+    def _execution_mode(self) -> str:
+        if self._model_evidence_class == "MOCKED_TEST_DOUBLE":
+            return "DETERMINISTIC_TEST_DOUBLE"
+        if self._model_evidence_class == "SIMULATED_RAG_TEST_DOUBLE":
+            return "SIMULATED_RAG_TEST_DOUBLE"
+        return "AI_RAG_LOCAL_LLM"
+
     def _discard(
         self,
         new_dir: Path,
@@ -836,6 +1123,8 @@ class ScopedRegenerationService:
         structure: StructuralVerificationReport | None = None,
         discarded: str | None = None,
         escalation: EscalationRecord | None = None,
+        retrieval_evidence: tuple[TriggerCRetrievalEvidence, ...] = (),
+        human_review: HumanReviewPackage | None = None,
     ) -> ScopedRegenerationResult:
         return ScopedRegenerationResult(
             status=run_status,
@@ -852,10 +1141,14 @@ class ScopedRegenerationService:
             escalation=escalation,
             discarded_workspace_relative_path=discarded,
             metrics=self._metrics(started, attempts, (), preservation),
+            repair_execution_mode=self._execution_mode(),
+            retrieval_evidence=retrieval_evidence,
+            patch_event=None,
+            human_review_package=human_review,
         )
 
-    @staticmethod
     def _metrics(
+        self,
         started: float,
         attempts: tuple[PatchAttemptRecord, ...],
         patches: tuple[ModulePatchRecord, ...],
@@ -879,6 +1172,8 @@ class ScopedRegenerationService:
                 if preservation is not None
                 else None
             ),
+            within_request_attempt_count=len(attempts),
+            within_request_attempt_limit=self._attempt_limit,
         )
 
     # ------------------------------------------------------------- utilities

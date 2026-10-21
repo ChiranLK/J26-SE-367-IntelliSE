@@ -14,6 +14,7 @@ from intelise_c3.domain.design_context import (
     DesignDiagnosticSeverity,
     ParsedAttribute,
     ParsedClass,
+    ParsedElementKind,
     ParsedMethod,
     ParsedMethodParameter,
     ParsedRelationship,
@@ -23,7 +24,14 @@ from intelise_c3.domain.generation_context import GenerationContext
 
 _CLASS_DIAGRAM_TYPES = {"CLASS", "CLASS_DIAGRAM"}
 _IDENTIFIER = r"[A-Za-z_][A-Za-z0-9_.]*"
-_CLASS_PATTERN = re.compile(rf"^class\s+(?P<name>{_IDENTIFIER})\s*(?P<body>\{{)?$")
+_CLASS_PATTERN = re.compile(
+    rf"^(?P<abstract>abstract\s+)?class\s+(?P<name>{_IDENTIFIER})\s*(?P<body>\{{)?$"
+)
+_ENUM_PATTERN = re.compile(rf"^enum\s+(?P<name>{_IDENTIFIER})\s*(?P<body>\{{)?$")
+_ENUM_VALUE_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Single-line skinparam directives are presentation-only; block forms ("... {")
+# are deliberately not matched so they still fail explicitly.
+_SKINPARAM_PATTERN = re.compile(r"^skinparam\s+[^{}]+$")
 _METHOD_PATTERN = re.compile(
     rf"^(?P<visibility>[+\-#~])?\s*(?P<name>{_IDENTIFIER})\s*"
     r"\((?P<parameters>[^)]*)\)\s*(?::\s*(?P<return_type>[^{{}}]+))?$"
@@ -193,6 +201,9 @@ class DesignUnderstandingService:
         current_class_name: str | None = None
         current_attributes: list[ParsedAttribute] = []
         current_methods: list[ParsedMethod] = []
+        current_kind = ParsedElementKind.CLASS
+        current_abstract = False
+        current_values: list[str] = []
         started = False
         ended = False
 
@@ -227,6 +238,9 @@ class DesignUnderstandingService:
                     "Content must occur between @startuml and @enduml.",
                 )
 
+            if current_class_name is None and _SKINPARAM_PATTERN.fullmatch(line):
+                continue
+
             if current_class_name is not None:
                 if line == "}":
                     classes.append(
@@ -235,11 +249,33 @@ class DesignUnderstandingService:
                             name=current_class_name,
                             attributes=tuple(current_attributes),
                             methods=tuple(current_methods),
+                            kind=current_kind,
+                            is_abstract=current_abstract,
+                            values=tuple(current_values),
                         )
                     )
                     current_class_name = None
                     current_attributes = []
                     current_methods = []
+                    current_kind = ParsedElementKind.CLASS
+                    current_abstract = False
+                    current_values = []
+                    continue
+
+                if current_kind is ParsedElementKind.ENUM:
+                    if not _ENUM_VALUE_PATTERN.fullmatch(line):
+                        self._fail(
+                            "UNSUPPORTED_PLANTUML_MEMBER",
+                            field,
+                            f"Unsupported enum value syntax: '{line}'.",
+                        )
+                    if line in current_values:
+                        self._fail(
+                            "DUPLICATE_ENUM_VALUE",
+                            field,
+                            f"Enum '{current_class_name}' repeats value '{line}'.",
+                        )
+                    current_values.append(line)
                     continue
 
                 method_match = _METHOD_PATTERN.fullmatch(line)
@@ -269,19 +305,32 @@ class DesignUnderstandingService:
                 )
 
             class_match = _CLASS_PATTERN.fullmatch(line)
-            if class_match:
-                class_name = class_match.group("name")
-                if class_match.group("body"):
-                    current_class_name = class_name
+            enum_match = None if class_match else _ENUM_PATTERN.fullmatch(line)
+            if class_match or enum_match:
+                declaration = class_match or enum_match
+                assert declaration is not None
+                kind = (
+                    ParsedElementKind.CLASS
+                    if class_match
+                    else ParsedElementKind.ENUM
+                )
+                is_abstract = bool(class_match and class_match.group("abstract"))
+                if declaration.group("body"):
+                    current_class_name = declaration.group("name")
                     current_attributes = []
                     current_methods = []
+                    current_kind = kind
+                    current_abstract = is_abstract
+                    current_values = []
                 else:
                     classes.append(
                         ParsedClass(
                             source_uml_id=uml_id,
-                            name=class_name,
+                            name=declaration.group("name"),
                             attributes=(),
                             methods=(),
+                            kind=kind,
+                            is_abstract=is_abstract,
                         )
                     )
                 continue

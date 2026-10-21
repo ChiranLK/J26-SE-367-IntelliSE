@@ -44,6 +44,11 @@ export const OVERVIEW_OK = {
     detail: "Ollama is reachable and the configured model is installed.",
     checked_at_utc: "2026-10-14T00:00:00Z",
   },
+  teamsoclo: {
+    enabled: true,
+    key_configured: true,
+    model: "claude-opus-5-5",
+  },
   generated_workspace_root_name: "demo-ui",
   traceability_store_name: "demo-ui.sqlite3",
   integrations: [
@@ -52,18 +57,38 @@ export const OVERVIEW_OK = {
   ],
 };
 
+export const CRUD_DOMAINS = {
+  catalog_version: "1.0",
+  review_status: "NOT_INDEPENDENTLY_REVIEWED",
+  domains: [
+    {
+      domain_id: "student_management",
+      title: "Student Management",
+      fixture_id: "student_management",
+      classification: "SIMULATED_C1_C2_FIXTURE",
+      notice: "SIMULATED",
+    },
+  ],
+};
+
 export const baseRoutes = () => ({
   "GET /api/v1/health": HEALTH,
   "GET /api/v1/demo/overview": OVERVIEW_OK,
+  "GET /api/v1/demo/crud-domains": CRUD_DOMAINS,
 });
 
 export function seedSession(partial) {
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...emptySession(), ...partial }));
 }
 
-export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1" } = {}) {
+export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1", dynamic = false } = {}) {
+  const generatedOrigin = mode === "LOCAL_LLM"
+    ? "LOCAL_LLM"
+    : mode === "EXPERIMENTAL_CLAUDE" || mode === "EXPERIMENTAL_OPENROUTER"
+      ? mode
+      : "TEMPLATE";
   const files = [
-    { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: mode === "LOCAL_LLM" ? "LOCAL_LLM" : "TEMPLATE", sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
+    { file_id: "F1", relative_path: "backend/src/services/taskService.js", module_identity: "taskService", artifact_type: "SOURCE", origin: generatedOrigin, sha256: "a".repeat(64), size_bytes: 120, requirement_ids: ["REQ-1"] },
     { file_id: "F2", relative_path: "backend/src/app.js", module_identity: "app", artifact_type: "SOURCE", origin: "TEMPLATE", sha256: "b".repeat(64), size_bytes: 80, requirement_ids: [] },
   ];
   return {
@@ -75,18 +100,28 @@ export function makeManifest({ mode = "TEMPLATE_ONLY", runId = "run-1" } = {}) {
     stack_approval: { classification: "CALLER_ASSERTED_PROVISIONAL_APPROVAL", authenticity_verified: false },
     files,
     artifact_digest_sha256: "c".repeat(64),
-    run_evidence: { evidence_digest_sha256: "d".repeat(64) },
+    run_evidence: {
+      evidence_digest_sha256: "d".repeat(64),
+      ...(dynamic
+        ? {
+            generator_version: "react-node-crud-generator-v1",
+            template_set_version: "react-node-crud-scaffold-v1",
+          }
+        : {}),
+    },
     execution_status: "NOT_EXECUTED",
     trust_boundary: "Generated code is untrusted and was not executed.",
-    llm_inference: mode === "LOCAL_LLM"
+    llm_inference: mode === "LOCAL_LLM" || mode === "EXPERIMENTAL_CLAUDE" || mode === "EXPERIMENTAL_OPENROUTER"
       ? {
-          provider: "ollama-local",
-          configured_model_identifier: "qwen2.5-coder:3b",
-          response_model_identifier: "qwen2.5-coder:3b",
+          provider: { LOCAL_LLM: "ollama-local", EXPERIMENTAL_CLAUDE: "teamsoclo-claude", EXPERIMENTAL_OPENROUTER: "openrouter" }[mode],
+          configured_model_identifier: { LOCAL_LLM: "qwen2.5-coder:3b", EXPERIMENTAL_CLAUDE: "claude-haiku-4-5", EXPERIMENTAL_OPENROUTER: "openai/gpt-4o" }[mode],
+          response_model_identifier: { LOCAL_LLM: "qwen2.5-coder:3b", EXPERIMENTAL_CLAUDE: "claude-haiku-4-5", EXPERIMENTAL_OPENROUTER: "openai/gpt-4o-2024-08-06" }[mode],
           prompt_template_version: "v-test",
-          generation_parameters: { temperature: 0, num_ctx: 4096, timeout_seconds: 120 },
+          generation_parameters: mode === "LOCAL_LLM"
+            ? { temperature: 0, num_ctx: 4096, timeout_seconds: 120 }
+            : { temperature: 0, max_tokens: 4096, timeout_seconds: 120 },
           client_inference_latency_ms: 1500,
-          response: { eval_count: 99 },
+          response: mode === "LOCAL_LLM" ? { eval_count: 99 } : { output_tokens: 99 },
         }
       : null,
   };
@@ -113,7 +148,16 @@ export function makeRegenerationResult({ status = "REVIEW_REQUIRED", mock = true
     c4_retest_handoff: null,
     escalation: null,
     discarded_workspace_relative_path: null,
-    metrics: { total_latency_ms: 1, llm_call_count: 0, rejected_attempt_count: 0, repair_success: "NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST" },
+    metrics: { total_latency_ms: 1, llm_call_count: 0, rejected_attempt_count: 0, within_request_attempt_count: 0, within_request_attempt_limit: 2, repair_success: "NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST" },
+    repair_execution_mode: mock ? "DETERMINISTIC_TEST_DOUBLE" : "AI_RAG_LOCAL_LLM",
+    retrieval_evidence: [{
+      module_path: "backend/src/services/taskService.js",
+      rag_a_chunk_ids: mock ? [] : ["RAGA-CHUNK-001"],
+      rag_b_rule_ids: mock ? [] : ["node-svc-001"],
+      applied_to_prompt: !mock,
+    }],
+    patch_event: null,
+    human_review_package: null,
     c4_testing_claim: false,
     execution_claim: "GENERATED_CODE_NOT_EXECUTED",
   };

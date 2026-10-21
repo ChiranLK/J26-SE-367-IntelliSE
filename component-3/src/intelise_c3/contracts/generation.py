@@ -17,6 +17,8 @@ class GenerationContractModel(BaseModel):
 class GenerationMode(StrEnum):
     LOCAL_LLM = "LOCAL_LLM"
     TEMPLATE_ONLY = "TEMPLATE_ONLY"
+    EXPERIMENTAL_CLAUDE = "EXPERIMENTAL_CLAUDE"
+    EXPERIMENTAL_OPENROUTER = "EXPERIMENTAL_OPENROUTER"
 
 
 class ProvisionalApprovalStatus(StrEnum):

@@ -1,0 +1,144 @@
+Create a Calculator
+Create a Calculator from extracting the audio file
+
+Project: 6ad62f5a8b7456adf93a30ea
+Extraction: 1f70d87f-d5ce-45e1-ae9b-61abbbe14984
+Classification: 33fad988-5121-4036-83ec-f560899f6ff8
+Model: tfidf-logistic-regression
+Model version: b48d2a3a87e3669957a1c5374c8879cd84fc1fe232e002a1c50c9821cb693823
+Classified: 2026-10-19T14:56:05.795000Z
+
+REQUIREMENTS
+
+R01 | FR (Functional) | Unreviewed model prediction
+User shall be able to add two numbers.
+Requirement ID: 88c3ca5f-bc98-4d0f-b74c-f005e82326b7
+Original model prediction: FR
+Evidence [0, 38): User shall be able to add two numbers.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R02 | FR (Functional) | Unreviewed model prediction
+User shall be able to subtract one number from another.
+Requirement ID: 0247538c-81d7-4703-a5bc-5fe2201bc5e7
+Original model prediction: FR
+Evidence [39, 94): User shall be able to subtract one number from another.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R03 | FR (Functional) | Unreviewed model prediction
+User shall be able to multiply 2 numbers.
+Requirement ID: 6d0d8610-8d7c-4a11-8f52-2f4ef0f8a64a
+Original model prediction: FR
+Evidence [95, 136): User shall be able to multiply 2 numbers.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R04 | FR (Functional) | Unreviewed model prediction
+User shall be able to divide one number by another.
+Requirement ID: 7a69f30e-58f2-4b6c-a15b-ec2e1f78ab6a
+Original model prediction: FR
+Evidence [137, 188): User shall be able to divide one number by another.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R05 | FR (Functional) | Unreviewed model prediction
+User shall be able to clear the input and start a new calculation.
+Requirement ID: aaa6437d-4988-4c8f-8ce6-21b632ef228b
+Original model prediction: FR
+Evidence [189, 255): User shall be able to clear the input and start a new calculation.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R06 | NFR (Non-functional) | Unreviewed model prediction
+Calculation results shall appear within one second.
+Requirement ID: 866a1f50-561d-42e9-bc2c-f1a8ad040236
+Original model prediction: NFR
+Evidence [256, 307): Calculation results shall appear within one second.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R07 | NFR (Non-functional) | Unreviewed model prediction
+The calculator shall operate on Windows and Linux.
+Requirement ID: 891fb249-e92e-4977-af3f-5b102a907d08
+Original model prediction: NFR
+Evidence [308, 358): The calculator shall operate on Windows and Linux.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+R08 | NFR (Non-functional) | Unreviewed model prediction
+The calculator shall support 100 concurrent users.
+Requirement ID: 45c56e78-aa63-4dba-b9be-a4911edbb561
+Original model prediction: NFR
+Evidence [359, 409): The calculator shall support 100 concurrent users.
+Unclear points: 0 potential flags (c1-ambiguity-rules-v1; English wording rules, not a trained ambiguity model).
+No configured rule matched; this does not prove clarity.
+
+SAVED DISCUSSION
+User shall be able to add two numbers. User shall be able to subtract one number from another. User shall be able to multiply 2 numbers. User shall be able to divide one number by another. User shall be able to clear the input and start a new calculation. Calculation results shall appear within one second. The calculator shall operate on Windows and Linux. The calculator shall support 100 concurrent users.
+
+Source SHA-256: 177c719310fd452bfb26c64ba8dcb6d59448927e67ab0dad9db7741a6bb17963
+
+AUDIO PROVENANCE
+{
+  "schema_version": "c1-transcription-provenance-v1",
+  "transcription_id": "8f3bb1aa-ef8e-44a3-84da-0955868445cd",
+  "provider": "azure",
+  "api_version": "2025-10-15",
+  "locale": "en-US",
+  "model": "azure-speech-fast",
+  "language": "en",
+  "original_transcript": "User shall be able to add two numbers. User shall be able to subtract one number from another. User shall be able to multiply 2 numbers. User shall be able to divide one number by another. User shall be able to clear the input and start a new calculation. Calculation results shall appear within one second. The calculator shall operate on Windows and Linux. The calculator shall support 100 concurrent users.",
+  "original_transcript_hash": "177c719310fd452bfb26c64ba8dcb6d59448927e67ab0dad9db7741a6bb17963",
+  "reviewed_discussion_hash": "177c719310fd452bfb26c64ba8dcb6d59448927e67ab0dad9db7741a6bb17963",
+  "segments": [
+    {
+      "start": 0.11,
+      "end": 2.51,
+      "text": "User shall be able to add two numbers."
+    },
+    {
+      "start": 2.67,
+      "end": 5.95,
+      "text": "User shall be able to subtract one number from another."
+    },
+    {
+      "start": 6.11,
+      "end": 9.07,
+      "text": "User shall be able to multiply 2 numbers."
+    },
+    {
+      "start": 9.23,
+      "end": 12.51,
+      "text": "User shall be able to divide one number by another."
+    },
+    {
+      "start": 12.67,
+      "end": 16.67,
+      "text": "User shall be able to clear the input and start a new calculation."
+    },
+    {
+      "start": 16.91,
+      "end": 20.11,
+      "text": "Calculation results shall appear within one second."
+    },
+    {
+      "start": 20.27,
+      "end": 23.55,
+      "text": "The calculator shall operate on Windows and Linux."
+    },
+    {
+      "start": 23.71,
+      "end": 27.47,
+      "text": "The calculator shall support 100 concurrent users."
+    }
+  ],
+  "audio_duration_seconds": 27.46925,
+  "processing_seconds": 7.8228563769953325,
+  "transcription_created_at": "2026-10-19T14:54:55.562000Z",
+  "transcription_completed_at": "2026-10-19T14:55:03.455000Z",
+  "review_recorded_at": "2026-10-19T14:55:22.643000Z",
+  "review_status": "user_reviewed"
+}
+
+Saved human labels are self-reported reviews. Model predictions may be wrong. English ambiguity rules can miss unclear requirements or flag clear wording; they do not establish semantic clarity. Extraction completeness and relevance require evaluation. No client approval or independent verification is implied.

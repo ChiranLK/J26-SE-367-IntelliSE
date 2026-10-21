@@ -9,6 +9,7 @@ remains ``PENDING``.
 from enum import StrEnum
 from typing import Literal
 
+from intelise_c3.contracts.defect_report import DefectSourceClassification
 from intelise_c3.domain.generation import GeneratedArtifactType, TraceRelationType
 from intelise_c3.domain.generation_context import DomainModel
 from intelise_c3.domain.structural_verification import StructuralVerificationReport
@@ -108,7 +109,7 @@ class ImpactSelectionReport(DomainModel):
     algorithm_version: Literal["C3_IMPACT_SELECTION_V1"] = IMPACT_ALGORITHM_VERSION
     defect_report_id: str
     defect_report_sha256: str
-    defect_source_classification: Literal["SIMULATED_C4_FIXTURE"]
+    defect_source_classification: DefectSourceClassification
     graph_id: str
     graph_version: int
     graph_content_digest_sha256: str
@@ -136,6 +137,7 @@ class RegenerationReasonCode(StrEnum):
     STRUCTURAL_VERIFICATION_FAILED = "STRUCTURAL_VERIFICATION_FAILED"
     ARTIFACT_PRESERVATION_VIOLATION = "ARTIFACT_PRESERVATION_VIOLATION"
     GRAPH_CHANGE_SCOPE_VIOLATION = "GRAPH_CHANGE_SCOPE_VIOLATION"
+    INSUFFICIENT_DEFECT_CONTEXT = "INSUFFICIENT_DEFECT_CONTEXT"
     PATCH_APPLIED_STRUCTURALLY_VERIFIED = "PATCH_APPLIED_STRUCTURALLY_VERIFIED"
 
 
@@ -146,6 +148,7 @@ class PatchRejectionCode(StrEnum):
     UNSAFE_PATCH_CONTENT = "UNSAFE_PATCH_CONTENT"
     UNINSPECTABLE_PATCH_SYNTAX = "UNINSPECTABLE_PATCH_SYNTAX"
     PATCH_INTERFACE_VIOLATION = "PATCH_INTERFACE_VIOLATION"
+    PATCH_REMOVED_GUARD_CHECK = "PATCH_REMOVED_GUARD_CHECK"
     PATCH_NO_OP = "PATCH_NO_OP"
 
 
@@ -172,6 +175,58 @@ class ModulePatchRecord(DomainModel):
     lines_added: int
     lines_removed: int
     attempts_used: int
+
+
+class TriggerCRetrievalEvidence(DomainModel):
+    """Auditable retrieval inputs used for one module repair prompt."""
+
+    evidence_version: Literal["1.0"] = "1.0"
+    module_path: str
+    rag_a_backend: str
+    rag_a_embedding_model: str | None
+    rag_a_chunk_ids: tuple[str, ...]
+    rag_b_backend: str
+    rag_b_embedding_model: str | None
+    rag_b_rule_ids: tuple[str, ...]
+    applied_to_prompt: bool
+
+
+class TriggerCPatchEvent(DomainModel):
+    """Versioned Trigger-C event; it records evidence, not proof of repair."""
+
+    event_version: Literal["1.0"] = "1.0"
+    trigger: Literal["C4_DEFECT_REPORT_TRIGGER_C"] = "C4_DEFECT_REPORT_TRIGGER_C"
+    defect_report_id: str
+    defect_ids: tuple[str, ...]
+    rtm_requirement_ids: tuple[str, ...]
+    retrievals: tuple[TriggerCRetrievalEvidence, ...]
+    changed_files: tuple[str, ...]
+    changed_symbols: tuple[str, ...]
+    changed_symbol_basis: Literal["GRAPH_CORROBORATED_C4_LOCATION_CLAIM"] = (
+        "GRAPH_CORROBORATED_C4_LOCATION_CLAIM"
+    )
+    rationale: str
+    source_artifact_digest_sha256: str
+    new_artifact_digest_sha256: str
+    graph_version_before: int
+    graph_version_after: int
+
+
+class HumanReviewPackage(DomainModel):
+    """Bounded within-request failure history for C3-08 researcher review."""
+
+    package_version: Literal["1.0"] = "1.0"
+    reason_code: str
+    required_action: str
+    defect_report: dict[str, object]
+    attempted_patches: tuple[PatchAttemptRecord, ...]
+    rejection_reasons: tuple[str, ...]
+    source_generation_run_id: str
+    source_artifact_digest_sha256: str
+    source_graph_version: int
+    candidate_new_generation_run_id: str | None = None
+    candidate_new_artifact_digest_sha256: str | None = None
+    cross_round_history_included: Literal[False] = False
 
 
 class FilePreservationEntry(DomainModel):
@@ -262,6 +317,8 @@ class RegenerationMetrics(DomainModel):
     patch_validity_rate: float | None
     collateral_edit_count: int | None
     unchanged_files_byte_identical: bool | None
+    within_request_attempt_count: int = 0
+    within_request_attempt_limit: int | None = None
     repair_success: Literal["NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST"] = (
         "NOT_EVALUATED_REQUIRES_INDEPENDENT_C4_RETEST"
     )
@@ -271,7 +328,9 @@ class ScopedRegenerationResult(DomainModel):
     result_version: Literal["1.0"] = "1.0"
     status: RegenerationStatus
     reason_codes: tuple[RegenerationReasonCode, ...]
-    model_evidence_class: Literal["REAL_LOCAL_OLLAMA", "MOCKED_TEST_DOUBLE"]
+    model_evidence_class: Literal[
+        "REAL_LOCAL_OLLAMA", "SIMULATED_RAG_TEST_DOUBLE", "MOCKED_TEST_DOUBLE"
+    ]
     impact_selection: ImpactSelectionReport
     patch_attempts: tuple[PatchAttemptRecord, ...]
     patches: tuple[ModulePatchRecord, ...]
@@ -283,6 +342,15 @@ class ScopedRegenerationResult(DomainModel):
     escalation: EscalationRecord | None
     discarded_workspace_relative_path: str | None
     metrics: RegenerationMetrics
+    repair_execution_mode: Literal[
+        "AI_RAG_LOCAL_LLM",
+        "SIMULATED_RAG_TEST_DOUBLE",
+        "DETERMINISTIC_TEST_DOUBLE",
+        "LEGACY_UNSPECIFIED",
+    ] = "LEGACY_UNSPECIFIED"
+    retrieval_evidence: tuple[TriggerCRetrievalEvidence, ...] = ()
+    patch_event: TriggerCPatchEvent | None = None
+    human_review_package: HumanReviewPackage | None = None
     c4_testing_claim: Literal[False] = False
     execution_claim: Literal["GENERATED_CODE_NOT_EXECUTED"] = (
         "GENERATED_CODE_NOT_EXECUTED"

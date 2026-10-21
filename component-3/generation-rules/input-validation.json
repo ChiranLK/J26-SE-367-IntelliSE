@@ -1,0 +1,64 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-INPUT-001",
+      "version": "1.0.0",
+      "category": "INPUT_VALIDATION",
+      "priority": 100,
+      "description": "C1 package must be client-approved, every requirement approved, stable IDs present, approval reference present.",
+      "target_kind": "CONTRACT",
+      "conditions": {
+        "all": [
+          {
+            "fact": "contract",
+            "equals": "C1"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [],
+        "artifact_types": []
+      },
+      "requires_knowledge": [],
+      "validation_requirements": [
+        "C1_APPROVED",
+        "C1_STABLE_IDS",
+        "C1_APPROVAL_REFERENCE"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "FAILED"
+    },
+    {
+      "rule_id": "R-INPUT-002",
+      "version": "1.0.0",
+      "category": "INPUT_VALIDATION",
+      "priority": 100,
+      "description": "C2 release must be VALIDATED, match the C1 project and SRS version, and anchor every FR to a known UML element.",
+      "target_kind": "CONTRACT",
+      "conditions": {
+        "all": [
+          {
+            "fact": "contract",
+            "equals": "C2"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [],
+        "artifact_types": []
+      },
+      "requires_knowledge": [],
+      "validation_requirements": [
+        "C2_VALIDATED",
+        "C1_C2_VERSION_MATCH",
+        "FR_ANCHORED"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "FAILED"
+    }
+  ]
+}

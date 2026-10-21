@@ -33,10 +33,11 @@ RUN npm test \
     && npm cache clean --force
 
 FROM ${NODE_IMAGE} AS runtime
+ARG CORS_ALLOWED_ORIGIN=http://127.0.0.1:5173
 ENV NODE_ENV=production \
     HOST=127.0.0.1 \
     PORT=3001 \
-    CORS_ALLOWED_ORIGIN=http://127.0.0.1:5173
+    CORS_ALLOWED_ORIGIN=${CORS_ALLOWED_ORIGIN}
 WORKDIR /app
 COPY --from=backend-validation --chown=node:node /validation/backend ./backend
 COPY --from=frontend-validation --chown=node:node /validation/frontend/dist ./frontend-dist
@@ -45,5 +46,12 @@ COPY --chown=node:node harness/static-server.mjs /opt/intelise-validator/static-
 USER node
 EXPOSE 3001 8080
 CMD ["node", "backend/src/app.js"]
+
+FROM runtime AS preview
+COPY --chown=node:node harness/preview-entry.mjs /opt/intelise-validator/preview-entry.mjs
+ENV BACKEND_HOST=0.0.0.0 \
+    STATIC_HOST=0.0.0.0 \
+    STATIC_PORT=8080
+CMD ["node", "/opt/intelise-validator/preview-entry.mjs"]
 
 

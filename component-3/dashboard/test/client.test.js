@@ -104,6 +104,8 @@ describe("api endpoint routing", () => {
       "POST /api/v1/traceability/graphs": {},
       "GET /api/v1/traceability/graphs/g%201": {},
       "GET /api/v1/traceability/graphs/g%201/versions/2": {},
+      "GET /api/v1/traceability/graphs/g%201/versions/2/rtm": {},
+      "GET /api/v1/traceability/graphs/g%201/versions/2/metrics": {},
       "POST /api/v1/impact-selections": {},
     });
 
@@ -115,9 +117,11 @@ describe("api endpoint routing", () => {
     await api.createGraph({});
     await api.latestGraph("g 1");
     await api.graphVersion("g 1", 2);
+    await api.graphRtm("g 1", 2);
+    await api.graphMetrics("g 1", 2);
     await api.impactSelection({});
 
-    expect(calls).toHaveLength(9);
+    expect(calls).toHaveLength(11);
     expect(calls.every((call) => call.url.startsWith("/api/v1/"))).toBe(true);
   });
 });

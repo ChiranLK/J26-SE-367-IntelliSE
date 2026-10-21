@@ -53,6 +53,9 @@ class TraceGraphNode(DomainModel):
     source_identity: str
     label: str
     attributes: dict[str, str | int | bool | None] = Field(default_factory=dict)
+    # Optional for version-aware loading of historical snapshots created before
+    # this evidence field existed.
+    created_in_generation_run_id: str | None = None
     lifecycle_status: GraphLifecycleStatus = GraphLifecycleStatus.ACTIVE
     retired_in_graph_version: int | None = None
 
@@ -66,6 +69,9 @@ class TraceGraphLink(DomainModel):
     resolution_status: TraceResolutionStatus
     review_status: TraceReviewStatus
     provenance: TraceLinkProvenance
+    # Optional for version-aware loading of historical snapshots created before
+    # this evidence field existed.
+    created_in_generation_run_id: str | None = None
     lifecycle_status: GraphLifecycleStatus = GraphLifecycleStatus.ACTIVE
     retired_in_graph_version: int | None = None
     retirement_reason: str | None = None
@@ -83,6 +89,8 @@ class TraceabilityDiagnostics(DomainModel):
     dangling_node_ids: tuple[str, ...]
     unresolved_link_ids: tuple[str, ...]
     missing_evidence: tuple[str, ...]
+    orphan_node_ids: tuple[str, ...] = ()
+    coverage_gaps: tuple[str, ...] = ()
 
 
 class TraceabilityCoverageReport(DomainModel):
@@ -188,3 +196,74 @@ class TraceabilityEvaluationReport(DomainModel):
     algorithm_output_claim: Literal["CALCULATED_NOT_BENCHMARKED"] = (
         "CALCULATED_NOT_BENCHMARKED"
     )
+
+
+class RequirementTraceChain(DomainModel):
+    requirement_id: str
+    requirement_node_id: str
+    label: str
+    uml_nodes: tuple[TraceGraphNode, ...]
+    code_modules: tuple[TraceGraphNode, ...]
+    api_operations: tuple[TraceGraphNode, ...]
+    database_artifacts: tuple[TraceGraphNode, ...]
+    test_hooks: tuple[TraceGraphNode, ...]
+    links: tuple[TraceGraphLink, ...]
+
+
+class ImpactSet(DomainModel):
+    requirement_id: str
+    affected_node_ids: tuple[str, ...]
+    code_node_ids: tuple[str, ...]
+    api_node_ids: tuple[str, ...]
+    database_node_ids: tuple[str, ...]
+    test_hook_node_ids: tuple[str, ...]
+    module_paths: tuple[str, ...]
+
+
+class RtmRow(DomainModel):
+    requirement_id: str
+    requirement_label: str
+    uml_elements: tuple[str, ...]
+    code_modules: tuple[str, ...]
+    api_operations: tuple[str, ...]
+    database_entities: tuple[str, ...]
+    test_hooks: tuple[str, ...]
+
+
+class RtmExport(DomainModel):
+    graph_id: str
+    graph_version: int
+    rows: tuple[RtmRow, ...]
+    table_markdown: str
+
+
+class TraceabilityDiagnostic(DomainModel):
+    code: Literal["ORPHAN_DOWNSTREAM_NODE", "REQUIREMENT_COVERAGE_GAP"]
+    severity: Literal["REVIEW_REQUIRED"] = "REVIEW_REQUIRED"
+    affected_ids: tuple[str, ...]
+    message: str
+
+
+class TraceabilityMetricsReport(DomainModel):
+    report_version: Literal["1.0"] = "1.0"
+    graph_id: str
+    graph_version: int
+    total_requirements: int
+    covered_requirements: int
+    coverage_rate: float
+    coverage_gaps: tuple[str, ...]
+    total_active_nodes: int
+    orphan_node_count: int
+    orphan_rate: float
+    orphan_node_ids: tuple[str, ...]
+    diagnostics: tuple[TraceabilityDiagnostic, ...] = ()
+    oracle_dataset_id: str | None = None
+    oracle_link_count: int = 0
+    true_positives: int = 0
+    false_positives: int = 0
+    false_negatives: int = 0
+    precision: float = 0.0
+    recall: float = 0.0
+    f1_score: float = 0.0
+    preservation_rate: float | None = None
+    oracle_honesty_note: str = ""

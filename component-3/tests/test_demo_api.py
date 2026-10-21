@@ -23,6 +23,7 @@ from intelise_c3.core.config import get_settings
 from intelise_c3.main import create_app
 from intelise_c3.scripts.generate_task_mvp import build_simulated_request
 from intelise_c3.services import demo_support
+from intelise_c3.services.docker_preview import DockerPreviewService
 
 PRIMARY_SCENARIO = "SIM-SCN-001-service-update-missing-task"
 CONTROLLER_SCENARIO = "SIM-SCN-002-controller-with-location"
@@ -33,7 +34,7 @@ SERVICE_PATH = "backend/src/services/taskService.js"
 def demo_client(tmp_path: Path) -> Iterator[TestClient]:
     get_settings.cache_clear()
     application = create_app()
-    application.state.settings = SimpleNamespace(
+    settings = SimpleNamespace(
         service_name="intelise-component-3",
         api_version="v1",
         ollama_base_url="http://127.0.0.1:11434",
@@ -41,6 +42,8 @@ def demo_client(tmp_path: Path) -> Iterator[TestClient]:
         generated_workspace_root=tmp_path / "workspaces",
         traceability_store_path=tmp_path / "graphs.sqlite3",
     )
+    application.state.settings = settings
+    application.state.preview_service = DockerPreviewService(settings)
     with TestClient(application) as client:
         yield client
     get_settings.cache_clear()
@@ -109,6 +112,27 @@ def test_overview_reports_missing_model_and_unreachable_ollama_honestly(
     down = demo_client.get("/api/v1/demo/overview").json()["ollama"]
     assert (down["reachable"], down["model_installed"]) == (False, None)
     assert "ConnectError" in down["detail"]
+
+
+def test_engine_reload_invalidates_provider_bound_hybrid_services(
+    demo_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GENERATION_PROVIDER", "openrouter")
+    monkeypatch.setenv("TEAMSOCLO_MODEL", "claude-opus-5-5")
+    monkeypatch.setattr(
+        demo_support.httpx,
+        "get",
+        lambda url, timeout: _FakeTagsResponse({"models": []}),
+    )
+    demo_client.app.state.hybrid_pipeline = object()
+    demo_client.app.state.hybrid_preview = object()
+
+    response = demo_client.post("/api/v1/demo/engine-reload")
+
+    assert response.status_code == 200
+    assert demo_client.app.state.settings.teamsoclo_model == "claude-opus-5-5"
+    assert demo_client.app.state.hybrid_pipeline is None
+    assert demo_client.app.state.hybrid_preview is None
 
 
 # ------------------------------------------------------------------ fixtures
