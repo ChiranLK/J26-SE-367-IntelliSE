@@ -11,6 +11,18 @@ const saved = () => ({ id: 'a'.repeat(24), name: input.name, description: input.
   status: 'draft', created_at: '2026-10-15T00:00:00Z', updated_at: '2026-10-15T00:00:00Z',
   transcription_provenance: projectProvenance(input.discussion_text) })
 
+test('Azure source remains explicit and its transcript hashes are verified', async () => {
+  const project = saved()
+  project.transcription_provenance.provider = 'azure'
+  project.transcription_provenance.model = 'azure-speech-fast'
+  project.transcription_provenance.api_version = '2025-10-15'
+  project.transcription_provenance.locale = 'en-US'
+  assert.equal(validProject(project), true)
+  assert.equal(await verifyProjectProvenance(project), true)
+  project.transcription_provenance.provider = 'unknown-provider'
+  assert.equal(validProject(project), false)
+})
+
 test('recognizes actual OpenAPI references/nullable provenance, rejects older or incomplete contracts', () => {
   assert.equal(supportsProjectProvenance(provenanceContract), true)
   for (const doc of [null, {}, { paths: {} }, { ...provenanceContract, components: {} }]) assert.equal(supportsProjectProvenance(doc), false)

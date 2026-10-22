@@ -36,7 +36,7 @@ const hash = (value) => typeof value === 'string' && /^[a-f\d]{64}$/.test(value)
 const text = (value, max) => typeof value === 'string' && Array.from(value).length <= max
 
 export function validProjectProvenance(p) {
-  return Boolean(p && p.schema_version === 'c1-transcription-provenance-v1' && p.provider === 'whisper'
+  return Boolean(p && p.schema_version === 'c1-transcription-provenance-v1' && ['whisper', 'azure'].includes(p.provider)
     && validTranscriptionId(p.transcription_id) && p.review_status === 'user_reviewed' && p.language === 'en'
     && text(p.model, 200) && p.model.trim() && text(p.original_transcript, 40000) && p.original_transcript.trim()
     && hash(p.original_transcript_hash) && hash(p.reviewed_discussion_hash)

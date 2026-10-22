@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import AmbiguityHints from './AmbiguityHints.jsx'
+import RequirementReviewList from './RequirementReviewList.jsx'
 import { classificationLabels, classifyExtraction, getLatestClassification, getLatestExtraction, getProject, listProjects } from '../services/projectApi.js'
 
 function ClassificationMetadata({ result }) {
@@ -10,7 +12,7 @@ function ClassificationMetadata({ result }) {
   </dl>
 }
 
-function SavedProject({ projectId, onBusyChange }) {
+function SavedProject({ projectId, onBusyChange, activeStep = 2, onProgress, reviewerProps }) {
   const [view, setView] = useState({ phase: 'loading', project: null, extraction: null, classification: null, classificationState: 'loading', error: null, notice: '' })
   const [revision, setRevision] = useState(0)
   const [classifying, setClassifying] = useState(false)
@@ -91,9 +93,14 @@ function SavedProject({ projectId, onBusyChange }) {
     }
   }
 
+  useEffect(() => {
+    onProgress?.(view.phase === 'ready' && !!view.classification && view.classificationState === 'saved')
+  }, [onProgress, view.phase, view.classification, view.classificationState])
+
   if (view.phase === 'loading') return <div className="classification-project-detail" role="status">Loading project and saved extraction…</div>
   if (view.phase === 'error') return <div className="classification-project-detail"><p role="alert">{view.error.message}</p><button className="workspace-button" onClick={refresh}>Retry loading project</button></div>
   const { project, extraction, classification, classificationState, error, notice } = view
+  if (!extraction) return <div hidden={activeStep !== 2}><AmbiguityHints text={project.discussion_text} scope="discussion_text" /></div>
   // Defensive mapping also guards against a stale response after an extraction change.
   let labels = new Map()
   let mappingError = null
@@ -103,12 +110,12 @@ function SavedProject({ projectId, onBusyChange }) {
   const waiting = classifying || classificationState === 'loading'
 
   return <article className="classification-project-detail" aria-labelledby="saved-project-title">
-    <div className="workspace-heading"><h3 id="saved-project-title">{project.name}</h3>
+    <div hidden={activeStep !== 2}>
+    <div className="workspace-heading"><h3 id="saved-project-title">Review requirement labels</h3>
       <button className="workspace-button" disabled={waiting} onClick={refresh}>Refresh saved results</button></div>
-    <p className="record-id">Project <code>{project.id}</code></p>
-    <details><summary>Original discussion</summary><p className="source-discussion">{project.discussion_text}</p></details>
-    {!extraction ? <p role="status">No saved extraction exists for this project. Save an extraction through the backend before classifying requirements.</p> : <>
-      <div className="workspace-heading extraction-heading"><div><h4>Saved requirement candidates</h4><p className="record-id">Extraction <code>{extraction.run_id}</code></p></div>
+
+    <>
+      <div className="workspace-heading extraction-heading"><div><h4>{extraction.candidates.length} requirement {extraction.candidates.length === 1 ? "candidate" : "candidates"}</h4><p className="record-id">Extraction <code>{extraction.run_id}</code></p></div>
         <button className="workspace-button primary" disabled={waiting || !extraction.candidates.length} onClick={() => { void classify() }}>
           {classifying ? 'Classifying…' : 'Classify requirements'}
         </button></div>
@@ -120,16 +127,17 @@ function SavedProject({ projectId, onBusyChange }) {
       </div>
       {error && <p className="workspace-error" role="alert">{error.message}{error.kind === 'model_unavailable' && ' Existing saved predictions remain readable.'}</p>}
       {mappingError && <p className="workspace-error" role="alert">{mappingError}</p>}
-      {classification && !mappingError && <ClassificationMetadata result={classification} />}
+      {classification && !mappingError && <details className="classification-details"><summary>Model & classification details</summary><p className="record-id">{project.name} · Project <code>{project.id}</code></p><ClassificationMetadata result={classification} /></details>}
+    </>
+    </div>
+    <>
       {!extraction.candidates.length ? <p role="status">This saved extraction contains no requirements.{classification ? ' Its saved classification has no predictions.' : ''}</p>
-        : <ul className="classification-requirement-list">{extraction.candidates.map((candidate) => <li key={candidate.requirement_id}>
-          <div className="requirement-identity"><code>{candidate.requirement_id}</code>
-            {labels.has(candidate.requirement_id) ? <span className={`requirement-badge ${labels.get(candidate.requirement_id).toLowerCase()}`} title={labels.get(candidate.requirement_id) === 'FR' ? 'Functional requirement prediction' : 'Non-functional requirement prediction'}>{labels.get(candidate.requirement_id)}</span>
-              : <span className="requirement-badge pending">Unclassified</span>}
-          </div><p>{candidate.requirement_text}</p><small>Candidate for review · Classification does not approve this requirement.</small>
-        </li>)}</ul>}
-      <p className="workspace-note">FR = functional requirement; NFR = non-functional requirement. Labels are baseline predictions for review, without individual confidence scores.</p>
-    </>}
+        : null}
+        <RequirementReviewList key={classification?.classification_id ?? 'unclassified'} projectId={projectId} extraction={extraction}
+          classification={mappingError ? null : classification} labels={labels} disabled={waiting} project={project} activeStep={activeStep} {...reviewerProps} />
+
+    </>
+    <div hidden={activeStep !== 2}><AmbiguityHints text={project.discussion_text} scope="discussion_text" /></div>
   </article>
 }
 
@@ -194,12 +202,12 @@ function StandaloneWorkspace() {
 
 // Share the dashboard's selected project; retain the standalone stash interface
 // for callers that do not provide a selection. Never duplicate project navigation.
-export default function ProjectWorkspace({ projectId, refreshKey = 0 }) {
+export default function ProjectWorkspace({ projectId, refreshKey = 0, activeStep = 2, onProgress, reviewerProps }) {
   const [busy, setBusy] = useState(false)
   if (projectId === undefined) return <StandaloneWorkspace />
   return <section className="project-workspace" aria-labelledby="projects-title" aria-busy={busy}>
-    <div className="section-heading"><div><p className="eyebrow section-eyebrow">CLASSIFY & REVIEW</p><h2 id="projects-title">Requirement classification</h2></div><p>Review the trained FR/NFR baseline’s predictions.</p></div>
-    {projectId ? <SavedProject key={`${projectId}-${refreshKey}`} projectId={projectId} onBusyChange={setBusy} />
+    <h2 id="projects-title" className="sr-only">Requirement classification and export</h2>
+    {projectId ? <SavedProject key={`${projectId}-${refreshKey}`} projectId={projectId} onBusyChange={setBusy} activeStep={activeStep} onProgress={onProgress} reviewerProps={reviewerProps} />
       : <p className="classification-project-detail">Create or open a saved project above to classify its saved extraction.</p>}
   </section>
 }

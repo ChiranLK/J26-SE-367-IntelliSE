@@ -6,6 +6,7 @@ import AudioTranscription from './AudioTranscription.jsx'
 export default function CreateProjectForm({ onSaved }) {
   const [input, setInput] = useState({ name: '', description: '', discussion_text: '' })
   const [errors, setErrors] = useState({})
+  const [reviewed, setReviewed] = useState(false)
   const [failure, setFailure] = useState(null)
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState('paste')
@@ -30,9 +31,10 @@ export default function CreateProjectForm({ onSaved }) {
     event.preventDefault()
     if (pending.current || audioSaveBlocked) return
     const invalid = validateProjectInput(input)
+    if (!Object.keys(invalid).length && !reviewed) invalid.source_review = 'Review the discussion and confirm it before saving.'
     setErrors(invalid)
     if (Object.keys(invalid).length) {
-      form.current.elements.namedItem(Object.keys(invalid)[0]).focus()
+      form.current.elements.namedItem(Object.keys(invalid)[0])?.focus()
       return
     }
     const controller = new AbortController()
@@ -56,6 +58,7 @@ export default function CreateProjectForm({ onSaved }) {
 
   function applyTranscript(job, text) {
     setInput((previous) => ({ ...previous, discussion_text: text }))
+    setReviewed(false)
     setProvenance(job)
     setReplacement(null)
     setTab('paste')
@@ -69,7 +72,7 @@ export default function CreateProjectForm({ onSaved }) {
   function field(name, label, multiline, rows) {
     const props = {
       id: name, name, value: input[name], required: name !== 'description', disabled: saving,
-      onChange: (event) => setInput({ ...input, [name]: event.target.value }),
+      onChange: (event) => { setInput({ ...input, [name]: event.target.value }); if (name === 'discussion_text') setReviewed(false) },
       'aria-invalid': Boolean(errors[name]), 'aria-describedby': `${name}-help ${errors[name] ? `${name}-error` : ''}`.trim(),
     }
     return <div className="form-field">
@@ -81,13 +84,13 @@ export default function CreateProjectForm({ onSaved }) {
   }
 
   return <section className="panel" aria-labelledby="create-heading">
-    <p className="eyebrow section-eyebrow">01 · CAPTURE THE DISCUSSION</p>
+    <p className="eyebrow section-eyebrow">STEP 1 · CREATE & REVIEW SOURCE</p>
     <h2 id="create-heading">Create a project</h2>
-    <p className="panel-description">Start with your client's original words. Save the discussion, then extract candidates for human review.</p>
+    <p className="panel-description">Add a title and description, then paste a discussion or upload an audio recording. Read and edit the text before continuing.</p>
     <form ref={form} onSubmit={submit} noValidate aria-busy={saving}>
       {field('name', 'Project name', false)}
       {field('description', 'Description (optional)', true, 3)}
-      <div className="discussion-tabs" role="tablist" aria-label="Discussion source" onKeyDown={(event) => {
+      <div className="discussion-tabs" data-active={tab} role="tablist" aria-label="Discussion source" onKeyDown={(event) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
         event.preventDefault()
         const next = event.key === 'Home' ? 'paste' : event.key === 'End' ? 'audio' : tab === 'paste' ? 'audio' : 'paste'
@@ -96,12 +99,12 @@ export default function CreateProjectForm({ onSaved }) {
       }}>
         {['paste', 'audio'].map((value) => <button key={value} id={`source-${value}-tab`} role="tab" type="button" disabled={saving}
           aria-selected={tab === value} aria-controls={`source-${value}-panel`} tabIndex={tab === value ? 0 : -1}
-          onClick={() => setTab(value)}>{value === 'paste' ? 'Paste text' : 'Upload audio'}</button>)}
+          onClick={() => setTab(value)}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{value === 'paste' ? <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><path d="M14 3v6h6M8 13h8M8 17h5" /></> : <><path d="M9 18V5l11-2v13M9 8l11-2" /><ellipse cx="6" cy="18" rx="3" ry="3" /><ellipse cx="17" cy="16" rx="3" ry="3" /></>}</svg>{value === 'paste' ? 'Paste text' : 'Upload audio'}</button>)}
       </div>
-      <div id="source-paste-panel" role="tabpanel" aria-labelledby="source-paste-tab" hidden={tab !== 'paste'}>
+      <div id="source-paste-panel" className="source-tab-panel source-text-panel" role="tabpanel" aria-labelledby="source-paste-tab" hidden={tab !== 'paste'}>
         <p className="field-help">Paste or edit the discussion below. Audio never replaces this text without your explicit action.</p>
       </div>
-      <div id="source-audio-panel" role="tabpanel" aria-labelledby="source-audio-tab" hidden={tab !== 'audio'}>
+      <div id="source-audio-panel" className="source-tab-panel" role="tabpanel" aria-labelledby="source-audio-tab" hidden={tab !== 'audio'}>
         <AudioTranscription disabled={saving} onUse={useTranscript} provenanceAvailable={contract.phase === 'supported'} />
       </div>
       {replacement && <div role="alertdialog" aria-modal="false" aria-labelledby="replace-discussion-heading" className="workspace-notice">
@@ -112,20 +115,23 @@ export default function CreateProjectForm({ onSaved }) {
           <button type="button" className="workspace-button" onClick={() => setReplacement(null)}>Keep current discussion</button>
         </div>
       </div>}
+      <div className="source-review-heading"><span className="step-mini">REVIEW YOUR SOURCE</span><p>Check names, numbers, permissions and missing words. This text becomes your saved discussion.</p></div>
       {field('discussion_text', 'Original client discussion', true, 9)}
-      {provenance && <div className="workspace-notice" role="status">
+      <label className="source-review-check"><input type="checkbox" name="source_review" checked={reviewed} disabled={saving} onChange={(event) => setReviewed(event.target.checked)} />I have reviewed this discussion and am ready to continue.</label>
+      {errors.source_review && <p className="field-error" role="alert">{errors.source_review}</p>}
+      {provenance && <div className={`workspace-notice audio-source-link ${audioSaveBlocked ? '' : 'ready'}`} role="status">
         {audioSaveBlocked ? <>
           <p><strong>Audio-derived project saving is unavailable.</strong> {contract.phase === 'loading' ? 'Checking the backend provenance contract.' : 'The configured backend does not currently provide the required provenance contract.'} Your discussion and source reference are retained; saving is blocked.</p>
           {contract.error && <p className="field-help">{contract.error}</p>}
           <button type="button" className="workspace-button" disabled={contract.phase === 'loading'} onClick={() => { setContract({ phase: 'loading', error: '' }); setContractRevision((value) => value + 1) }}>Check audio saving support</button>
-        </> : <p><strong>Audio source retained for saving.</strong> Save explicitly to store this reviewed discussion with its transcription reference and backend-sourced original. User-reviewed does not mean independently verified.</p>}
-        <p className="record-id">Source transcription: <code>{provenance.transcription_id}</code> · {provenance.model} · {provenance.language}</p>
-        <details className="audio-original"><summary>Applied original ASR transcript (unchanged)</summary><pre>{provenance.original_transcript}</pre></details>
-        <p className="field-help">Further discussion edits retain this source association. The source job stays unchanged.</p>
+        </> : <p><strong>Audio transcript linked.</strong> When you save this project, your edited discussion and the original transcript will be kept together.</p>}
+        <details className="audio-source-details"><summary>Recording details</summary><p className="record-id">Transcription: <code>{provenance.transcription_id}</code> · {provenance.model} · {provenance.language}</p></details>
+        <details className="audio-original"><summary>View original transcript (before your edits)</summary><pre>{provenance.original_transcript}</pre></details>
+        <p className="field-help">You can keep editing your discussion. The original transcript stays unchanged.</p>
         <button type="button" className="workspace-button" disabled={saving} onClick={() => setClearing(true)}>Clear audio-derived discussion</button>
         {clearing && <div role="alertdialog" aria-modal="false" aria-label="Clear audio discussion confirmation">
           <p>Clear the discussion and its pending source association? The saved transcription job remains in the backend. Project name and description stay unchanged.</p>
-          <button type="button" className="workspace-button" onClick={() => { setInput((previous) => ({ ...previous, discussion_text: '' })); setProvenance(null); setClearing(false) }}>Clear discussion and association</button>
+          <button type="button" className="workspace-button" onClick={() => { setInput((previous) => ({ ...previous, discussion_text: '' })); setReviewed(false); setProvenance(null); setClearing(false) }}>Clear discussion and association</button>
           <button type="button" className="workspace-button" onClick={() => setClearing(false)}>Keep audio discussion</button>
         </div>}
       </div>}

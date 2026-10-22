@@ -148,3 +148,17 @@ test('project URL fragments can be restored after refresh', () => {
   assert.equal(projectFromHash('#new-project'), null)
   assert.equal(projectFromHash(''), null)
 })
+
+
+test('confirmed provider timeout permits explicit recovery without an uncertain-save lock', async (t) => {
+  let calls = 0
+  const detail = 'Requirement extraction provider timed out. Check server performance, model load time and C1_LLM_TIMEOUT_SECONDS. No automatic retry was attempted.'
+  t.mock.method(globalThis, 'fetch', async () => { calls++; return Response.json({ detail }, { status: 504 }) })
+  await assert.rejects(extractRequirements(id, discussion), error => error.status === 504 && error.code === 'extraction-timeout' && !error.uncertain)
+  assert.equal(calls, 1)
+})
+
+test('unknown gateway timeout still requires retrieval because persistence is uncertain', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ detail: 'Gateway timed out' }, { status: 504 }))
+  await assert.rejects(extractRequirements(id, discussion), error => error.status === 504 && error.uncertain)
+})

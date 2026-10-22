@@ -72,8 +72,8 @@ export default function AudioTranscription({ disabled, onUse, provenanceAvailabl
   }
 
   return <div className="audio-transcription">
-    <div className="form-field">
-      <label htmlFor="audio-file">Audio recording</label>
+    <div className="form-field audio-upload-field">
+      <label htmlFor="audio-file" className="audio-upload-heading"><span className="audio-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4m-4 4 4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" /></svg></span>Audio recording</label>
       <input id="audio-file" type="file" accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4" disabled={locked}
         aria-describedby="audio-limits" onChange={(event) => {
           const selected = event.target.files?.[0] ?? null
@@ -83,10 +83,10 @@ export default function AudioTranscription({ disabled, onUse, provenanceAvailabl
       <p id="audio-limits" className="field-help">WAV, MP3 or M4A · Default limit: 10 MB (10,000,000 bytes) and 2 minutes. The server checks decoding and duration; configured limits may differ. English transcription requires review.</p>
       {file && <p className="audio-filename">Selected: {file.name}</p>}
     </div>
-    <button type="button" className="workspace-button" onClick={upload} disabled={locked || !file || Boolean(validateAudioFile(file))}>
+    <button type="button" className="workspace-button primary audio-transcribe-button" onClick={upload} disabled={locked || !file || Boolean(validateAudioFile(file))}>
       {activity === 'uploading' ? 'Uploading audio…' : 'Transcribe audio'}
     </button>
-    <p role="status" aria-live="polite" className="audio-status">{activity === 'uploading' ? 'Uploading audio. Please wait.'
+    <p role="status" aria-live="polite" className="audio-status" data-state={activity === 'uploading' ? 'uploading' : job?.status ?? 'idle'}>{activity === 'uploading' ? 'Uploading audio. Please wait.'
       : job ? `Transcription ${job.status}.${activity === 'polling' ? ' Checking status automatically.' : ''}` : 'No audio submitted.'}</p>
     {job && <div className="audio-job">
       <p className="record-id">Transcription ID: <code>{job.transcription_id}</code></p>

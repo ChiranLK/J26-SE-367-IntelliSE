@@ -30,7 +30,7 @@ function errorDetail(detail) {
   return ''
 }
 
-async function request(path, {
+export async function request(path, {
   baseUrl = DEFAULT_BASE_URL, signal, timeoutMs = 15000, method = 'GET', body,
   validate = () => true, query = {}, componentPath = true,
 } = {}) {
@@ -40,7 +40,7 @@ async function request(path, {
   if (signal?.aborted) cancel()
   else signal?.addEventListener('abort', cancel, { once: true })
   const timeout = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
-  const writing = method === 'POST'
+  const writing = !['GET', 'HEAD'].includes(method)
   try {
     let url
     try { url = new URL(baseUrl) } catch { throw new ApiError('The backend URL is not configured correctly.', { code: 'config' }) }
@@ -55,6 +55,10 @@ async function request(path, {
       headers: { Accept: 'application/json', ...(body === undefined || multipart ? {} : { 'Content-Type': 'application/json' }) },
       ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     })
+    if (response.status === 204) {
+      if (!await validate(null, response)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
+      return null
+    }
     let data
     try { data = await response.json() } catch (error) {
       if (controller.signal.aborted) throw error
@@ -70,7 +74,7 @@ async function request(path, {
         uncertain: writing && response.status >= 500 && response.status !== 502,
       })
     }
-    if (!await validate(data)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
+    if (!await validate(data, response)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
     return data
   } catch (error) {
     if (signal?.aborted) throw error
@@ -122,6 +126,15 @@ export function listProjects({ limit = 10, offset = 0, ...options } = {}) {
 export const getProject = (id, options = {}) => request(projectPath(id), { ...options, validate: async (data) => validProject(data) && data.id === id.toLowerCase() && await verifyProjectProvenance(data) })
 export const extractRequirements = (id, discussion, options = {}) => request(`${projectPath(id)}/extractions`, {
   timeoutMs: EXTRACTION_TIMEOUT_MS, ...options, method: 'POST', validate: (data) => validExtraction(data, id, discussion),
+}).catch((error) => {
+  // This exact application response is raised before repository.create(). A proxy
+  // 504 or a lost connection remains uncertain and still requires retrieval.
+  if (error.status === 504 && error.detail === 'Requirement extraction provider timed out. Check server performance, model load time and C1_LLM_TIMEOUT_SECONDS. No automatic retry was attempted.') {
+    throw new ApiError('Extraction timed out before a run was saved. You can try again explicitly after checking the local extraction service. No automatic retry was attempted.', {
+      status: 504, detail: error.detail, code: 'extraction-timeout', uncertain: false,
+    })
+  }
+  throw error
 })
 export const getLatestExtraction = (id, discussion, options = {}) => request(`${projectPath(id)}/extractions/latest`, {
   ...options, validate: (data) => validExtraction(data, id, discussion),
@@ -158,4 +171,9 @@ export function classifyRequirement(text, options = {}) {
       && typeof data.classified_at === 'string' && Number.isFinite(Date.parse(data.classified_at))
       && typeof data.processing_seconds === 'number' && Number.isFinite(data.processing_seconds) && data.processing_seconds >= 0,
   })
+}
+
+
+export function deleteProject(id, options = {}) {
+  return request(projectPath(id), { ...options, method: 'DELETE', validate: (data, response) => response.status === 204 && data === null })
 }
