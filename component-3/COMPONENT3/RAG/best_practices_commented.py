@@ -13,6 +13,32 @@ import re
 from typing import Optional
 
 # RAG BEST-PRACTICE RETRIEVAL RULES
+# BEST-PRACTICE CARD LOCATIONS
+# The original guidance is stored as reviewed JSON cards under component-3/rules.
+# Easy-to-open study copies are in COMPONENT3/RAG/Best-Practice-Cards.
+# This Python file validates, filters and retrieves those cards.
+#
+# INPUT VALIDATION
+# node-val-001.json validates request fields, types and ranges at the API boundary.
+#
+# SQL INJECTION PREVENTION
+# node-repo-001.json requires parameterized SQL inside repository modules.
+#
+# CONTROLLER, SERVICE AND REPOSITORY SEPARATION
+# node-ctrl-002.json handles HTTP errors in the controller boundary.
+# node-svc-001.json keeps services testable through dependency injection.
+# node-repo-001.json keeps database queries inside repository modules.
+#
+# REACT FORM ACCESSIBILITY
+# react-ui-002.json requires labels and accessible field-error attributes.
+#
+# STABLE API CONTRACTS AND TEST SEAMS
+# any-api-002.json defines stable service, OpenAPI and UI test seams.
+# any-api-003.json defines stable OpenAPI operation IDs and schemas.
+#
+# DOCKER CONTAINER SECURITY
+# any-dep-001.json requires non-root containers, localhost ports and health checks.
+
 # Define the technology stacks that best-practice cards may target.
 SUPPORTED_STACKS = {"react", "angular", "node", "spring", "any"}
 
@@ -93,7 +119,10 @@ def estimate_tokens(text: str) -> int:
 
 
 def _validate(raw: dict, source: str) -> RuleCard:
-    # RULE-CARD VALIDATION
+    # BEST-PRACTICE CARD VALIDATION
+    # Validate the JSON cards for input validation, SQL safety, layering,
+    # accessibility, API/test seams and Docker security before retrieval.
+    # This validates the guidance card itself; C1/C2 input validation is separate.
     # Reject a card when any required field is missing.
     missing = [field for field in REQUIRED_FIELDS if field not in raw]
     if missing:
@@ -141,6 +170,9 @@ def _validate(raw: dict, source: str) -> RuleCard:
 def load_rule_cards(rules_dir: str | Path) -> list[RuleCard]:
     """Load and strictly validate all JSON rule cards from ``rules_dir``."""
 
+    # LOAD THE ACTUAL BEST-PRACTICE FILES
+    # Read node-val-001, node-repo-001, React, API and Docker JSON cards
+    # from component-3/rules before they can be searched by RAG.
     # Resolve and confirm the best-practice rules directory.
     base = Path(rules_dir)
     if not base.is_dir():
@@ -222,7 +254,9 @@ class RetrievalHit:
 
 
 def _metadata_allows(card: RuleCard, query: RetrievalQuery) -> bool:
-    # METADATA FILTER
+    # SELECT PRACTICES FOR THE CURRENT CODE MODULE
+    # Examples: validation cards for API validation, SQL cards for repositories,
+    # accessibility cards for React UI and Docker cards for deployment files.
     # Compare the requested artifact, module and task type with the card filters.
     for wanted, offered in (
         (query.artifact_type, card.artifact_types),
@@ -296,7 +330,9 @@ class FilterBestPracticeStore(BestPracticeStore):
         self._cards = list(cards)
 
     def _scored(self, task, stack, layer, category=None):
-        # DETERMINISTIC FILTER RETRIEVAL
+        # RANK THE RELEVANT BEST PRACTICES
+        # Match the task, technology stack and application layer so unrelated
+        # guidance is not sent to the code-generation step.
         # Validate the requested stack and layer before scoring cards.
         if stack not in SUPPORTED_STACKS or stack == "any":
             raise ValueError(f"unsupported stack: {stack}")
@@ -350,7 +386,9 @@ class FilterBestPracticeStore(BestPracticeStore):
 
 
 def format_rules_for_prompt(rules: list[RuleCard]) -> str:
-    # PROMPT GUIDANCE FORMATTER
+    # SEND THE SELECTED PRACTICES AS CONTROLLED GUIDANCE
+    # Add the chosen validation, SQL, layering, accessibility, API or Docker
+    # rule together with its bad and good examples to an enabled LLM prompt.
     # Return no prompt text when retrieval found no applicable rule.
     if not rules:
         return ""
@@ -370,7 +408,9 @@ def create_store(
 ) -> BestPracticeStore:
     """Create the configured backend without changing the public store API."""
 
-    # Read the selected retrieval backend and load the validated rule corpus.
+    # CONNECT THE JSON CARDS TO THE RETRIEVAL BACKEND
+    # Load the same reviewed practice cards for deterministic filter retrieval
+    # or Chroma semantic retrieval.
     selected = (backend or os.environ.get("RAG_BACKEND", "filter")).lower()
     cards = load_rule_cards(rules_dir)
 

@@ -1,0 +1,22 @@
+{
+  "id": "any-dep-001",
+  "stack": "any",
+  "layer": "deployment",
+  "category": "container-security",
+  "priority": 3,
+  "rule": "Run generated containers as a non-root user, publish ports on 127.0.0.1 only, drop capabilities, never mount the Docker socket or host source, and gate URLs on health checks.",
+  "bad_example": "docker run -p 3001:3001 -v /var/run/docker.sock:/var/run/docker.sock app",
+  "good_example": "docker run --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:3001:3001 app",
+  "document_id": "DOC-DOCKER-SANDBOX",
+  "artifact_types": [
+    "DEPLOYMENT"
+  ],
+  "modules": [
+    "deployment"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases OWASP Docker Security Cheat Sheet"
+}
