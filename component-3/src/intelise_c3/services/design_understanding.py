@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+# Import regex support and the small internal result container.
 import re
 from dataclasses import dataclass
 
+# Import API error status and the C3 design data models.
 from fastapi import status
 
 from intelise_c3.core.errors import ApplicationError, ErrorDetail
@@ -22,24 +24,40 @@ from intelise_c3.domain.design_context import (
 )
 from intelise_c3.domain.generation_context import GenerationContext
 
+# PLANTUML DESIGN PARSING RULES
+# These patterns define the small, deterministic PlantUML subset C3 supports.
+# Identify the UML artifact types that this parser can analyze.
 _CLASS_DIAGRAM_TYPES = {"CLASS", "CLASS_DIAGRAM"}
+
+# Define the allowed format for class, field and method names.
 _IDENTIFIER = r"[A-Za-z_][A-Za-z0-9_.]*"
+
+# Find normal or abstract class declarations.
 _CLASS_PATTERN = re.compile(
     rf"^(?P<abstract>abstract\s+)?class\s+(?P<name>{_IDENTIFIER})\s*(?P<body>\{{)?$"
 )
+
+# Find enum declarations and valid enum values.
 _ENUM_PATTERN = re.compile(rf"^enum\s+(?P<name>{_IDENTIFIER})\s*(?P<body>\{{)?$")
 _ENUM_VALUE_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 # Single-line skinparam directives are presentation-only; block forms ("... {")
 # are deliberately not matched so they still fail explicitly.
 _SKINPARAM_PATTERN = re.compile(r"^skinparam\s+[^{}]+$")
+
+# Find a method name, its parameters, return type and visibility.
 _METHOD_PATTERN = re.compile(
     rf"^(?P<visibility>[+\-#~])?\s*(?P<name>{_IDENTIFIER})\s*"
     r"\((?P<parameters>[^)]*)\)\s*(?::\s*(?P<return_type>[^{{}}]+))?$"
 )
+
+# Find a class field with its name, type and visibility.
 _ATTRIBUTE_PATTERN = re.compile(
     rf"^(?P<visibility>[+\-#~])?\s*(?P<name>{_IDENTIFIER})\s*:"
     r"\s*(?P<type_name>[^{{}}()]+)$"
 )
+
+# Find a relationship between two classes and its optional label or multiplicity.
 _RELATIONSHIP_PATTERN = re.compile(
     rf"^(?P<left>{_IDENTIFIER})\s*"
     r"(?:\"(?P<left_multiplicity>[^\"]+)\"\s*)?"
@@ -47,11 +65,16 @@ _RELATIONSHIP_PATTERN = re.compile(
     r"(?:\"(?P<right_multiplicity>[^\"]+)\"\s*)?"
     rf"(?P<right>{_IDENTIFIER})(?:\s*:\s*(?P<label>.+))?$"
 )
+
+# Find one typed parameter inside a method declaration.
 _PARAMETER_PATTERN = re.compile(
     rf"^(?P<name>{_IDENTIFIER})\s*:\s*(?P<type_name>[^{{}}(),]+)$"
 )
+
+# Confirm that the document starts with a valid PlantUML opening line.
 _START_PATTERN = re.compile(r"^@startuml(?:\s+\S+)?$")
 
+# Convert PlantUML visibility symbols into normalized domain values.
 _VISIBILITY = {
     "+": Visibility.PUBLIC,
     "-": Visibility.PRIVATE,
@@ -59,6 +82,7 @@ _VISIBILITY = {
     "~": Visibility.PACKAGE,
     None: Visibility.UNSPECIFIED,
 }
+# Convert PlantUML connectors into normalized relationship types.
 _RELATIONSHIP_TYPES = {
     "--": "ASSOCIATION",
     "-->": "DIRECTED_ASSOCIATION",
@@ -76,6 +100,9 @@ _RELATIONSHIP_TYPES = {
 
 @dataclass(frozen=True)
 class _ParsedDiagram:
+    """Hold classes and relationships parsed from one class diagram."""
+
+    # Store the two results produced by the PlantUML parser.
     classes: tuple[ParsedClass, ...]
     relationships: tuple[ParsedRelationship, ...]
 
@@ -85,11 +112,17 @@ class DesignUnderstandingService:
 
     def build(self, generation_context: GenerationContext) -> DesignContext:
         """Parse supported class diagrams from an accepted immutable context."""
+
+        # 1. REVIEW THE DESIGN
+        # Read the C2 PlantUML artifacts and prepare the complete design summary.
+
+        # Collect parsed output and diagnostics across every supplied UML artifact.
         parsed_classes: list[ParsedClass] = []
         parsed_relationships: list[ParsedRelationship] = []
         diagnostics: list[DesignDiagnostic] = []
         class_diagram_count = 0
 
+        # Parse class diagrams and preserve other diagram types without interpreting them.
         for uml_element in generation_context.uml_elements:
             if uml_element.element_type.upper() not in _CLASS_DIAGRAM_TYPES:
                 diagnostics.append(
@@ -105,6 +138,7 @@ class DesignUnderstandingService:
                 )
                 continue
 
+            # A class diagram must include PlantUML source before it can be parsed.
             class_diagram_count += 1
             if uml_element.plantuml_source is None or not uml_element.plantuml_source.strip():
                 self._fail(
@@ -116,8 +150,12 @@ class DesignUnderstandingService:
             parsed = self._parse_class_diagram(
                 uml_element.uml_id, uml_element.plantuml_source
             )
+
+            # Add this diagram's classes and relationships to the full design result.
             parsed_classes.extend(parsed.classes)
             parsed_relationships.extend(parsed.relationships)
+
+            # Record a successful parse message for this class diagram.
             diagnostics.append(
                 DesignDiagnostic(
                     severity=DesignDiagnosticSeverity.INFO,
@@ -131,6 +169,7 @@ class DesignUnderstandingService:
                 )
             )
 
+        # Require at least one class diagram and one parsed class.
         if class_diagram_count == 0:
             self._fail(
                 "MISSING_CLASS_DIAGRAM",
@@ -144,6 +183,7 @@ class DesignUnderstandingService:
                 "No class definitions were found in the released class diagrams.",
             )
 
+        # Reject duplicate class names across all supplied class diagrams.
         class_names: set[str] = set()
         for parsed_class in parsed_classes:
             if parsed_class.name in class_names:
@@ -154,6 +194,7 @@ class DesignUnderstandingService:
                 )
             class_names.add(parsed_class.name)
 
+        # Every relationship endpoint must name a class declared in the design.
         for relationship in parsed_relationships:
             unknown_names = [
                 name
@@ -168,6 +209,7 @@ class DesignUnderstandingService:
                     + ", ".join(unknown_names),
                 )
 
+        # Record that upstream C1/C2 identities and trace links were retained.
         diagnostics.append(
             DesignDiagnostic(
                 severity=DesignDiagnosticSeverity.INFO,
@@ -179,6 +221,7 @@ class DesignUnderstandingService:
             )
         )
 
+        # Return the normalized design used by coverage, stack selection and generation.
         return DesignContext(
             generation_context_version=generation_context.context_version,
             project_id=generation_context.project_id,
@@ -196,6 +239,9 @@ class DesignUnderstandingService:
         )
 
     def _parse_class_diagram(self, uml_id: str, source: str) -> _ParsedDiagram:
+        # Read one PlantUML class diagram and convert it into structured data.
+
+        # Keep parser state while reading the PlantUML document line by line.
         classes: list[ParsedClass] = []
         relationships: list[ParsedRelationship] = []
         current_class_name: str | None = None
@@ -207,12 +253,17 @@ class DesignUnderstandingService:
         started = False
         ended = False
 
+        # Validate the envelope and interpret each supported declaration.
         for line_number, raw_line in enumerate(source.splitlines(), start=1):
+            # Remove extra spaces and ignore empty lines or comments.
             line = raw_line.strip()
             if not line or line.startswith("'") or line.startswith("//"):
                 continue
 
+            # Create a precise source location for any validation error.
             field = f"uml_elements.{uml_id}.plantuml_source.line.{line_number}"
+
+            # Start reading content after the @startuml marker.
             if _START_PATTERN.fullmatch(line):
                 if started:
                     self._fail(
@@ -222,6 +273,8 @@ class DesignUnderstandingService:
                     )
                 started = True
                 continue
+
+            # Finish the document at @enduml and reject an unclosed class body.
             if line == "@enduml":
                 if current_class_name is not None:
                     self._fail(
@@ -231,6 +284,8 @@ class DesignUnderstandingService:
                     )
                 ended = True
                 continue
+
+            # Reject content placed outside the PlantUML start and end markers.
             if not started or ended:
                 self._fail(
                     "INCOMPLETE_PLANTUML_DOCUMENT",
@@ -238,11 +293,14 @@ class DesignUnderstandingService:
                     "Content must occur between @startuml and @enduml.",
                 )
 
+            # Ignore supported visual styling because it does not change the design.
             if current_class_name is None and _SKINPARAM_PATTERN.fullmatch(line):
                 continue
 
+            # While inside a class/enum body, parse members until the closing brace.
             if current_class_name is not None:
                 if line == "}":
+                    # Save the completed class or enum and reset the parser state.
                     classes.append(
                         ParsedClass(
                             source_uml_id=uml_id,
@@ -262,6 +320,7 @@ class DesignUnderstandingService:
                     current_values = []
                     continue
 
+                # Enum bodies may contain only unique simple values.
                 if current_kind is ParsedElementKind.ENUM:
                     if not _ENUM_VALUE_PATTERN.fullmatch(line):
                         self._fail(
@@ -278,6 +337,7 @@ class DesignUnderstandingService:
                     current_values.append(line)
                     continue
 
+                # Parse a supported method signature.
                 method_match = _METHOD_PATTERN.fullmatch(line)
                 if method_match:
                     current_methods.append(
@@ -285,6 +345,7 @@ class DesignUnderstandingService:
                     )
                     continue
 
+                # Parse a supported class attribute.
                 attribute_match = _ATTRIBUTE_PATTERN.fullmatch(line)
                 if attribute_match:
                     current_attributes.append(
@@ -304,6 +365,10 @@ class DesignUnderstandingService:
                     f"Unsupported class member syntax: '{line}'.",
                 )
 
+            # 2. CLASSES IN THE DESIGN
+            # Extract class names, fields, methods and enum details from C2 PlantUML.
+
+            # Start a class/enum declaration or store a declaration without a body.
             class_match = _CLASS_PATTERN.fullmatch(line)
             enum_match = None if class_match else _ENUM_PATTERN.fullmatch(line)
             if class_match or enum_match:
@@ -335,6 +400,10 @@ class DesignUnderstandingService:
                     )
                 continue
 
+            # 3. CLASS CONNECTIONS
+            # Extract how the classes connect, including relationship type and direction.
+
+            # Parse a supported relationship between two declared classes.
             relationship_match = _RELATIONSHIP_PATTERN.fullmatch(line)
             if relationship_match:
                 connector = relationship_match.group("connector")
@@ -362,6 +431,7 @@ class DesignUnderstandingService:
                 f"Unsupported PlantUML syntax: '{line}'.",
             )
 
+        # The complete diagram must have a valid PlantUML start and end marker.
         if not started or not ended:
             self._fail(
                 "INCOMPLETE_PLANTUML_DOCUMENT",
@@ -369,11 +439,15 @@ class DesignUnderstandingService:
                 "PlantUML class diagrams require @startuml and @enduml.",
             )
 
+        # Return all classes and relationships found in this diagram.
         return _ParsedDiagram(tuple(classes), tuple(relationships))
 
     def _parse_method(
         self, uml_id: str, line_number: int, match: re.Match[str]
     ) -> ParsedMethod:
+        # Convert one matched method line into a structured method object.
+
+        # Parse and validate each typed method parameter.
         parameters: list[ParsedMethodParameter] = []
         parameter_text = match.group("parameters").strip()
         if parameter_text:
@@ -395,6 +469,7 @@ class DesignUnderstandingService:
                     )
                 )
 
+        # Return the normalized method signature.
         return ParsedMethod(
             name=match.group("name"),
             parameters=tuple(parameters),
@@ -408,6 +483,9 @@ class DesignUnderstandingService:
 
     @staticmethod
     def _fail(code: str, field: str, message: str) -> None:
+        # Use one shared error format for every invalid PlantUML rule.
+
+        # Stop parsing with a precise field-level HTTP 422 validation error.
         raise ApplicationError(
             [ErrorDetail(code=code, field=field, message=message)],
             status_code=422,

@@ -176,46 +176,76 @@ def get_audit(run_id: str, request: Request) -> str:
     return pipeline_for(request).audit_markdown(run_id)
 
 
+# DOWNLOAD GENERATED CODE AS A ZIP
+# Verify every generated file against its manifest hash before returning the archive.
 @router.get("/runs/{run_id}/archive", responses={**_ERRORS, 200: {"content": {"application/zip": {}}, "description": "Project zip."}},
             summary="Download the generated project as a zip after every file was re-hashed")
 def get_archive(run_id: str, request: Request) -> Response:
+    # Build the verified zip in memory; tampered or missing files stop the export.
     name, data = pipeline_for(request).archive_zip(run_id)
+
+    # Return a browser download with the correct zip name and content type.
     return Response(content=data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
+# OPEN GENERATED PROJECT FOLDER
+# Open only a backend-resolved project path and only on supported Windows systems.
 def _open_in_file_manager(path: Path) -> None:
+    # Reject this dashboard action on non-Windows operating systems.
     if os.name != "nt":
         raise ApplicationError(
             [ErrorDetail(code="OPEN_FOLDER_UNSUPPORTED", field="platform",
                          message="Opening a folder from the dashboard only works on Windows. Open the path shown on the page in your file manager.")],
             status_code=status.HTTP_501_NOT_IMPLEMENTED)
+
+    # Pass the already-resolved path directly to Windows File Explorer.
     subprocess.Popen(["explorer", str(path)])
 
 
+# GET GENERATED PROJECT LOCATION
+# Return the exact project directory for one valid generation run.
 @router.get("/runs/{run_id}/location", responses=_ERRORS, summary="Where the generated project folder is on this computer")
 def get_location(run_id: str, request: Request) -> dict[str, Any]:
+    # The pipeline validates the run id and resolves its generated project folder.
     return {"run_id": run_id, "path": str(pipeline_for(request).project_dir(run_id))}
 
 
+# OPEN THE GENERATED PROJECT LOCATION
+# Resolve the run folder on the backend before asking Windows to open it.
 @router.post("/runs/{run_id}/open-folder", responses=_ERRORS, summary="Open the generated project folder in the file manager (Windows)")
 def open_folder(run_id: str, request: Request) -> dict[str, Any]:
+    # Never accept a raw folder path from the browser; derive it from the run id.
     path = pipeline_for(request).project_dir(run_id)
+
+    # Open the verified run location in the operating-system file manager.
     _open_in_file_manager(path)
+
+    # Confirm which folder was opened for the dashboard response.
     return {"run_id": run_id, "path": str(path), "opened": True}
 
 
+# READ ONE GENERATED FILE SAFELY
+# Return file content only when the path exists in the manifest and its hash matches.
 @router.get("/runs/{run_id}/file", responses=_ERRORS, summary="Read one generated file after hash verification")
 def get_file(run_id: str, request: Request, path: str = Query(min_length=1, max_length=300)) -> dict[str, Any]:
+    # Find the requested generation run and load its trusted manifest.
     pipeline = pipeline_for(request)
     run_dir, manifest = pipeline.find_run(run_id)
+
+    # Allow only a file path explicitly recorded in this run's manifest.
     record = next((r for r in manifest["files"] if r["path"] == path), None)
     if record is None:
         raise ApplicationError([ErrorDetail(code="FILE_NOT_IN_MANIFEST", field="path", message="Path is not a generated file of this run.")],
                                status_code=status.HTTP_404_NOT_FOUND)
+
+    # Read the generated file from the fixed project directory.
     content = (run_dir / PROJECT_DIR / record["path"]).read_bytes().decode("utf-8")
     from hashlib import sha256
 
+    # Compare the current bytes with the SHA-256 fingerprint stored at generation time.
     verified = sha256(content.encode("utf-8")).hexdigest() == record["sha256"]
+
+    # Hide content when verification fails; otherwise return it with audit metadata.
     return {"path": path, "sha256": record["sha256"], "verified": verified, "module_id": record["module_id"],
             "content": content if verified else None}
 

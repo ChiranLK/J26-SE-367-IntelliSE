@@ -9,6 +9,7 @@ import { inspectC1SrsDocument, inspectC2PlantUmlDocument, normalizeDesignContext
 import { useSession } from "../state/session.jsx";
 import { useAction } from "../state/useAction.js";
 
+// Show a simple recovery message when design analysis or stack selection fails.
 function FriendlyDesignError({ error, action, onReviewInputs }) {
   if (!error) return null;
   const details = Array.isArray(error.errors) ? error.errors : [];
@@ -37,6 +38,7 @@ function FriendlyDesignError({ error, action, onReviewInputs }) {
 }
 
 // The connector symbols of the diagram, in words. The symbol stays available as a tooltip.
+// Translate PlantUML relationship types into words used by the Design page.
 const CONNECTOR_WORDS = {
   "<|--": "is the parent of",
   "--|>": "is a kind of",
@@ -50,6 +52,7 @@ const CONNECTOR_WORDS = {
 // Notes about the way C3 itself split the uploaded file (one element per class) are not about the user's design.
 const ADAPTER_NOISE = /was preserved but not parsed|were preserved\.|^Parsed \d+ classes/;
 
+// Display parsed classes, fields, methods, relationships and useful diagnostics.
 function Classes({ design }) {
   const notes = (design.diagnostics ?? []).filter((row) => !ADAPTER_NOISE.test(row.message ?? ""));
   return (
@@ -101,8 +104,13 @@ function Classes({ design }) {
 // Coverage depends on the actual requirements, UML elements and anchors, not only
 // their release labels. Using the complete validated context prevents an older
 // report from being reused when C1/C2 content is rebuilt under the same version.
+// Create a stable browser-session key for results derived from one input context.
 const contextKey = (context) => (context ? JSON.stringify(context) : null);
 
+// APPLICATION PROFILE - RULE-BASED CRUD OR CUSTOM RECOMMENDATION
+// This section reads approved C1/C2 content and recommends an application type.
+
+// List the words that indicate a behaviour-focused application instead of simple CRUD.
 const BEHAVIOUR_SIGNALS = [
   ["calculate", "calculation"],
   ["calculator", "calculator"],
@@ -116,29 +124,45 @@ const BEHAVIOUR_SIGNALS = [
   ["schedule", "scheduling"],
 ];
 
+// Start the application-profile recommendation using deterministic C1/C2 word matching.
 function recommendApplicationProfile(context) {
+  // Stop when validated C1/C2 input is not available.
   if (!context) return null;
+
+  // Convert the complete accepted input to lowercase text for consistent matching.
   const inputText = JSON.stringify(context).toLowerCase();
+
+  // Find supported behaviour words and remove duplicate result labels.
   const signals = [...new Set(BEHAVIOUR_SIGNALS
     .filter(([term]) => inputText.includes(term))
     .map(([, label]) => label))];
 
+  // Recommend Custom / non-CRUD when at least one behaviour signal is found.
   if (signals.length) {
     return {
+      // Save the profile value used by the generation process.
       profile: "CUSTOM_NON_CRUD",
+      // Show the recommended profile name on the page.
       title: "Custom / non-CRUD application",
+      // Explain which matched words caused this recommendation.
       reason: `The approved input contains behaviour-specific logic: ${signals.slice(0, 4).join(", ")}.`,
     };
   }
+
+  // Recommend Schema-driven CRUD when no supported behaviour signal is found.
   return {
+    // Save the profile value used by the generation process.
     profile: "SCHEMA_DRIVEN_CRUD",
+    // Show the recommended profile name on the page.
     title: "Schema-driven CRUD application",
+    // Explain why the input is treated as an entity-focused CRUD application.
     reason: "The approved input is primarily structured around entities and does not contain a supported calculation or workflow signal.",
   };
 }
 
 // A class no requirement points to can still serve one: it is joined by relationships to a class that does.
 // Walks the diagram's relationship lines outwards from the linked classes and names the nearest one.
+// Find design classes that support an anchored class through UML relationships.
 function supportingClasses(report, relationships) {
   const linked = new Set(report.uml_elements.filter((item) => item.status === "ANCHORED").map((item) => item.name));
   const neighbours = new Map();
@@ -163,6 +187,7 @@ function supportingClasses(report, relationships) {
   return { nearest, neighbours };
 }
 
+// Present requirement coverage, linked classes and missing trace links.
 function CoverageCard({ report, titles = {}, relationships = [] }) {
   const { totals } = report;
   const { nearest: servedBy, neighbours } = supportingClasses(report, relationships);
@@ -210,14 +235,18 @@ function CoverageCard({ report, titles = {}, relationships = [] }) {
   );
 }
 
+// DESIGN & STACK PAGE PROCESS
+// Orchestrate design analysis, coverage, application profile, stack comparison and approval.
 export default function DesignStack({ navigate }) {
   const { session, set } = useSession();
+  // Read the accepted input and any results already stored in the browser session.
   const generationContext = session.validation?.ok ? session.validation.generationContext : null;
   const design = session.designContext;
   const report = session.stackReport;
   const applicationProfile = session.applicationProfile ?? "SCHEMA_DRIVEN_CRUD";
   const fromDocuments = session.inputSources?.c2 === "C3_DOCUMENT_ADAPTER";
   const c1Title = useMemo(() => inspectC1SrsDocument(session.sourceDocuments?.c1Text ?? "").title, [session.sourceDocuments?.c1Text]);
+  // Re-read uploaded documents only for labels and source summary values shown in the UI.
   const sourceDesign = useMemo(
     () => inspectC2PlantUmlDocument(session.sourceDocuments?.c2Text || session.c2InputText || ""),
     [session.sourceDocuments?.c2Text, session.c2InputText],
@@ -237,6 +266,7 @@ export default function DesignStack({ navigate }) {
     }).length || (sourceSummary?.uml_artifacts ?? 0) - (sourceSummary?.use_case_diagrams ?? 0) || design.source_uml_elements.length
     : 0;
   const projectName = design && /^[0-9a-f]{16,}$/i.test(design.project_id ?? "") && c1Title ? c1Title : design?.project_id;
+  // Derive the suggested application profile and technology hints from C1/C2.
   const profileRecommendation = useMemo(
     () => recommendApplicationProfile(generationContext),
     [generationContext],
@@ -248,6 +278,7 @@ export default function DesignStack({ navigate }) {
   );
   // Only what the documents name is used as a preference; team comfort stays neutral.
   const choices = useMemo(() => ({ frontend: named.frontend, backend: named.backend, comfort: { ...DEFAULT_COMFORT }, touched: false }), [named]);
+  // Keep the human approval form and demo progress timing in local component state.
   const [approvedBy, setApprovedBy] = useState("");
   const [reference, setReference] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -259,6 +290,7 @@ export default function DesignStack({ navigate }) {
     return ms;
   };
 
+  // Step 1: ask the backend to parse the validated C2 class diagram.
   const buildDesign = useAction(async () => {
     const started = Date.now();
     const ms = choosePace("design");
@@ -273,6 +305,7 @@ export default function DesignStack({ navigate }) {
     set("graph", null);
   });
 
+  // Coverage: ask the backend which FRs and UML elements have C2 anchors.
   const computeCoverage = useAction(async () => {
     const started = Date.now();
     const ms = choosePace("coverage");
@@ -283,6 +316,7 @@ export default function DesignStack({ navigate }) {
   const coverage = session.designCoverage?.contextKey === contextKey(generationContext) ? session.designCoverage : null;
   const inputsSimulated = session.inputSources?.c1 === "SIMULATED_FIXTURE" || session.inputSources?.c2 === "SIMULATED_FIXTURE";
 
+  // Step 3: send the design and deterministic criteria to backend stack selection.
   const selectStack = useAction(async () => {
     const started = Date.now();
     const ms = choosePace("stack");
@@ -302,6 +336,7 @@ export default function DesignStack({ navigate }) {
     set("graph", null);
   });
 
+  // Step 4: record the researcher's explicit approval or rejection in the session.
   const decide = (status) =>
     set("approval", {
       status,
@@ -318,6 +353,7 @@ export default function DesignStack({ navigate }) {
   const compare = session.stackCompare ?? report;
   const selectedBuildable = report?.selected_stack?.generator_availability === "IMPLEMENTED";
   const canApprove = acknowledged && approvedBy.trim() && reference.trim() && selectedBuildable;
+  // Changing the application profile invalidates all downstream generation results.
   const chooseProfile = (profile) => {
     set("applicationProfile", profile);
     set("approval", null);

@@ -53,10 +53,13 @@ export const api = {
 
   validateInput: (inputPackage) =>
     apiRequest("/validate-input", { method: "POST", body: inputPackage }),
+  // Send the accepted input to the backend PlantUML design parser.
   buildDesignContext: (generationContext) =>
     apiRequest("/design-context", { method: "POST", body: generationContext }),
+  // Ask the backend to calculate FR-to-UML anchor coverage.
   designCoverage: (generationContext) =>
     apiRequest("/design-coverage", { method: "POST", body: generationContext }),
+  // Ask the backend to score and rank the four documented technology stacks.
   selectStack: (request) => apiRequest("/stack-selection", { method: "POST", body: request }),
 
   generate: (request) =>
