@@ -1,0 +1,19 @@
+{
+  "file_id": "KB-COMMON-DATA-TYPES",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-TYPE-MAP",
+      "description": "UML scalar type to JSON Schema, JavaScript and PostgreSQL types.",
+      "mappings": {
+        "String": {"json_schema": "string", "javascript": "string", "postgresql": "TEXT"},
+        "Integer": {"json_schema": "integer", "javascript": "number", "postgresql": "INTEGER"},
+        "Number": {"json_schema": "number", "javascript": "number", "postgresql": "NUMERIC"},
+        "Boolean": {"json_schema": "boolean", "javascript": "boolean", "postgresql": "BOOLEAN"},
+        "DateTime": {"json_schema": "string", "json_format": "date-time", "javascript": "string", "postgresql": "TIMESTAMPTZ"}
+      },
+      "array_suffix": "[]",
+      "unknown_type_behavior": "REVIEW_REQUIRED"
+    }
+  ]
+}

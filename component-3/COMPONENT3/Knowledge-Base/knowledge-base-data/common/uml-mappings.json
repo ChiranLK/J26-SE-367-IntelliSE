@@ -1,0 +1,27 @@
+{
+  "file_id": "KB-COMMON-UML-MAPPINGS",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-UML-CLASS-ROLES",
+      "description": "Deterministic class-role classification by name suffix. Classes without a recognized suffix and with attributes only are ENTITY classes.",
+      "suffix_roles": {
+        "Service": "SERVICE",
+        "Repository": "REPOSITORY",
+        "Policy": "POLICY",
+        "Controller": "CONTROLLER"
+      },
+      "default_role_with_attributes_only": "ENTITY",
+      "default_role_otherwise": "UNCLASSIFIED"
+    },
+    {
+      "item_id": "KB-UML-RELATIONSHIPS",
+      "description": "Code obligations implied by released UML relationships.",
+      "relationships": {
+        "COMPOSITION": "Parent schema embeds an array of the child; database uses a child table with ON DELETE CASCADE foreign key.",
+        "ASSOCIATION:uses": "Source receives the target through constructor injection.",
+        "ASSOCIATION:persists": "Repository stores the target entity."
+      }
+    }
+  ]
+}

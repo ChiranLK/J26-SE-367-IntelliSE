@@ -1,0 +1,34 @@
+{
+  "kb_id": "C3-KB",
+  "kb_version": "1.0.0",
+  "schema_version": "1.0",
+  "purpose": "Structured, versioned FACTS consumed by the Component 3 rule engine and templates. Facts are not rules (see generation-rules/) and are never indexed into best-practice RAG (see rules/).",
+  "authority_order": [
+    "APPROVED_C1_REQUIREMENTS",
+    "RELEASED_C2_DESIGN",
+    "STRUCTURED_DOMAIN_KNOWLEDGE_BASE",
+    "DETERMINISTIC_RULES",
+    "RETRIEVED_RAG_GUIDANCE",
+    "LLM_SUGGESTION"
+  ],
+  "files": [
+    "common/data-types.json",
+    "common/uml-mappings.json",
+    "common/api-conventions.json",
+    "common/database-conventions.json",
+    "common/validation-patterns.json",
+    "common/architecture-conventions.json",
+    "common/test-seam-patterns.json",
+    "common/traceability-types.json",
+    "stacks/react-node.json",
+    "stacks/react-spring.json",
+    "stacks/angular-node.json",
+    "stacks/angular-spring.json",
+    "domains/gpa/manifest.json",
+    "domains/gpa/grading-policy.json",
+    "domains/gpa/calculation-rules.json",
+    "domains/gpa/validation-rules.json"
+  ],
+  "domains": ["gpa"],
+  "change_policy": "Any edit changes the computed KB digest, which is part of every generation cache key and manifest. Version must be bumped on semantic change."
+}

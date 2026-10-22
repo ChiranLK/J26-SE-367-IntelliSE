@@ -1,0 +1,384 @@
+/*
+ * CODE GENERATION PAGE
+ * Sends the approved C1, C2 and stack context to the code-generation process.
+ * Original: component-3/dashboard/src/pages/Generation.jsx
+ */
+
+import { useState } from "react";
+import { api } from "../api/endpoints.js";
+import { BehaviourGeneration } from "../components/BehaviourGeneration.jsx";
+import { CodePreview } from "../components/CodePreview.jsx";
+import { HybridGenerate } from "../components/HybridGenerate.jsx";
+import { listParameters } from "../lib/behaviourFiles.js";
+import { Badge, Button, Callout, Card, ErrorPanel, Hash, JsonView, KeyValues, Loading, OriginBadge, PageHeader, Stat, StatusBadge, Table, TechnicalDetails } from "../components/ui.jsx";
+import { formatBytes, formatDuration } from "../lib/format.js";
+import { isDynamicCrudManifest, summarizeDynamicRun } from "../lib/crudSummary.js";
+import { buildGenerationRequest, buildStructuralRequest } from "../lib/requests.js";
+import { useBackend } from "../state/backend.jsx";
+import { useSession } from "../state/session.jsx";
+import { useAction } from "../state/useAction.js";
+
+const MODES = [
+  { id: "LOCAL_LLM", label: "Qwen Local", help: "Writes business logic with the configured local Qwen model through Ollama." },
+  { id: "EXPERIMENTAL_CLAUDE", label: "TeamSocLo API", help: "Writes business logic with the configured TeamSocLo model; the API key stays in the backend." },
+];
+
+export default function Generation({ navigate }) {
+  const { session, set } = useSession();
+  const { overview } = useBackend();
+  const [modeOverride, setModeOverride] = useState(null);
+  const [workspaceName, setWorkspaceName] = useState(() => {
+    const project = session.validation?.generationContext?.project_id ?? "generated-application";
+    return project.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-|-$/g, "") || "generated-application";
+  });
+  const [previewPath, setPreviewPath] = useState(null);
+
+  const generationContext = session.validation?.ok ? session.validation.generationContext : null;
+  const approved = session.approval?.status === "APPROVED_FOR_MVP_GENERATION";
+  const profileSupported = (session.applicationProfile ?? "SCHEMA_DRIVEN_CRUD") === "SCHEMA_DRIVEN_CRUD";
+  const approvedContext = Boolean(generationContext && session.designContext && session.stackReport && approved);
+  const ready = approvedContext && profileSupported;
+  const stored = session.generationRun;
+  const run = stored?.run;
+  const ollama = overview?.ollama;
+  const mode = modeOverride ?? "LOCAL_LLM";
+  const ollamaOk = ollama?.reachable && ollama?.model_installed;
+
+  const generate = useAction(async (selectedMode) => {
+    const requestedMode = selectedMode ?? mode;
+    setModeOverride(requestedMode);
+    set("generationAttempted", true);
+    const request = buildGenerationRequest({
+      generationContext,
+      designContext: session.designContext,
+      stackReport: session.stackReport,
+      approval: session.approval,
+      mode: requestedMode,
+      workspaceName,
+    });
+    const started = Date.now();
+    const result = requestedMode === "EXPERIMENTAL_CLAUDE"
+      ? await api.generateExperimental(request)
+      : await api.generate(request);
+    set("generationRun", { run: result, mode: requestedMode, durationMs: Date.now() - started, at: new Date().toISOString() });
+    set("structural", null);
+    set("graph", null);
+    set("preview", null);
+    setPreviewPath(null);
+  });
+
+  const structural = useAction(async () => {
+    const report = await api.structuralVerification(buildStructuralRequest({ run, designContext: session.designContext }));
+    set("structural", report);
+  });
+
+  const launchPreview = useAction(async () => {
+    const built = await api.previewBuild({
+      manifest: run.manifest,
+      workspace_relative_path: run.workspace_relative_path,
+    });
+    set("preview", built);
+    const running = await api.previewStart(built.preview_id);
+    set("preview", running);
+    return running;
+  });
+
+  const files = run?.manifest.files ?? [];
+  const templateCount = files.filter((file) => file.origin === "TEMPLATE").length;
+  const llmCount = files.filter((file) => file.origin === "LOCAL_LLM").length;
+  const externalLlmCount = files.filter((file) => file.origin === "EXPERIMENTAL_CLAUDE").length;
+  const manifest = run?.manifest;
+  const llm = manifest?.llm_inference;
+  const rag = manifest?.run_evidence?.rag;
+  const dynamicRun = manifest && isDynamicCrudManifest(manifest);
+  const crudSummary = dynamicRun ? summarizeDynamicRun({ designContext: session.designContext, manifest }) : null;
+
+  return (
+    <div className="page">
+      <PageHeader
+        title="Code Generation"
+        subtitle={
+          profileSupported
+            ? "Generate a traceable React + Node.js workspace from the validated design context. Source remains read-only until an isolated preview is explicitly started."
+            : "Generate a React + Node.js application from the validated design context. Source remains read-only until the app is explicitly started in Application Preview."
+        }
+      />
+
+
+      {!approvedContext ? (
+        <Callout tone="warn" title="Approved stack required">
+          Generation needs validated input, a supported application profile, a design context, a stack selection, and an explicit approval.
+          The backend enforces the same gate.{" "}
+          <button type="button" className="link-button" onClick={() => navigate(generationContext ? "design" : "inputs")}>
+            Open the previous step
+          </button>
+        </Callout>
+      ) : null}
+
+      {!profileSupported ? (
+        <BehaviourGeneration ready={approvedContext} workspaceName={workspaceName} teamsoclo={overview?.teamsoclo} navigate={navigate} />
+      ) : (
+      <>
+      <Card title="Choose the generation engine" subtitle="Every run records its actual provider, model, prompt version, file origins, and evidence digest.">
+        <div className="grid grid-2">
+          {MODES.map((item) => (
+            <Callout key={item.id} tone={item.id === "LOCAL_LLM" ? "info" : "warn"} title={`${item.label} · ${item.id === "LOCAL_LLM" ? (ollama?.configured_model ?? "model not reported") : (overview?.teamsoclo?.model ?? "model not reported")}`}>
+              {item.help}
+            </Callout>
+          ))}
+        </div>
+        {mode === "LOCAL_LLM" ? (
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "0.5rem 0.75rem",
+              background: "var(--accent-soft)",
+              border: "1px solid var(--line)",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="small">
+              Engine:{" "}
+              <strong>
+                {ollama?.base_url?.includes("11435")
+                  ? "Google Colab GPU"
+                  : "Local Machine (Offline)"}
+              </strong>{" "}
+              (<code>{ollama?.configured_model}</code>)
+            </span>
+          </div>
+        ) : null}
+        {mode === "LOCAL_LLM" && !ollamaOk ? (
+          <Callout tone="warn" title="Ollama is not ready">
+            {ollama ? ollama.detail : "The Ollama status is unknown because the API has not answered."} The request will
+            still be sent so you can see the real backend error.
+          </Callout>
+        ) : null}
+        {mode === "EXPERIMENTAL_CLAUDE" ? (
+          <Callout tone="warn" title="TeamSocLo API generation">
+            The API credential stays in the backend environment. There is no silent fallback to Qwen Local, and the
+            response manifest records the provider and model returned by TeamSocLo.
+          </Callout>
+        ) : null}
+        <div className="form-grid">
+          <label>
+            Workspace name
+            <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} pattern="^[a-z0-9][a-z0-9._-]*$" />
+          </label>
+        </div>
+        <div className="button-row" aria-label="Generation methods">
+          <Button onClick={() => generate.run("LOCAL_LLM")} loading={generate.loading && mode === "LOCAL_LLM"} disabled={!ready}>
+            Generate with Ollama Local
+          </Button>
+          <Button variant="secondary" onClick={() => generate.run("EXPERIMENTAL_CLAUDE")} loading={generate.loading && mode === "EXPERIMENTAL_CLAUDE"} disabled={!ready || !overview?.teamsoclo?.enabled || !overview?.teamsoclo?.key_configured}>
+            Generate with Google Colab
+          </Button>
+        </div>
+        {generate.loading ? (
+          <Loading
+            label={`Generating (${MODES.find((item) => item.id === mode)?.label})`}
+            startedAt={generate.startedAt}
+            note={mode === "LOCAL_LLM" ? "The API call is synchronous, so no incremental progress is reported. Local model inference commonly takes tens of seconds." : "The external API call is synchronous, uses the backend-only credential, and never falls back silently."}
+          />
+        ) : null}
+        <ErrorPanel error={generate.error} context="Generation" />
+      </Card>
+
+      {run ? (
+        <>
+          {crudSummary ? (
+            <Card title="Dynamic CRUD summary" subtitle="Derived from the verified manifest and design context — not filename heuristics.">
+              <KeyValues
+                items={[
+                  { label: "Domain entities", value: crudSummary.entities.map((entity) => entity.name).join(", ") },
+                  { label: "Generated files", value: crudSummary.fileCount },
+                  { label: "Selected stack", value: `${manifest.selected_frontend} + ${manifest.selected_backend}` },
+                  { label: "SQL tables (design artifact)", value: crudSummary.sqlTables.join(", ") || "—" },
+                  { label: "Manifest digest", value: <Hash value={crudSummary.artifactDigest} length={24} /> },
+                  { label: "Traceability", value: session.graph ? `graph v${session.graph.snapshot.graph_version}` : "Not created yet" },
+                  { label: "Structural check", value: session.structural?.overall_status ?? "Not run yet" },
+                ]}
+              />
+              {crudSummary.entities.map((entity) => (
+                <div key={entity.name} className="class-box">
+                  <div className="class-name">{entity.name}</div>
+                  <div className="class-members">
+                    {entity.fields.map((field) => (
+                      <div key={field.name}>
+                        <code>
+                          {field.name}: {field.type}
+                        </code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <h3 className="subhead">API paths</h3>
+              <ul className="plain-list">
+                {crudSummary.apiPaths.map((path) => (
+                  <li key={path}>
+                    <code>{path}</code>
+                  </li>
+                ))}
+              </ul>
+              <Callout tone="warn" title="REVIEW_REQUIRED and simulated labels">
+                <ul className="plain-list">
+                  {crudSummary.reviewRequired.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </Callout>
+            </Card>
+          ) : null}
+
+          <div className="stats">
+            <Stat label="Files generated" value={files.length} />
+            <Stat label="Deterministic scaffold" value={templateCount} tone="info" />
+            <Stat label="Local-model files" value={llmCount} tone="llm" />
+            <Stat label="External-model files" value={externalLlmCount} tone="warn" />
+            <Stat label="Execution status" value={manifest.execution_status.replaceAll("_", " ")} hint="Generated code was never run" />
+            <Stat label="Request time" value={formatDuration(stored.durationMs)} />
+          </div>
+
+          {rag ? (
+            <Card className="research-highlight" title="RAG B · generation guidance" subtitle="Best-practice rules retrieved for the selected stack and module layer.">
+              <div className="result-head">
+                <StatusBadge status={rag.enabled ? "SATISFIED" : "NOT_RUN"} label={rag.enabled ? "ENABLED" : "NOT APPLIED"} />
+                <Badge tone="llm">{String(rag.backend).toUpperCase()}</Badge>
+                {rag.embedding_model ? <code>{rag.embedding_model}</code> : null}
+              </div>
+              {rag.retrievals?.length ? (
+                <Table dense rowKey={(row) => `${row.module_path}-${row.layer}`} rows={rag.retrievals} columns={[
+                  { key: "module_path", header: "Target module", render: (row) => <code>{row.module_path}</code> },
+                  { key: "layer", header: "Layer" },
+                  { key: "retrieved_rule_ids", header: "Retrieved rules", render: (row) => row.retrieved_rule_ids?.map((id) => <Badge key={id} tone="llm">{id}</Badge>) },
+                  { key: "applied_to_prompt", header: "Prompt", render: (row) => <StatusBadge status={row.applied_to_prompt ? "SATISFIED" : "NOT_RUN"} label={row.applied_to_prompt ? "APPLIED" : "NOT APPLIED"} /> },
+                ]} />
+              ) : <p className="muted small">No best-practice retrievals were recorded for this run.</p>}
+            </Card>
+          ) : null}
+
+          <div className="grid grid-2">
+            <Card title="Run evidence">
+              <KeyValues
+                items={[
+                  { label: "Generation run ID", value: <code>{manifest.generation_run_id}</code> },
+                  { label: "Mode", value: <Badge tone={manifest.generation_mode === "LOCAL_LLM" ? "llm" : manifest.generation_mode.startsWith("EXPERIMENTAL_") ? "warn" : "info"}>{manifest.generation_mode}</Badge> },
+                  { label: "Artifact digest", value: <Hash value={manifest.artifact_digest_sha256} length={24} /> },
+                  { label: "Evidence digest", value: <Hash value={manifest.run_evidence.evidence_digest_sha256} length={24} /> },
+                  { label: "Workspace", value: <code>{run.workspace_relative_path}</code> },
+                  { label: "Selected stack", value: `${manifest.selected_frontend} + ${manifest.selected_backend}` },
+                  { label: "Stack approval", value: `${manifest.stack_approval.classification} (authenticity verified: ${String(manifest.stack_approval.authenticity_verified)})` },
+                  { label: "Generated at", value: manifest.generated_at_utc },
+                ]}
+              />
+              <Callout tone="info">{manifest.trust_boundary}</Callout>
+            </Card>
+            <Card title="Model evidence" subtitle={llm ? "Recorded by the configured inference client" : undefined}>
+              {llm ? (
+                <KeyValues
+                  items={[
+                    { label: "Provider", value: llm.provider },
+                    { label: "Configured model", value: <code>{llm.configured_model_identifier}</code> },
+                    { label: "Response model", value: <code>{llm.response_model_identifier}</code> },
+                    { label: "Prompt template", value: llm.prompt_template_version },
+                    { label: "Client latency", value: formatDuration(llm.client_inference_latency_ms) },
+                    { label: "Output tokens", value: llm.response.eval_count ?? llm.response.output_tokens ?? "Not reported" },
+                    { label: "Temperature", value: llm.generation_parameters.temperature },
+                    { label: "Context / max tokens", value: llm.generation_parameters.num_ctx ?? llm.generation_parameters.max_tokens ?? "Not reported" },
+                  ]}
+                />
+              ) : (
+                <p className="muted small">No model was called. All files come from deterministic templates.</p>
+              )}
+            </Card>
+          </div>
+
+          <Card title="Generated files and origins" subtitle="Click a row to preview. Origin shows who wrote the file.">
+            <Table
+              dense
+              rowKey={(row) => row.relative_path}
+              selectedKey={previewPath}
+              onRowClick={(row) => setPreviewPath(row.relative_path)}
+              rows={files}
+              columns={[
+                { key: "relative_path", header: "Path", render: (row) => <code>{row.relative_path}</code> },
+                { key: "artifact_type", header: "Type" },
+                { key: "origin", header: "Origin", render: (row) => <OriginBadge origin={row.origin} /> },
+                { key: "size_bytes", header: "Size", render: (row) => formatBytes(row.size_bytes) },
+                { key: "sha256", header: "SHA-256", render: (row) => <Hash value={row.sha256} /> },
+                { key: "requirement_ids", header: "Requirements", render: (row) => row.requirement_ids.join(", ") },
+              ]}
+            />
+          </Card>
+
+          <Card title="Safe read-only preview">
+            <CodePreview run={run} path={previewPath} />
+          </Card>
+
+          <Card
+            title="C3 structural verification (static)"
+            subtitle="Inspects generated structure without executing source. This is not Component 4 testing."
+            actions={<Button variant="secondary" onClick={() => structural.run()} loading={structural.loading}>Run structural verification</Button>}
+          >
+            {structural.loading ? <Loading label="Inspecting generated structure" startedAt={structural.startedAt} /> : null}
+            <ErrorPanel error={structural.error} context="Structural verification" />
+            {session.structural ? (
+              <>
+                <div className="result-head">
+                  <StatusBadge status={session.structural.overall_status} />
+                  <span className="small">
+                    {session.structural.summary.pass_count} pass · {session.structural.summary.fail_count} fail · {session.structural.summary.review_required_count} review required
+                  </span>
+                </div>
+                <Table
+                  dense
+                  rowKey={(row) => row.finding_id}
+                  rows={session.structural.findings}
+                  columns={[
+                    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+                    { key: "rule_id", header: "Rule", render: (row) => <code>{row.rule_id}</code> },
+                    { key: "category", header: "Category" },
+                    { key: "message", header: "Message" },
+                  ]}
+                />
+              </>
+            ) : null}
+          </Card>
+
+          <div className="button-row">
+            {dynamicRun ? (
+              <Button variant="secondary" onClick={() => launchPreview.run()} loading={launchPreview.loading}>
+                Build & Start Local Preview
+              </Button>
+            ) : null}
+            {session.preview?.status === "RUNNING" && session.preview.ui_url ? (
+              <a className="btn btn-primary" href={session.preview.ui_url} target="_blank" rel="noreferrer">Open Generated UI</a>
+            ) : null}
+            {dynamicRun ? <Button variant="ghost" onClick={() => navigate("preview")}>Preview details</Button> : null}
+            <Button onClick={() => navigate("traceability")}>Continue to Living Traceability</Button>
+          </div>
+          {launchPreview.loading ? <Loading label="Building and starting isolated local preview" startedAt={launchPreview.startedAt} note="Docker builds the generated application, then assigns new loopback UI and API ports." /> : null}
+          <ErrorPanel error={launchPreview.error} context="Local preview" />
+          {session.preview?.status === "RUNNING" ? (
+            <Callout tone="info" title="Generated application is running locally">
+              UI: <a href={session.preview.ui_url} target="_blank" rel="noreferrer">{session.preview.ui_url}</a>{" "}
+              · API: <code>{session.preview.api_url}</code>. This is an isolated preview, not production deployment.
+            </Callout>
+          ) : null}
+          <TechnicalDetails summary="Generation manifest and canonical evidence">
+            <JsonView value={manifest} summary="Open full manifest JSON" />
+          </TechnicalDetails>
+        </>
+      ) : null}
+      </>
+      )}
+
+      {/* The GPA project card appears once a generation has been tried (finished or not), or when its own run exists. */}
+      {listParameters(session.designContext).length || session.generationAttempted || session.behaviourRun?.run || session.generationRun?.run || session.hybrid?.run ? <HybridGenerate /> : null}
+    </div>
+  );
+}
