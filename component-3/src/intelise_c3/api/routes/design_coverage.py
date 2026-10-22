@@ -8,9 +8,12 @@ from intelise_c3.domain.generation_context import GenerationContext
 from intelise_c3.services.design_coverage import DesignCoverageService
 
 router = APIRouter(tags=["design-coverage"])
+
+# Reuse the stateless deterministic coverage service for every request.
 design_coverage_service = DesignCoverageService()
 
 
+# Check Requirement Coverage button: compare C1 FRs with C2 UML anchors.
 @router.post(
     "/design-coverage",
     response_model=DesignCoverageReport,

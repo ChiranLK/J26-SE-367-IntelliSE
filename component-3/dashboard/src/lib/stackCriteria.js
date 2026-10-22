@@ -1,11 +1,14 @@
 // Builds the technology-comparison criteria from what the user actually has: the uploaded documents and the
 // choices made on the page. Nothing here assumes a particular application or a fixed technology.
 
+// Human-readable names for the four supported technologies.
 export const TECH_LABELS = { REACT: "React", ANGULAR: "Angular", NODE_JS: "Node.js", SPRING_BOOT: "Spring Boot" };
 
+// Options shown by the frontend and backend preference controls.
 export const FRONTEND_CHOICES = [["", "No preference"], ["REACT", "React"], ["ANGULAR", "Angular"]];
 export const BACKEND_CHOICES = [["", "No preference"], ["NODE_JS", "Node.js"], ["SPRING_BOOT", "Spring Boot"]];
 
+// Accept a detected technology only when the document names exactly one option.
 const only = (matches) => (matches.length === 1 ? matches[0] : "");
 
 /** Technologies the documents name. A technology counts only when exactly one of its kind is mentioned. */
@@ -20,6 +23,7 @@ export function technologiesNamedIn(...texts) {
   return { frontend: only(frontend), backend: only(backend) };
 }
 
+// Class-name suffixes used to recognize a layered design.
 const LAYER_SUFFIX = /(Service|Repository|Controller|Manager|Dao)$/;
 
 /**
@@ -51,12 +55,16 @@ export function unbuildableTechnologies(report) {
   return [...all].filter((tech) => !buildable.has(tech));
 }
 
+// Neutral team-proficiency defaults used until the researcher changes them.
 export const DEFAULT_COMFORT = { react: 5, angular: 5, node_js: 5, spring_boot: 5 };
 
+// Build the documented criteria and evidence sent to backend stack selection.
 export function buildStackCriteria({ named, choices, architecture = null, prohibited = [] }) {
+  // Record whether evidence came from the documents or default page assumptions.
   const stated = Boolean(named.frontend || named.backend);
   const touched = Boolean(choices.touched);
   const evidence = (reference, confidence, notes) => ({ reference, confidence, uncertainty_notes: notes });
+  // Normalize choices, team scores, runtime support and evidence confidence.
   return {
     preferred_frontend: choices.frontend || null,
     preferred_backend: choices.backend || null,
@@ -76,10 +84,13 @@ export function buildStackCriteria({ named, choices, architecture = null, prohib
   };
 }
 
+// Remove technical evidence suffixes from messages shown to users.
 const withoutEvidence = (text) => String(text ?? "").replace(/\s*\(evidence:[^)]*\)/g, "");
 
+// Convert a technology enum value into its display name.
 const label = (technology) => TECH_LABELS[technology] ?? technology;
 
+// Build the readable frontend + backend candidate name.
 export const stackName = (candidate) => `${label(candidate.frontend)} + ${label(candidate.backend)}`;
 
 /** Plain-language reason a candidate was ruled out. */
@@ -107,8 +118,10 @@ export const fitMarks = (row) => 10 * row.criterion_scores.reduce((total, item) 
 /** Can the generator for this combination build it today: 10 or 0. */
 export const buildMarks = (row) => (row.generator_availability === "IMPLEMENTED" ? 10 : 0);
 
+// Combine design fit and current generator availability into the displayed mark.
 export const finalMarks = (row) => (1 - BUILD_WEIGHT) * fitMarks(row) + BUILD_WEIGHT * buildMarks(row);
 
+// Display marks with one decimal place.
 export const formatMarks = (value) => value.toFixed(1);
 
 /** One sentence that says why the selected option has the most marks. */

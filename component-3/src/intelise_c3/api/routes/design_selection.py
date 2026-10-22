@@ -11,10 +11,13 @@ from intelise_c3.services.design_understanding import DesignUnderstandingService
 from intelise_c3.services.stack_selection import StackSelectionService
 
 router = APIRouter(tags=["design-and-stack-selection"])
+
+# Reuse stateless deterministic services for every request.
 design_understanding_service = DesignUnderstandingService()
 stack_selection_service = StackSelectionService()
 
 
+# Analyze Design button: parse the accepted C2 class diagram.
 @router.post(
     "/design-context",
     response_model=DesignContext,
@@ -34,6 +37,7 @@ async def build_design_context(
     return design_understanding_service.build(generation_context)
 
 
+# Compare Technology Options button: score and rank four candidate stacks.
 @router.post(
     "/stack-selection",
     response_model=StackSelectionReport,
