@@ -17,75 +17,32 @@ from app.schemas.research_reports import (
 )
 from app.schemas.test_result import TestResult
 from app.services.docker_runner import DockerTestRunner, SandboxExecutionResult
+from app.services.test_classification import (
+    classify_project_tests,
+    integration_boundary_evidence,
+    performance_workload_evidence,
+    project_files_for_category,
+)
 
 
 def _project_files_for_test_type(
     project_files: Optional[Dict[str, str]],
     test_type: str,
 ) -> Optional[Dict[str, str]]:
-    """Select explicitly categorized tests while retaining all application files.
-
-    Projects may place trusted tests below ``tests/unit``, ``tests/integration``,
-    and ``tests/performance`` (or use a matching ``test_<type>_`` filename).
-    When that convention is present, each agent executes only its authorized
-    category. Projects without categorized tests retain the legacy behaviour.
-    """
-    if not project_files:
-        return project_files
-
-    def is_test_file(path: str) -> bool:
-        normalized = path.replace("\\", "/").lower()
-        basename = normalized.rsplit("/", 1)[-1]
-        return normalized.endswith(".py") and (
-            basename.startswith("test_") or "/tests/" in f"/{normalized}"
-        )
-
-    def category(path: str) -> Optional[str]:
-        normalized = path.replace("\\", "/").lower()
-        basename = normalized.rsplit("/", 1)[-1]
-        for candidate in ("unit", "integration", "performance"):
-            if (
-                f"/tests/{candidate}/" in f"/{normalized}"
-                or basename.startswith(f"test_{candidate}_")
-            ):
-                return candidate
-        return None
-
-    categorized_tests = {
-        path: category(path)
-        for path in project_files
-        if is_test_file(path) and category(path) is not None
-    }
-    if not categorized_tests:
-        return project_files
-
-    return {
-        path: content
-        for path, content in project_files.items()
-        if not is_test_file(path) or categorized_tests.get(path) == test_type
-    }
+    """Compatibility wrapper around validated, mutually-exclusive classification."""
+    return project_files_for_category(project_files, test_type)
 
 
 def _categorized_project_tests(
     project_files: Optional[Dict[str, str]], test_type: str
 ) -> List[str]:
     """Return trusted project test files explicitly assigned to one test category."""
-    matches: List[str] = []
-    for path in (project_files or {}):
-        normalized = path.replace("\\", "/").lower()
-        basename = normalized.rsplit("/", 1)[-1]
-        if not normalized.endswith(".py"):
-            continue
-        if f"/tests/{test_type}/" in f"/{normalized}" or basename.startswith(f"test_{test_type}_"):
-            matches.append(path)
-    return matches
+    return classify_project_tests(project_files).paths_for(test_type)
 
 
 def _has_any_categorized_project_tests(project_files: Optional[Dict[str, str]]) -> bool:
-    return any(
-        _categorized_project_tests(project_files, category)
-        for category in ("unit", "integration", "performance")
-    )
+    classification = classify_project_tests(project_files)
+    return classification.has_explicit_metadata and not classification.errors
 
 
 def _explicit_suite_supports(test_code: str, test_type: str) -> bool:
@@ -96,8 +53,38 @@ def _explicit_suite_supports(test_code: str, test_type: str) -> bool:
     if test_type == "unit":
         return bool(re.search(r"def\s+test_|\bassert\b|pytest\.", code))
     if test_type == "integration":
-        return bool(re.search(r"integration|pytest\.mark\.integration", code, re.IGNORECASE))
-    return bool(re.search(r"performance|benchmark|latency|throughput|elapsed", code, re.IGNORECASE))
+        return bool(re.search(r"pytest\.mark\.integration\b", code))
+    return bool(re.search(r"pytest\.mark\.performance\b", code))
+
+
+def _parse_embedded_performance_metrics(output: str) -> Optional[Dict[str, float]]:
+    """Parse the constrained key=value evidence emitted by an authorized workload."""
+    for line in (output or "").splitlines():
+        if not re.search(r"(?:[A-Z][A-Z0-9_]*_PERFORMANCE|INTELISE_PERFORMANCE)", line):
+            continue
+        pairs = {
+            key: value
+            for key, value in re.findall(
+                r"\b(sample_count|sample_size|p95_ms|mean_ms|threshold_ms|p50_ms|p99_ms|max_ms)=([0-9]+(?:\.[0-9]+)?)",
+                line,
+            )
+        }
+        sample_raw = pairs.get("sample_count", pairs.get("sample_size"))
+        if sample_raw is None or not all(key in pairs for key in ("p95_ms", "mean_ms", "threshold_ms")):
+            continue
+        sample_size = int(float(sample_raw))
+        if sample_size <= 0:
+            continue
+        return {
+            "sample_size": sample_size,
+            "latency_p95_ms": float(pairs["p95_ms"]),
+            "mean_latency_ms": float(pairs["mean_ms"]),
+            "embedded_threshold_ms": float(pairs["threshold_ms"]),
+            **({"latency_p50_ms": float(pairs["p50_ms"])} if "p50_ms" in pairs else {}),
+            **({"latency_p99_ms": float(pairs["p99_ms"])} if "p99_ms" in pairs else {}),
+            **({"max_latency_ms": float(pairs["max_ms"])} if "max_ms" in pairs else {}),
+        }
+    return None
 
 
 class UnitTestAgent:
@@ -385,13 +372,9 @@ class UnitTestAgent:
         provenance = None
         meaningful_oracle = False
 
-        categorized = _has_any_categorized_project_tests(project_files)
-        has_project_oracle = bool(_categorized_project_tests(project_files, "unit")) if categorized else bool(
-            project_files and any(
-                f.endswith(".py") and (os.path.basename(f).startswith("test_") or "/tests/" in f"/{f}")
-                for f in project_files
-            )
-        )
+        classification = classify_project_tests(project_files)
+        unit_paths = classification.paths_for("unit")
+        has_project_oracle = bool(unit_paths) and not classification.errors
 
         # Explicit specifications may generate authoritative assertions. Without them,
         # callable/presence checks are not accepted as verification evidence.
@@ -407,7 +390,11 @@ class UnitTestAgent:
             effective_test_code = generated_code
             meaningful_oracle = provenance.get("meaningful_oracle_available", False)
 
-        if not has_project_oracle and not _explicit_suite_supports(effective_test_code, "unit") and not meaningful_oracle:
+        if classification.errors or (
+            not has_project_oracle
+            and not _explicit_suite_supports(effective_test_code, "unit")
+            and not meaningful_oracle
+        ):
             return UnitTestReport(
                 agent_id=self.AGENT_ID,
                 total_tests=0,
@@ -421,8 +408,9 @@ class UnitTestAgent:
                 meaningful_oracle_available=False,
                 specification_source="none",
                 trust_status="NOT_CONFIGURED",
-                generation_provenance={"reason": "No authorized unit-test assertions were supplied."},
+                generation_provenance={"reason": classification.reason_for("unit")},
                 status="NOT_EXECUTED",
+                authorization_reason=classification.reason_for("unit"),
             )
 
         start_time = time.perf_counter()
@@ -434,6 +422,8 @@ class UnitTestAgent:
         }
         if project_files is not None:
             exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "unit")
+            if has_project_oracle:
+                exec_kwargs["trusted_test_cases"] = None
         exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -480,6 +470,11 @@ class UnitTestAgent:
             trust_status=trust_status_val,
             generation_provenance=provenance,
             status=overall_status,
+            authorization_reason=(
+                classification.reason_for("unit")
+                if project_files
+                else "Explicit trusted unit test suite supplied for this run."
+            ),
         )
 
 
@@ -524,10 +519,22 @@ class IntegrationTestAgent:
         start_time = time.perf_counter()
         seams = self.discover_test_seams(source_code)
 
-        categorized = _has_any_categorized_project_tests(project_files)
-        has_project_oracle = bool(_categorized_project_tests(project_files, "integration")) if categorized else False
+        classification = classify_project_tests(project_files)
+        integration_paths = classification.paths_for("integration")
+        has_project_oracle = bool(integration_paths) and not classification.errors
         has_explicit_oracle = _explicit_suite_supports(test_code, "integration") if require_category_marker else bool((test_code or "").strip())
-        if not has_project_oracle and not has_explicit_oracle:
+        boundary_authorized = False
+        boundary_evidence: List[str] = []
+        if has_project_oracle and project_files:
+            boundary_authorized, boundary_evidence = integration_boundary_evidence(project_files, integration_paths)
+        if classification.errors or (not has_project_oracle and not has_explicit_oracle) or (has_project_oracle and not boundary_authorized):
+            if classification.errors or not has_project_oracle:
+                authorization_reason = classification.reason_for("integration")
+            else:
+                authorization_reason = (
+                    "Declared integration tests were not executed because static evidence did not show "
+                    "multiple application modules or an application/external boundary."
+                )
             return IntegrationTestReport(
                 agent_id=self.AGENT_ID,
                 total_interactions=0,
@@ -535,8 +542,9 @@ class IntegrationTestAgent:
                 failed_interactions=0,
                 duration_ms=0.0,
                 test_results=[],
-                test_seams_verified=seams,
+                test_seams_verified=boundary_evidence or seams,
                 status="NOT_EXECUTED",
+                authorization_reason=authorization_reason,
             )
 
         exec_kwargs = {
@@ -547,6 +555,8 @@ class IntegrationTestAgent:
         }
         if project_files is not None:
             exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "integration")
+            if has_project_oracle:
+                exec_kwargs["trusted_test_cases"] = None
         exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -577,8 +587,13 @@ class IntegrationTestAgent:
             failed_interactions=failed,
             duration_ms=duration_ms,
             test_results=integration_results,
-            test_seams_verified=seams,
+            test_seams_verified=boundary_evidence or seams,
             status=overall_status,
+            authorization_reason=(
+                f"{classification.reason_for('integration')} Boundary evidence: {', '.join(boundary_evidence)}."
+                if has_project_oracle
+                else "Explicit pytest integration marker supplied for this run."
+            ),
         )
 
 
@@ -651,10 +666,20 @@ print("---BENCHMARK_OUTPUT_END---")
         Executes controlled workload against source code, measures latency percentiles,
         and flags threshold breaches.
         """
-        categorized = _has_any_categorized_project_tests(project_files)
-        has_project_oracle = bool(_categorized_project_tests(project_files, "performance")) if categorized else False
+        classification = classify_project_tests(project_files)
+        performance_paths = classification.paths_for("performance")
+        has_project_oracle = bool(performance_paths) and not classification.errors
         has_explicit_oracle = _explicit_suite_supports(test_code, "performance") if require_category_marker else bool((test_code or "").strip())
-        if not has_project_oracle and not has_explicit_oracle:
+        workload_authorized = False
+        workload_reason = ""
+        if has_project_oracle and project_files:
+            workload_authorized, workload_reason = performance_workload_evidence(project_files, performance_paths)
+        if classification.errors or (not has_project_oracle and not has_explicit_oracle) or (has_project_oracle and not workload_authorized):
+            authorization_reason = (
+                classification.reason_for("performance")
+                if classification.errors or not has_project_oracle
+                else workload_reason
+            )
             return PerformanceTestReport(
                 agent_id=self.AGENT_ID,
                 metrics=PerformanceMetrics(
@@ -664,9 +689,12 @@ print("---BENCHMARK_OUTPUT_END---")
                     max_latency_ms=0.0, throughput_rps=0.0,
                     threshold_latency_ms=latency_threshold_ms, is_breached=False,
                 ),
-                bottlenecks_detected=["No authorized performance workload or threshold assertion was supplied."],
+                bottlenecks_detected=[authorization_reason],
                 test_results=[],
                 status="NOT_EXECUTED",
+                authorization_reason=authorization_reason,
+                embedded_assertion_status="NOT_EVALUATED",
+                pipeline_sla_status="NOT_EVALUATED",
             )
 
         start_time = time.perf_counter()
@@ -678,45 +706,55 @@ print("---BENCHMARK_OUTPUT_END---")
         }
         if project_files is not None:
             exec_kwargs["project_files"] = _project_files_for_test_type(project_files, "performance")
+            if has_project_oracle:
+                exec_kwargs["trusted_test_cases"] = None
         exec_result: SandboxExecutionResult = await self.runner.execute_verification(**exec_kwargs)
         measured_wall_ms = round((time.perf_counter() - start_time) * 1000, 2)
         total_time_ms = round(exec_result.duration_ms if (exec_result.duration_ms and exec_result.duration_ms > 0) else measured_wall_ms, 2)
 
-        # Inspect AST workload complexity patterns for evidence-grounded performance diagnosis
+        # The embedded assertion and the pipeline SLA are separate evidence.  For
+        # project workloads, consume measured per-operation statistics emitted by
+        # the authorized test.  Direct/legacy callers retain pytest-duration fallback.
+        embedded = _parse_embedded_performance_metrics(exec_result.stdout)
+        durations = [t.duration_ms for t in exec_result.test_results if t.duration_ms is not None]
+        if not durations:
+            durations = [total_time_ms]
+        durations.sort()
+        if embedded:
+            count = int(embedded["sample_size"])
+            mean_l = embedded["mean_latency_ms"]
+            p95 = embedded["latency_p95_ms"]
+            p50 = embedded.get("latency_p50_ms")
+            p99 = embedded.get("latency_p99_ms")
+            maximum = embedded.get("max_latency_ms")
+            workload_duration_ms = round(mean_l * count, 4)
+            throughput_rps = round(1000.0 / mean_l, 2) if mean_l > 0 else 0.0
+        else:
+            count = len(durations)
+            mean_l = sum(durations) / count
+            p50 = durations[count // 2]
+            p95 = durations[min(int(count * 0.95), count - 1)]
+            p99 = durations[-1]
+            maximum = durations[-1]
+            workload_duration_ms = round(sum(durations), 2)
+            throughput_rps = round((count / (sum(durations) / 1000.0)), 2) if sum(durations) > 0 else 0.0
+
+        container_overhead_ms = round(max(0.0, total_time_ms - sum(durations)), 2)
+        pipeline_evaluated = embedded is not None or not project_files
+        is_breached = bool(pipeline_evaluated and p95 > latency_threshold_ms)
+        embedded_assertion_status = (
+            "ERROR" if exec_result.status == TestResultStatus.ERROR.value
+            else "FAILED" if exec_result.is_timeout or exec_result.status == TestResultStatus.FAILED.value
+            else "PASSED"
+        )
+        pipeline_sla_status = "NOT_EVALUATED" if not pipeline_evaluated else ("FAILED" if is_breached else "PASSED")
+
         complexity_patterns = []
         try:
             from app.services.defect_analysis_service import DefectAnalysisService
             complexity_patterns = DefectAnalysisService().inspect_workload_complexity_patterns(source_code)
         except Exception as exc:
             logger.debug("Workload complexity inspection failed: %s", exc)
-
-        # Parse test durations to compute latency statistics
-        durations = [t.duration_ms for t in exec_result.test_results if t.duration_ms is not None]
-        if not durations:
-            durations = [total_time_ms]
-
-        durations.sort()
-        count = len(durations)
-        mean_l = sum(durations) / count
-        p50 = durations[count // 2]
-        p95_idx = min(int(count * 0.95), count - 1)
-        p95 = durations[p95_idx]
-        p99 = durations[-1]
-        throughput_rps = round((count / (sum(durations) / 1000.0)), 2) if sum(durations) > 0 else 0.0
-
-        # Separate container startup overhead from raw code duration using independently measured execution intervals
-        workload_duration_ms = round(sum(durations), 2)
-        container_overhead_ms = round(max(0.0, total_time_ms - workload_duration_ms), 2)
-
-        # Breach condition: empirical SLA threshold breach, timeout under performance load,
-        # or confirmed algorithmic complexity pattern with elevated workload execution duration (>= 50.0ms or scale test failure).
-        # Container startup overhead is explicitly excluded from triggering breaches.
-        is_breached = (
-            p95 > latency_threshold_ms
-            or exec_result.is_timeout
-            or exec_result.status == TestResultStatus.FAILED.value
-            or (len(complexity_patterns) > 0 and (p95 >= 50.0 or exec_result.status == TestResultStatus.FAILED.value))
-        )
 
         bottlenecks = []
         if is_breached:
@@ -727,39 +765,46 @@ print("---BENCHMARK_OUTPUT_END---")
             if complexity_patterns:
                 pat_descs = [f"{p['pattern']} ({p['complexity']})" for p in complexity_patterns]
                 bottlenecks.append(
-                    f"Algorithmic bottleneck identified: {', '.join(pat_descs)} resulting in elevated execution latency ({p95:.1f}ms)."
+                    f"Static complexity context: {', '.join(pat_descs)}; measured p95 was {p95:.4f}ms."
                 )
             if exec_result.is_timeout:
                 bottlenecks.append("Execution timed out under performance workload: potential non-terminating loop or catastrophic algorithmic scaling.")
-            if exec_result.status == TestResultStatus.FAILED.value and not exec_result.is_timeout:
-                bottlenecks.append("An authorized performance assertion failed in the submitted performance test suite.")
+        elif not pipeline_evaluated:
+            bottlenecks.append("Embedded workload assertion ran, but no parseable performance measurement evidence was emitted; pipeline SLA was NOT_EVALUATED.")
+        if exec_result.status == TestResultStatus.FAILED.value and not exec_result.is_timeout:
+            bottlenecks.append("An authorized embedded performance assertion failed independently of the pipeline SLA verdict.")
 
         metrics = PerformanceMetrics(
             sample_size=count,
             duration_ms=workload_duration_ms,
             workload_duration_ms=workload_duration_ms,
             container_startup_overhead_ms=container_overhead_ms,
-            mean_latency_ms=round(mean_l, 2),
-            latency_p50_ms=round(p50, 2),
-            latency_p95_ms=round(p95, 2),
-            latency_p99_ms=round(p99, 2),
-            max_latency_ms=round(durations[-1], 2),
+            mean_latency_ms=round(mean_l, 4),
+            latency_p50_ms=round(p50, 4) if p50 is not None else None,
+            latency_p95_ms=round(p95, 4),
+            latency_p99_ms=round(p99, 4) if p99 is not None else None,
+            max_latency_ms=round(maximum, 4) if maximum is not None else None,
             throughput_rps=throughput_rps,
             threshold_latency_ms=latency_threshold_ms,
             is_breached=is_breached,
         )
 
-        status = "FAILED" if is_breached else "PASSED"
-        if exec_result.is_timeout:
-            # Under performance testing, a timeout is an empirical failure (catastrophic scaling or hang under load)
-            status = "FAILED"
-        elif exec_result.status == TestResultStatus.ERROR.value and not exec_result.test_results:
+        status = "PASSED" if embedded_assertion_status == "PASSED" and pipeline_sla_status == "PASSED" else "FAILED"
+        if exec_result.status == TestResultStatus.ERROR.value:
             status = "ERROR"
+        elif pipeline_sla_status == "NOT_EVALUATED" and embedded_assertion_status == "PASSED":
+            status = "NOT_EXECUTED"
 
         perf_test_results = []
         for tr in exec_result.test_results:
             tr.test_type = TestType.PERFORMANCE
             tr.test_id = f"performance::{tr.test_id}"
+            tr.stdout = exec_result.stdout
+            tr.metrics = {
+                **(tr.metrics or {}),
+                "evidence_kind": "embedded_workload_assertion",
+                **(embedded or {}),
+            }
             perf_test_results.append(tr)
         if status == "ERROR":
             perf_test_results.append(
@@ -781,18 +826,11 @@ print("---BENCHMARK_OUTPUT_END---")
                     error_message="; ".join(bottlenecks),
                     duration_ms=p95,
                     test_type=TestType.PERFORMANCE,
+                    metrics={"evidence_kind": "pipeline_measured_sla", **metrics.model_dump()},
                 )
             )
-        else:
-            perf_test_results.append(
-                TestResult(
-                    test_id=f"perf-sla-{uuid.uuid4().hex[:8]}",
-                    name="test_performance_sla_compliance",
-                    status=TestResultStatus.PASSED,
-                    duration_ms=p95,
-                    test_type=TestType.PERFORMANCE,
-                )
-            )
+        # A passing SLA is report-level evidence, not another project test.  Keep
+        # it out of test_results so the embedded workload is not double-counted.
 
         return PerformanceTestReport(
             agent_id=self.AGENT_ID,
@@ -800,6 +838,14 @@ print("---BENCHMARK_OUTPUT_END---")
             bottlenecks_detected=bottlenecks,
             test_results=perf_test_results,
             status=status,
+            authorization_reason=(
+                f"{classification.reason_for('performance')} {workload_reason}"
+                if has_project_oracle
+                else "Explicit pytest performance marker supplied for this run."
+            ),
+            embedded_assertion_status=embedded_assertion_status,
+            pipeline_sla_status=pipeline_sla_status,
+            embedded_metrics=embedded or {},
         )
 
 

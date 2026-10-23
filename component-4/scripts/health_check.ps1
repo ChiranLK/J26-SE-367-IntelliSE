@@ -67,14 +67,14 @@ Write-Host "[4/5] Checking Docker Sandbox Environment..." -NoNewline
 try {
     $DockerVersion = docker --version 2>&1
     if ($LASTEXITCODE -eq 0) {
-        $ImageMatch = docker images --format "{{.Repository}}:{{.Tag}}" | Select-String "intelise-python-runner:3.12"
+        $ImageMatch = docker images --format "{{.Repository}}:{{.Tag}}" | Select-String "intelise-python-runner:3.12-v2"
         if ($ImageMatch) {
             Write-Host " [OK]" -ForegroundColor Green
             Write-Host "      Docker Daemon: Connected ($DockerVersion)" -ForegroundColor Gray
-            Write-Host "      Sandbox Image: intelise-python-runner:3.12 [Ready]" -ForegroundColor Gray
+            Write-Host "      Sandbox Image: intelise-python-runner:3.12-v2 [Ready]" -ForegroundColor Gray
         } else {
             Write-Host " [WARN]" -ForegroundColor Yellow
-            Write-Host "      Docker daemon active, but 'intelise-python-runner:3.12' image is missing." -ForegroundColor Yellow
+            Write-Host "      Docker daemon active, but 'intelise-python-runner:3.12-v2' image is missing." -ForegroundColor Yellow
             $AllHealthy = $false
         }
     } else {

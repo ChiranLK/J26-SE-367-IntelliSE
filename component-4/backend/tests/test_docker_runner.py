@@ -95,6 +95,99 @@ def test_docker_sandbox_failing_assertion():
     assert failed_test.error_message is not None
 
 
+def test_docker_sandbox_resolves_wrapped_zip_project_root_and_runs_embedded_tests():
+    """Regression: a one-directory ZIP wrapper must not hide its app package."""
+    runner = DockerTestRunner()
+    project_files = {
+        "Generated-GPA-Stdlib-Verification/app/__init__.py": "",
+        "Generated-GPA-Stdlib-Verification/app/gpa.py": (
+            "def compute_gpa(points):\n"
+            "    return sum(points) / len(points)\n"
+        ),
+        "Generated-GPA-Stdlib-Verification/tests/test_gpa.py": (
+            "import unittest\n"
+            "from app.gpa import compute_gpa\n\n"
+            "class TestGpa(unittest.TestCase):\n"
+            "    def test_average(self):\n"
+            "        self.assertEqual(compute_gpa([4, 3]), 3.5)\n"
+        ),
+        "Generated-GPA-Stdlib-Verification/requirements.txt": "# stdlib only\n",
+    }
+
+    result = asyncio.run(
+        runner.execute_verification(
+            source_code=project_files["Generated-GPA-Stdlib-Verification/app/gpa.py"],
+            trusted_test_cases=project_files["Generated-GPA-Stdlib-Verification/tests/test_gpa.py"],
+            filename="wrapped.zip",
+            project_files=project_files,
+        )
+    )
+
+    assert result.status == VerificationStatus.PASSED.value
+    assert result.exit_code == 0
+    assert [item.name for item in result.test_results] == ["test_average"]
+    assert "test_gpa.py::TestGpa::test_average" in result.stdout
+
+
+def test_project_layout_adds_wrapped_root_and_src_to_import_path():
+    root, import_paths = DockerTestRunner._resolve_project_layout(
+        {
+            "outer/pyproject.toml": "",
+            "outer/src/example/__init__.py": "",
+            "outer/tests/test_example.py": "",
+        }
+    )
+
+    assert root == "/workspace/outer"
+    assert import_paths == ["/workspace/outer", "/workspace/outer/src"]
+
+
+def test_runner_image_prepares_fastapi_test_dependency():
+    runner = DockerTestRunner()
+    result = asyncio.run(
+        runner.execute_verification(
+            source_code="def value(): return 1\n",
+            trusted_test_cases=(
+                "from fastapi.testclient import TestClient\n"
+                "from solution import value\n"
+                "def test_dependency_and_code(): assert value() == 1\n"
+            ),
+        )
+    )
+
+    assert result.status == VerificationStatus.PASSED.value
+    assert result.exit_code == 0
+
+
+def test_collection_traceback_is_preserved_and_classified():
+    runner = DockerTestRunner()
+    marker = "__XML__"
+    traceback = (
+        "ImportError while importing test module '/workspace/test_verification.py'.\n"
+        "test_verification.py:1: in <module>\n"
+        "    import unavailable_package\n"
+        "E   ModuleNotFoundError: No module named 'unavailable_package'"
+    )
+    xml_traceback = traceback.replace("<", "&lt;").replace(">", "&gt;")
+    xml = (
+        '<testsuites><testsuite errors="1" tests="1">'
+        '<testcase classname="" name="test_verification" time="0.0">'
+        f'<error message="collection failure">{xml_traceback}</error>'
+        '</testcase></testsuite></testsuites>'
+    )
+
+    result = runner._parse_sandbox_output(
+        {"stdout": f"pytest output\n{marker}\n{xml}", "stderr": "", "exit_code": 2, "timeout": False},
+        duration_ms=10.0,
+        xml_marker=marker,
+    )
+
+    assert result.status == VerificationStatus.ERROR.value
+    assert result.telemetry["error_category"] == "MISSING_DEPENDENCY"
+    assert traceback in result.telemetry["collection_traceback"]
+    assert result.test_results[0].metrics["failure_origin"] == "MISSING_DEPENDENCY"
+
+
 def test_docker_sandbox_timeout_enforcement():
     """
     Validates that infinite loops or runaway processes are terminated cleanly at the timeout

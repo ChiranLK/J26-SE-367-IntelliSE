@@ -829,6 +829,8 @@ export default function UnifiedSubmissionPage() {
   const perfReport = agentReports.performance;
   const perfMetrics = perfReport?.metrics;
   const perfStatus = perfReport?.status || (verificationRun?.status === 'BLOCKED' ? 'BLOCKED' : 'NOT_EXECUTED');
+  const performanceExecuted = !['NOT_EXECUTED', 'BLOCKED', 'PENDING'].includes(perfStatus)
+    && Number(perfMetrics?.sample_size || 0) > 0;
 
   const isDeliveryConfirmed = Boolean(verificationRun?.delivery_confirmation?.is_delivered);
 
@@ -1767,12 +1769,12 @@ export default function UnifiedSubmissionPage() {
 
                   {perfMetrics ? (
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      <div>Measured Latency (p95): <strong>{Number(perfMetrics.latency_p95_ms || 0).toFixed(2)}ms</strong></div>
+                      <div>Measured Latency (p95): <strong>{performanceExecuted ? `${Number(perfMetrics.latency_p95_ms).toFixed(2)}ms` : 'N/A'}</strong></div>
                       <div>Configured Threshold SLA: <strong>&lt;= {Number(perfMetrics.threshold_latency_ms || 0).toFixed(2)}ms</strong></div>
                       <div style={{ marginTop: '0.2rem' }}>
                         Decision:{' '}
-                        <Badge variant={perfMetrics.is_breached ? 'danger' : 'success'}>
-                          {perfMetrics.is_breached ? 'THRESHOLD BREACHED' : 'WITHIN THRESHOLD (PASS)'}
+                        <Badge variant={!performanceExecuted ? 'warning' : perfMetrics.is_breached ? 'danger' : 'success'}>
+                          {!performanceExecuted ? 'NOT_EVALUATED' : perfMetrics.is_breached ? 'THRESHOLD BREACHED' : 'WITHIN THRESHOLD (PASS)'}
                         </Badge>
                       </div>
                     </div>

@@ -12,7 +12,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Create an unprivileged non-root user with UID 1000
 RUN groupadd -g 1000 sandbox && \
     useradd -u 1000 -g sandbox -m -s /bin/bash sandbox && \
-    pip install --no-cache-dir pytest==9.1.1
+    pip install --no-cache-dir \
+        pytest==9.1.1 \
+        fastapi==0.143.0 \
+        httpx==0.28.1
 
 # Default workdir
 WORKDIR /workspace

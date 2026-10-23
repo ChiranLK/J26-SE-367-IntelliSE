@@ -176,6 +176,8 @@ class DefectAnalysisService:
         failed_tests = [
             t for t in test_results
             if t.status in (TestResultStatus.FAILED, TestResultStatus.ERROR, TestResultStatus.TIMEOUT)
+            and (t.metrics or {}).get("failure_origin")
+            not in ("COLLECTION_ERROR", "MISSING_DEPENDENCY", "INFRASTRUCTURE_FAILURE")
         ]
 
         seen_test_names = set()

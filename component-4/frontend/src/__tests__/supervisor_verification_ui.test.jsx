@@ -114,4 +114,31 @@ describe('Supervisor verification results UI', () => {
     expect(screen.getByText(/Governance decision: READY/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /View Software Explanation/i })).toBeInTheDocument();
   });
+
+  it('renders unexecuted performance evidence as N/A and NOT_EVALUATED', async () => {
+    const blockedRun = {
+      ...baseRun,
+      status: 'BLOCKED',
+      test_results: [{ name: 'test_checkout_total', test_type: 'unit', status: 'PASSED', duration_ms: 4 }],
+      defect_reports: [],
+      execution_telemetry: {
+        ...baseRun.execution_telemetry,
+        agent_reports: {
+          ...baseRun.execution_telemetry.agent_reports,
+          integration: { status: 'NOT_EXECUTED', total_interactions: 0, passed_interactions: 0, failed_interactions: 0, duration_ms: 0 },
+          performance: {
+            status: 'NOT_EXECUTED',
+            metrics: { sample_size: 0, duration_ms: 0, latency_p95_ms: 0, threshold_latency_ms: 200, is_breached: false },
+          },
+        },
+      },
+    };
+    arrange(blockedRun, { delivery_status: 'BLOCKED_VERIFICATION_FAILED' });
+
+    fireEvent.click(await screen.findByRole('button', { name: /details/i }));
+
+    expect((await screen.findAllByText('N/A')).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Performance verdict: NOT_EVALUATED/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Performance verdict: WITHIN THRESHOLD/i)).not.toBeInTheDocument();
+  });
 });
