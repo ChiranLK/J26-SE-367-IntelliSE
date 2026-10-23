@@ -166,16 +166,27 @@ class GovernanceReportService:
 
         # Gate 3: Zero Unresolved Performance Bottlenecks (SO1, SO2)
         perf_defects = [d for d in run.defect_reports if d.defect_category == "performance_bottleneck"]
-        perf_passed = len(perf_defects) == 0
+        perf_report = (run.execution_telemetry or {}).get("agent_reports", {}).get("performance", {})
+        perf_status = perf_report.get("status") if isinstance(perf_report, dict) else None
+        perf_executed = perf_status not in (None, "NOT_EXECUTED", "BLOCKED", "PENDING")
+        perf_passed = perf_executed and perf_status == "PASSED" and len(perf_defects) == 0
+        perf_gate_status = "PASSED" if perf_passed else ("NOT_EXECUTED" if not perf_executed else "FAILED")
         gating_checks.append(
             ReadinessGatingCheck(
                 gate_name="ZERO_PERFORMANCE_BOTTLENECK_BREACHES",
-                status="PASSED" if perf_passed else "FAILED",
-                required=True,
-                details=f"Identified {len(perf_defects)} unmitigated performance threshold breach(es).",
+                status=perf_gate_status,
+                # Performance is a release gate only when an authorized workload
+                # was actually configured and executed.  An absent workload stays
+                # visibly NOT_EXECUTED; it is never mislabeled as PASSED.
+                required=perf_executed,
+                details=(
+                    "Performance testing was NOT_EXECUTED; no passing performance verdict is available."
+                    if not perf_executed
+                    else f"Performance status is '{perf_status}'; identified {len(perf_defects)} unmitigated threshold breach(es)."
+                ),
             )
         )
-        if not perf_passed:
+        if perf_executed and not perf_passed:
             blocking_reasons.append(f"Module contains {len(perf_defects)} unmitigated performance bottleneck(s).")
 
         # Gate 4: Zero Semantic Drift (FR07, NFR01)

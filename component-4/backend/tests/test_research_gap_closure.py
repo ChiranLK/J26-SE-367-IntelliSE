@@ -593,12 +593,38 @@ def test_deployment_readiness_report_gating():
             )
         ],
         defect_reports=[],
+        execution_telemetry={
+            "agent_reports": {
+                "performance": {
+                    "status": "PASSED",
+                    "metrics": {"sample_size": 10, "latency_p95_ms": 5.0},
+                }
+            }
+        },
         created_at=now,
         updated_at=now,
     )
     report_approved = service.generate_deployment_readiness_report(run=run_passed)
     assert report_approved.readiness_status == DeploymentReadinessStatus.READY
     assert len(report_approved.blocking_reasons) == 0
+
+    # No benchmark execution must never be rendered as a passing performance gate.
+    run_passed.execution_telemetry = {
+        "agent_reports": {
+            "performance": {
+                "status": "NOT_EXECUTED",
+                "metrics": {"sample_size": 0, "latency_p95_ms": 0.0},
+            }
+        }
+    }
+    report_without_performance = service.generate_deployment_readiness_report(run=run_passed)
+    performance_gate = next(
+        gate for gate in report_without_performance.gating_checks
+        if gate.gate_name == "ZERO_PERFORMANCE_BOTTLENECK_BREACHES"
+    )
+    assert performance_gate.status == "NOT_EXECUTED"
+    assert performance_gate.required is False
+    assert report_without_performance.readiness_status == DeploymentReadinessStatus.READY
 
 
 # ==============================================================================

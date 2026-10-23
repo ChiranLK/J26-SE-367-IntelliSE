@@ -58,6 +58,40 @@ class MockRunner(DockerTestRunner):
         )
 
 
+class CollectionErrorRunner(DockerTestRunner):
+    async def execute_verification(self, **_kwargs) -> SandboxExecutionResult:
+        return SandboxExecutionResult(
+            status="ERROR",
+            exit_code=2,
+            duration_ms=20.0,
+            error_message="ModuleNotFoundError: No module named 'benchmark_dependency'",
+            test_results=[
+                TestResult(
+                    test_id="collection-error",
+                    name="test_performance_workload",
+                    test_type=TestType.PERFORMANCE,
+                    status=TestResultStatus.ERROR,
+                    error_message="collection failure",
+                    metrics={"failure_origin": "MISSING_DEPENDENCY"},
+                )
+            ],
+            telemetry={"error_category": "MISSING_DEPENDENCY"},
+        )
+
+
+@pytest.mark.anyio
+async def test_collection_error_never_becomes_passing_performance_verdict():
+    agent = PerformanceTestAgent(runner=CollectionErrorRunner())
+
+    report = await agent.execute_performance_tests(
+        source_code="def workload(): return 1",
+        test_code="def test_performance_workload(): assert True",
+    )
+
+    assert report.status == "ERROR"
+    assert all(result.status != TestResultStatus.PASSED for result in report.test_results)
+
+
 @pytest.mark.anyio
 async def test_cpu_bound_slow_algorithms():
     """

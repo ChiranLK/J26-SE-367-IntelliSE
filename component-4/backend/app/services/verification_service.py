@@ -48,6 +48,7 @@ from app.services.feedback_service import TechnicalFeedbackService
 from app.services.governance_report_service import GovernanceReportService
 from app.services.ollama_client import OllamaClient
 from app.services.semantic_drift_service import SemanticDriftService
+from app.services.test_classification import classify_project_tests
 from app.services.xai_service import XaiExplanationService
 from app.workflows.verification_graph import verification_pipeline
 
@@ -55,10 +56,11 @@ from app.workflows.verification_graph import verification_pipeline
 def _has_categorized_project_tests(metadata: Optional[dict]) -> bool:
     """Return whether a ZIP project carries separate trusted test categories."""
     project_files = (metadata or {}).get("project_files") or {}
-    normalized_paths = [str(path).replace("\\", "/").lower() for path in project_files]
-    return all(
-        any(f"/tests/{test_type}/" in f"/{path}" for path in normalized_paths)
-        for test_type in ("unit", "integration", "performance")
+    classification = classify_project_tests(project_files)
+    return (
+        classification.has_explicit_metadata
+        and not classification.errors
+        and any(classification.paths_for(category) for category in ("unit", "integration", "performance"))
     )
 
 

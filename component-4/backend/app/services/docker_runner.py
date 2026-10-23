@@ -1,7 +1,9 @@
 import ast
 import asyncio
 import os
+import posixpath
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -64,6 +66,48 @@ class DockerTestRunner:
         self.image_name = image_name or settings.DOCKER_RUNNER_IMAGE
         self.timeout_seconds = timeout_seconds or settings.DOCKER_TIMEOUT_SECONDS
 
+    @staticmethod
+    def _resolve_project_layout(project_files: Dict[str, str]) -> Tuple[str, List[str]]:
+        """Return the effective ZIP project root and its import search paths.
+
+        ZIP producers commonly wrap a project in one directory.  Mounting the
+        extraction directory at ``/workspace`` does not make packages below that
+        wrapper importable, so pytest collection used to fail before any test ran.
+        The returned paths are container paths and never escape ``/workspace``.
+        """
+        normalized = [
+            posixpath.normpath(path.replace("\\", "/")).lstrip("/")
+            for path in project_files
+            if path and posixpath.normpath(path.replace("\\", "/")) not in (".", "")
+        ]
+        top_levels = {path.split("/", 1)[0] for path in normalized}
+        has_root_file = any("/" not in path for path in normalized)
+        wrapper = next(iter(top_levels)) if len(top_levels) == 1 and not has_root_file else ""
+        project_root = f"/workspace/{wrapper}" if wrapper else "/workspace"
+
+        import_paths = [project_root]
+        relative_paths = [
+            path[len(wrapper) + 1 :] if wrapper and path.startswith(f"{wrapper}/") else path
+            for path in normalized
+        ]
+        if any(path.startswith("src/") for path in relative_paths):
+            import_paths.append(f"{project_root}/src")
+        return project_root, import_paths
+
+    @staticmethod
+    def _embedded_test_paths(project_files: Dict[str, str]) -> List[str]:
+        paths: List[str] = []
+        for path in project_files:
+            normalized = path.replace("\\", "/")
+            basename = posixpath.basename(normalized)
+            if normalized.endswith(".py") and (
+                basename.startswith("test_")
+                or basename.endswith("_test.py")
+                or "/tests/" in f"/{normalized}"
+            ):
+                paths.append(normalized)
+        return sorted(paths)
+
     def check_docker_available(self) -> Tuple[bool, str]:
         """
         Verifies that Docker engine is installed, running, and accessible.
@@ -75,6 +119,8 @@ class DockerTestRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=5,
             )
             if res.returncode == 0:
@@ -98,6 +144,8 @@ class DockerTestRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=5,
             )
             if inspect_res.returncode == 0:
@@ -124,6 +172,8 @@ class DockerTestRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=180,
             )
             if build_res.returncode == 0:
@@ -299,17 +349,32 @@ class DockerTestRunner:
                     with open(target_file, "w", encoding="utf-8") as f:
                         f.write(file_content)
 
-                test_target = "/workspace"
-                # If explicit test cases provided, write as test_verification.py
-                if cleaned_test_code:
-                    test_file_path = os.path.join(temp_dir, "test_verification.py")
+                project_root, python_paths = self._resolve_project_layout(project_files)
+                embedded_tests = self._embedded_test_paths(project_files)
+                matching_embedded_tests = [
+                    path for path in embedded_tests
+                    if project_files[path].strip() == cleaned_test_code
+                ]
+
+                # Prefer the submitted test files at their genuine paths.  Upload
+                # ingestion stores the primary embedded suite in test_code too;
+                # copying it to /workspace/test_verification.py loses ZIP-root
+                # import semantics and duplicates project tests.
+                if matching_embedded_tests:
+                    test_target = " ".join(
+                        shlex.quote(f"/{posixpath.join('workspace', path)}") for path in embedded_tests
+                    )
+                elif cleaned_test_code:
+                    relative_root = project_root.removeprefix("/workspace/")
+                    host_root = os.path.join(temp_dir, relative_root.replace("/", os.sep)) if relative_root else temp_dir
+                    test_file_path = os.path.join(host_root, "test_verification.py")
                     with open(test_file_path, "w", encoding="utf-8") as f:
                         f.write(cleaned_test_code)
-                    test_target = "/workspace/test_verification.py"
-
-                # Write pytest.ini with pythonpath for relative package imports
-                with open(os.path.join(temp_dir, "pytest.ini"), "w", encoding="utf-8") as f:
-                    f.write("[pytest]\npython_files = test_*.py *_test.py\npythonpath = . /workspace\naddopts = -s\n")
+                    test_target = shlex.quote(f"{project_root}/test_verification.py")
+                else:
+                    test_target = " ".join(
+                        shlex.quote(f"/{posixpath.join('workspace', path)}") for path in embedded_tests
+                    ) or shlex.quote(project_root)
             else:
                 solution_filename = "solution.py"
                 if filename and filename.endswith(".py") and not filename.startswith("test_") and filename != "conftest.py":
@@ -326,7 +391,9 @@ class DockerTestRunner:
                 with open(os.path.join(temp_dir, test_filename), "w", encoding="utf-8") as f:
                     f.write(cleaned_test_code)
 
-                test_target = f"/workspace/{test_filename}"
+                test_target = shlex.quote(f"/workspace/{test_filename}")
+                project_root = "/workspace"
+                python_paths = [project_root]
 
                 # Write neutral pytest.ini to avoid root or environmental interference
                 with open(os.path.join(temp_dir, "pytest.ini"), "w", encoding="utf-8") as f:
@@ -358,7 +425,9 @@ class DockerTestRunner:
                 "-e",
                 "PYTHONDONTWRITEBYTECODE=1",
                 "-e",
-                "PYTHONPATH=/workspace",
+                f"PYTHONPATH={':'.join(python_paths)}",
+                "-w",
+                project_root,
                 self.image_name,
                 "sh",
                 "-c",
@@ -410,6 +479,8 @@ class DockerTestRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout,
             )
             duration = (time.perf_counter() - start) * 1000
@@ -518,6 +589,17 @@ class DockerTestRunner:
         # Exit code 3 = internal error
         # Exit code 4 = command line usage error
         # Exit code 5 = no tests collected
+        collection_traceback = ""
+        if exit_code == 2:
+            collection_traceback = "\n".join(
+                trace.strip()
+                for trace in [
+                    *(t.stack_trace or "" for t in test_results if t.status == TestResultStatus.ERROR),
+                    stderr,
+                ]
+                if trace and trace.strip()
+            )
+
         if exit_code == 0:
             overall_status = VerificationStatus.PASSED.value
             error_msg = None
@@ -529,9 +611,25 @@ class DockerTestRunner:
             # No tests collected
             overall_status = VerificationStatus.ERROR.value
             error_msg = "No test cases were discovered in the authorized test suite."
+        elif exit_code == 2:
+            overall_status = VerificationStatus.ERROR.value
+            error_msg = collection_traceback or pytest_stdout or "Pytest collection failed."
         else:
             overall_status = VerificationStatus.ERROR.value
             error_msg = f"Test runner exited with error code {exit_code}: {stderr or pytest_stdout}"
+
+        error_category = None
+        diagnostic_text = f"{collection_traceback}\n{pytest_stdout}\n{stderr}"
+        if exit_code == 2:
+            missing_match = re.search(r"ModuleNotFoundError: No module named ['\"]([^'\"]+)", diagnostic_text)
+            error_category = "MISSING_DEPENDENCY" if missing_match else "COLLECTION_ERROR"
+            for test_result in test_results:
+                if test_result.status == TestResultStatus.ERROR:
+                    test_result.metrics = {
+                        **(test_result.metrics or {}),
+                        "failure_origin": error_category,
+                        "pytest_exit_code": exit_code,
+                    }
 
         return SandboxExecutionResult(
             status=overall_status,
@@ -547,6 +645,8 @@ class DockerTestRunner:
                 "total_tests": len(test_results),
                 "passed_tests": sum(1 for t in test_results if t.status == TestResultStatus.PASSED),
                 "failed_tests": sum(1 for t in test_results if t.status == TestResultStatus.FAILED),
+                "error_category": error_category,
+                "collection_traceback": collection_traceback or None,
             },
         )
 

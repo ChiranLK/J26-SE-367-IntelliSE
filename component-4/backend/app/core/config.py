@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Docker Test Runner Sandbox Configuration (Phase 2B)
-    DOCKER_RUNNER_IMAGE: str = "intelise-python-runner:3.12"
+    DOCKER_RUNNER_IMAGE: str = "intelise-python-runner:3.12-v2"
     DOCKER_TIMEOUT_SECONDS: int = 15
     DOCKER_MEMORY_LIMIT: str = "256m"
     DOCKER_CPU_LIMIT: str = "1.0"

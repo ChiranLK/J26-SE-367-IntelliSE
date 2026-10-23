@@ -186,6 +186,33 @@ def test_multi_file_static_security_scan():
     assert sec_reports[0].confidence == "CONFIRMED"
 
 
+def test_collection_failure_is_not_reported_as_confirmed_source_defect():
+    service = DefectAnalysisService()
+    result = TestResult(
+        test_id="collection-app",
+        name="test_verification",
+        test_type=TestType.UNIT,
+        status=TestResultStatus.ERROR,
+        error_message="collection failure",
+        stack_trace="ModuleNotFoundError: No module named 'app'",
+        metrics={"failure_origin": "COLLECTION_ERROR", "pytest_exit_code": 2},
+    )
+
+    reports = service.analyze_test_results(
+        run_id="run-collection",
+        submission_id="sub-collection",
+        status="ERROR",
+        test_results=[result],
+        project_files={
+            "wrapper/app/__init__.py": "",
+            "wrapper/app/gpa.py": "def compute(): return 4.0\n",
+            "wrapper/tests/test_gpa.py": "from app.gpa import compute\n",
+        },
+    )
+
+    assert reports == []
+
+
 # ==========================================
 # 3. Multi-File Repair Ingestion Tests
 # ==========================================

@@ -1267,6 +1267,10 @@ export default function VerificationRunsPage() {
                     ? report?.total_interactions
                     : metrics?.sample_size;
                   const durationMs = testType === 'performance' ? metrics?.duration_ms : report?.duration_ms;
+                  const performanceExecuted = testType !== 'performance' || (
+                    !['NOT_EXECUTED', 'BLOCKED', 'PENDING'].includes(report?.status)
+                    && Number(metrics?.sample_size || 0) > 0
+                  );
                   return (
                     <div
                       key={testType}
@@ -1301,13 +1305,13 @@ export default function VerificationRunsPage() {
                             <span>Failed <strong>{failedCount ?? 0}</strong></span>
                           </>
                         )}
-                        <span>Duration <strong>{Number.isFinite(durationMs) ? `${Number(durationMs).toFixed(1)} ms` : 'Not available'}</strong></span>
+                        <span>Duration <strong>{testType === 'performance' && !performanceExecuted ? 'N/A' : Number.isFinite(durationMs) ? `${Number(durationMs).toFixed(1)} ms` : 'Not available'}</strong></span>
                       </div>
                       {metrics && (
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          Measured latency (p95): {Number(metrics.latency_p95_ms || 0).toFixed(2)} ms<br />
+                          Measured latency (p95): {performanceExecuted ? `${Number(metrics.latency_p95_ms).toFixed(2)} ms` : 'N/A'}<br />
                           Configured threshold: {Number(metrics.threshold_latency_ms || 0).toFixed(2)} ms<br />
-                          Performance verdict: {metrics.is_breached ? 'THRESHOLD BREACHED' : 'WITHIN THRESHOLD'}
+                          Performance verdict: {!performanceExecuted ? 'NOT_EVALUATED' : metrics.is_breached ? 'THRESHOLD BREACHED' : 'WITHIN THRESHOLD'}
                         </div>
                       )}
                     </div>

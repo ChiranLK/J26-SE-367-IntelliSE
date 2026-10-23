@@ -184,7 +184,13 @@ async def execute_tests_node(state: VerificationWorkflowState) -> Dict[str, Any]
             if getattr(r, "status", None) == "ERROR":
                 for tr in getattr(r, "test_results", []):
                     if tr.status in (TestResultStatus.ERROR, TestResultStatus.TIMEOUT) and tr.error_message:
-                        error_msg = tr.error_message
+                        failure_origin = (tr.metrics or {}).get("failure_origin")
+                        if failure_origin in ("COLLECTION_ERROR", "MISSING_DEPENDENCY") and tr.stack_trace:
+                            # Preserve the actionable collection traceback at run
+                            # level instead of collapsing it to "collection failure".
+                            error_msg = tr.stack_trace
+                        else:
+                            error_msg = tr.error_message
                         break
 
     agent_telemetry = {

@@ -34,6 +34,7 @@ class UnitTestReport(BaseModel):
     trust_status: Optional[str] = Field(default=None, description="Trust status: AUTHORITATIVE, UNVERIFIED_SUGGESTION, or NO_SPECIFICATION")
     generation_provenance: Optional[Dict[str, Any]] = Field(default=None, description="Metadata explaining contract derivation")
     status: str = Field(default="PASSED", description="Overall unit test status")
+    authorization_reason: Optional[str] = Field(default=None, description="Why this category was or was not authorized")
 
 
 class IntegrationTestReport(BaseModel):
@@ -47,6 +48,7 @@ class IntegrationTestReport(BaseModel):
     test_results: List[TestResult] = Field(default_factory=list, description="Granular integration test results")
     test_seams_verified: List[str] = Field(default_factory=list, description="Verified dependency injection/API boundaries")
     status: str = Field(default="PASSED", description="Overall integration test status")
+    authorization_reason: Optional[str] = Field(default=None, description="Validated category and boundary evidence")
 
 
 class PerformanceMetrics(BaseModel):
@@ -57,10 +59,10 @@ class PerformanceMetrics(BaseModel):
     workload_duration_ms: float = Field(default=0.0, description="Directly measured workload execution duration excluding container initialization")
     container_startup_overhead_ms: float = Field(default=0.0, description="Container initialization and teardown overhead in ms")
     mean_latency_ms: float = Field(default=0.0, description="Arithmetic mean execution latency in ms")
-    latency_p50_ms: float = Field(default=0.0, description="50th percentile (median) latency in ms")
+    latency_p50_ms: Optional[float] = Field(default=None, description="50th percentile latency, when emitted by the workload")
     latency_p95_ms: float = Field(default=0.0, description="95th percentile latency in ms")
-    latency_p99_ms: float = Field(default=0.0, description="99th percentile latency in ms")
-    max_latency_ms: float = Field(default=0.0, description="Maximum single execution latency in ms")
+    latency_p99_ms: Optional[float] = Field(default=None, description="99th percentile latency, when emitted by the workload")
+    max_latency_ms: Optional[float] = Field(default=None, description="Maximum execution latency, when emitted by the workload")
     throughput_rps: float = Field(default=0.0, description="Calculated throughput (operations/requests per second)")
     threshold_latency_ms: float = Field(default=500.0, description="Configured maximum allowable latency threshold")
     is_breached: bool = Field(default=False, description="Whether latency threshold was breached")
@@ -74,6 +76,10 @@ class PerformanceTestReport(BaseModel):
     bottlenecks_detected: List[str] = Field(default_factory=list, description="Identified execution bottlenecks")
     test_results: List[TestResult] = Field(default_factory=list, description="Performance SLA test results")
     status: str = Field(default="PASSED", description="PASSED or FAILED based on threshold breaches")
+    authorization_reason: Optional[str] = Field(default=None, description="Validated category/workload authorization evidence")
+    embedded_assertion_status: str = Field(default="NOT_EVALUATED", description="Outcome of the embedded pytest workload assertion")
+    pipeline_sla_status: str = Field(default="NOT_EVALUATED", description="Independent pipeline threshold verdict")
+    embedded_metrics: Dict[str, Any] = Field(default_factory=dict, description="Measurements emitted by the embedded workload")
 
 
 class MultiAgentCoordinationPlan(BaseModel):
@@ -175,7 +181,7 @@ class ReadinessGatingCheck(BaseModel):
     """Individual safety gate item required for deployment authorization."""
 
     gate_name: str = Field(description="Name of the safety condition")
-    status: str = Field(description="PASSED, FAILED, or WARNING")
+    status: str = Field(description="PASSED, FAILED, WARNING, or NOT_EXECUTED")
     required: bool = Field(default=True, description="Whether passing is mandatory for release")
     details: str = Field(description="Evaluation rationale and observed evidence")
 
