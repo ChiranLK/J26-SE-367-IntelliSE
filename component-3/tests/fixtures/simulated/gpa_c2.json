@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0",
+  "project_id": "PROJECT-GPA-001",
+  "source_srs_version": "SRS-GPA-1.0",
+  "uml_version": "UML-GPA-1.0",
+  "release_status": "VALIDATED",
+  "validation_state": "PASSED",
+  "validation_report_ref": "SIMULATED-C2-GPA-VALIDATION-001",
+  "uml_elements": [
+    {
+      "uml_id": "UML-GPA-CLASS-001",
+      "element_type": "CLASS_DIAGRAM",
+      "name": "GpaCalculatorClasses",
+      "plantuml_source": "@startuml\nclass Course {\n  +id: String\n  +code: String\n  +credits: Integer\n  +grade: String\n  +gradePoint: Number\n}\nclass CourseService {\n  +list(): Course\n  +create(code: String, credits: Integer, grade: String, gradePoint: Number): Course\n  +update(id: String): Course\n  +remove(id: String): void\n}\nclass CourseRepository {\n  +list(): Course\n  +findById(id: String): Course\n  +create(value: Course): Course\n  +update(id: String): Course\n  +remove(id: String): void\n}\nCourseService --> CourseRepository : uses\nCourseRepository --> Course : persists\n@enduml"
+    }
+  ],
+  "ui_artifacts": [
+    {
+      "ui_id": "UI-GPA-WIREFRAME-001",
+      "artifact_type": "WIREFRAME",
+      "source_ref": "simulated://c2/wireframes/gpa-calculator"
+    }
+  ],
+  "requirement_uml_anchors": [
+    {
+      "anchor_id": "ANCHOR-GPA-001",
+      "requirement_id": "REQ-GPA-001",
+      "uml_id": "UML-GPA-CLASS-001"
+    },
+    {
+      "anchor_id": "ANCHOR-GPA-002",
+      "requirement_id": "REQ-GPA-002",
+      "uml_id": "UML-GPA-CLASS-001"
+    },
+    {
+      "anchor_id": "ANCHOR-GPA-003",
+      "requirement_id": "REQ-GPA-003",
+      "uml_id": "UML-GPA-CLASS-001"
+    }
+  ]
+}

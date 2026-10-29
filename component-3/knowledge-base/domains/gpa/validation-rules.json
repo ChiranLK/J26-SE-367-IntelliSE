@@ -1,0 +1,17 @@
+{
+  "file_id": "KB-GPA-VALIDATION-RULES",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-GPA-VALIDATION-DEFAULTS",
+      "description": "Domain validation facts used only when the approved requirement does not supply its own structured constraint. Requirement constraints always take precedence.",
+      "defaults": {
+        "ModuleResult.moduleCode": {"required": true, "max_length": 20},
+        "ModuleResult.credits": {"required": true, "integer": true, "min": 1, "max": 30},
+        "ModuleResult.grade": {"required": true, "enum_from_policy": true},
+        "ModuleResult.countsTowardGpa": {"required": false, "default": true}
+      },
+      "max_modules_per_calculation": 60
+    }
+  ]
+}

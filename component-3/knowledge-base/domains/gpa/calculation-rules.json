@@ -1,0 +1,44 @@
+{
+  "file_id": "KB-GPA-CALCULATION-RULES",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-GPA-FORMULA",
+      "formula": "GPA = SUM(credits_i * gradePoint_i) / SUM(credits_i), over modules that count toward GPA",
+      "implementation_note": "Grade points are held as integer tenths and credits as integers so the weighted sum is exact; only the final division is rounded.",
+      "source_id": "SRC-SLIIT-SUPPORT-GRADING"
+    },
+    {
+      "item_id": "KB-GPA-ROUNDING",
+      "decimal_places": 2,
+      "mode": "HALF_UP",
+      "status": "RESEARCH_ASSUMPTION",
+      "note": "Public SLIIT descriptions report GPA to two decimals; the official tie-breaking rule was not found. HALF_UP is a documented research assumption."
+    },
+    {
+      "item_id": "KB-GPA-ZERO-CREDIT",
+      "behavior": "REJECT",
+      "error_code": "ZERO_CREDIT_NOT_ALLOWED",
+      "note": "A module counted toward GPA with zero credits is invalid input; it is never silently skipped."
+    },
+    {
+      "item_id": "KB-GPA-UNKNOWN-GRADE",
+      "behavior": "REVIEW_REQUIRED",
+      "error_code": "UNKNOWN_GRADE",
+      "note": "A grade that is not in the accepted policy produces REVIEW_REQUIRED and no GPA value. C3 never guesses a grade point."
+    },
+    {
+      "item_id": "KB-GPA-NON-GPA-MODULES",
+      "behavior": "EXCLUDE_WHEN_FLAGGED",
+      "field": "countsTowardGpa",
+      "status": "RESEARCH_ASSUMPTION",
+      "note": "Modules explicitly flagged countsTowardGpa=false (e.g. pass/fail modules) are excluded from both sums. If no module counts, the result is REVIEW_REQUIRED (NO_GPA_CREDITS)."
+    },
+    {
+      "item_id": "KB-GPA-REPEATED-MODULES",
+      "behavior": "REVIEW_REQUIRED",
+      "error_code": "REPEATED_MODULE_POLICY_UNDEFINED",
+      "note": "The accepted policy does not define how repeated attempts of the same module are combined, so a repeated module code produces REVIEW_REQUIRED instead of a guessed value."
+    }
+  ]
+}

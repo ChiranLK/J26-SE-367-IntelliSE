@@ -1,0 +1,10 @@
+{
+  "id": "spring-repo-001",
+  "stack": "spring",
+  "layer": "repository",
+  "category": "layering",
+  "priority": 2,
+  "rule": "Repositories only handle persistence. Keep business rules and validation out of them.",
+  "bad_example": "class GpaRecordRepository { double computeGpa(...) { ... } }",
+  "good_example": "interface GpaRecordRepository extends JpaRepository<GpaRecord, String> {}"
+}

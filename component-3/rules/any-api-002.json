@@ -1,0 +1,24 @@
+{
+  "id": "any-api-002",
+  "stack": "any",
+  "layer": "test_seam",
+  "category": "testability",
+  "priority": 3,
+  "rule": "Publish stable seams for independent testers: exported service classes with constructor-injected repository and policy, stable OpenAPI operationIds, and data-testid attributes on form controls.",
+  "bad_example": "export default function handler(req, res) { const db = new Pool(); ... } // nothing injectable",
+  "good_example": "export class GpaCalculationService { constructor({ repository, gradingPolicy }) { ... } }",
+  "document_id": "DOC-TEST-SEAMS",
+  "artifact_types": [
+    "TEST_SEAM",
+    "BUSINESS_LOGIC"
+  ],
+  "modules": [
+    "test-seams",
+    "be.service"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases Michael Feathers, Working Effectively with Legacy Code (seam concept)"
+}

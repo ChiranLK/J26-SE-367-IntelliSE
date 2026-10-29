@@ -76,6 +76,30 @@ class InputValidationService:
                 )
             )
 
+        if not package.c2.uml_version.strip():
+            errors.append(
+                ErrorDetail(
+                    code="UML_VERSION_MISMATCH",
+                    field="c2.uml_version",
+                    message="C2 uml_version must be non-empty.",
+                )
+            )
+        elif (
+            package.c1.design_uml_version_ref is not None
+            and package.c1.design_uml_version_ref != package.c2.uml_version
+        ):
+            errors.append(
+                ErrorDetail(
+                    code="UML_VERSION_MISMATCH",
+                    field="c2.uml_version",
+                    message=(
+                        f"C2 uml_version '{package.c2.uml_version}' does not match the "
+                        "design UML version "
+                        f"'{package.c1.design_uml_version_ref}' referenced by C1."
+                    ),
+                )
+            )
+
         if package.c1.approval_status is not C1ApprovalStatus.APPROVED:
             errors.append(
                 ErrorDetail(
@@ -271,6 +295,7 @@ class InputValidationService:
                     requirement_id=requirement.requirement_id,
                     title=requirement.title,
                     approval_status="APPROVED",
+                    requirement_type=requirement.requirement_type,
                 )
                 for requirement in package.c1.requirements
             ),
@@ -279,6 +304,7 @@ class InputValidationService:
                     uml_id=element.uml_id,
                     element_type=element.element_type,
                     name=element.name,
+                    plantuml_source=element.plantuml_source,
                 )
                 for element in package.c2.uml_elements
             ),
@@ -295,6 +321,7 @@ class InputValidationService:
                     anchor_id=anchor.anchor_id,
                     requirement_id=anchor.requirement_id,
                     uml_id=anchor.uml_id,
+                    uml_element=anchor.uml_element,
                 )
                 for anchor in package.c2.requirement_uml_anchors
             ),

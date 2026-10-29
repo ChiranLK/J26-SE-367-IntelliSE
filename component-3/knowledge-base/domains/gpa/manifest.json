@@ -1,0 +1,20 @@
+{
+  "file_id": "KB-GPA-MANIFEST",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-GPA-DOMAIN",
+      "domain_id": "gpa",
+      "domain_pack_version": "1.0.0",
+      "description": "First fully worked Component 3 domain pack and benchmark: credit-weighted GPA calculation.",
+      "recognition": {
+        "required_uml_classes": ["ModuleResult", "GpaCalculation", "GradingPolicy", "GpaCalculationService"],
+        "rule": "The domain pack applies only when every required class exists in the released C2 class diagram."
+      },
+      "supported_stacks": ["react-nodejs"],
+      "policy_file": "domains/gpa/grading-policy.json",
+      "calculation_file": "domains/gpa/calculation-rules.json",
+      "validation_file": "domains/gpa/validation-rules.json"
+    }
+  ]
+}

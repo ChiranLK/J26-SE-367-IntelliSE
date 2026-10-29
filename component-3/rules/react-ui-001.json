@@ -1,0 +1,10 @@
+{
+  "id": "react-ui-001",
+  "stack": "react",
+  "layer": "ui",
+  "category": "separation",
+  "priority": 2,
+  "rule": "UI components must not call fetch directly. Use a dedicated API client module so endpoints stay traceable and mockable.",
+  "bad_example": "useEffect(() => { fetch('/api/gpa-records').then(...) }, []);",
+  "good_example": "import { gpaApi } from './api/gpaApi'; useEffect(() => { gpaApi.list().then(...) }, []);"
+}

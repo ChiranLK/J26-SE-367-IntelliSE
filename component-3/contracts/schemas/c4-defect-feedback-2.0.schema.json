@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "C4DefectCategory": {
+      "enum": [
+        "BUSINESS_LOGIC",
+        "VALIDATION",
+        "API_CONTRACT",
+        "DATA_ACCESS",
+        "UI_BEHAVIOR"
+      ],
+      "title": "C4DefectCategory",
+      "type": "string"
+    },
+    "C4Severity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "C4Severity",
+      "type": "string"
+    },
+    "EvidenceClass": {
+      "description": "Where an upstream/downstream document really came from.",
+      "enum": [
+        "SIMULATED_FIXTURE",
+        "UPSTREAM_COMPONENT_OUTPUT"
+      ],
+      "title": "EvidenceClass",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_digest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Artifact Digest Sha256",
+      "type": "string"
+    },
+    "category": {
+      "$ref": "#/$defs/C4DefectCategory"
+    },
+    "evidence_class": {
+      "$ref": "#/$defs/EvidenceClass"
+    },
+    "failing_test_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Failing Test Id",
+      "type": "string"
+    },
+    "generation_run_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Generation Run Id",
+      "type": "string"
+    },
+    "inferred_cause": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Inferred Cause",
+      "type": "string"
+    },
+    "module_digest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Module Digest Sha256",
+      "type": "string"
+    },
+    "module_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Module Id",
+      "type": "string"
+    },
+    "observed_evidence": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Observed Evidence",
+      "type": "string"
+    },
+    "project_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "proposed_repair_scope": {
+      "items": {
+        "maxLength": 120,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+        "type": "string"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Proposed Repair Scope",
+      "type": "array"
+    },
+    "report_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "report_version": {
+      "const": "2.0",
+      "title": "Report Version",
+      "type": "string"
+    },
+    "reported_at_utc": {
+      "maxLength": 40,
+      "minLength": 10,
+      "title": "Reported At Utc",
+      "type": "string"
+    },
+    "severity": {
+      "$ref": "#/$defs/C4Severity"
+    },
+    "test_seam_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Test Seam Id",
+      "type": "string"
+    },
+    "traceability_refs": {
+      "items": {
+        "maxLength": 120,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+        "type": "string"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Traceability Refs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "report_id",
+    "report_version",
+    "evidence_class",
+    "project_id",
+    "generation_run_id",
+    "artifact_digest_sha256",
+    "module_id",
+    "module_digest_sha256",
+    "failing_test_id",
+    "test_seam_id",
+    "category",
+    "severity",
+    "observed_evidence",
+    "inferred_cause",
+    "proposed_repair_scope",
+    "traceability_refs",
+    "reported_at_utc"
+  ],
+  "title": "C4DefectFeedback",
+  "type": "object"
+}

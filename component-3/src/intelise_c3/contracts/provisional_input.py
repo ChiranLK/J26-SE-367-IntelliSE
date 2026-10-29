@@ -7,9 +7,9 @@ schemas before production integration.
 """
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 
 Identifier = Annotated[
     str,
@@ -42,6 +42,9 @@ class C1Requirement(ProvisionalContractModel):
     requirement_id: Identifier
     title: NonEmptyText
     status: C1ApprovalStatus
+    # Optional functional/non-functional classification. None keeps the legacy
+    # behaviour (every requirement needs a UML anchor).
+    requirement_type: Literal["FR", "NFR"] | None = None
 
 
 class C1ApprovedSRS(ProvisionalContractModel):
@@ -53,6 +56,9 @@ class C1ApprovedSRS(ProvisionalContractModel):
     approval_status: C1ApprovalStatus
     approval_provenance_ref: NonEmptyText
     validation_report_ref: NonEmptyText
+    # Optional pin of the C2 UML release this SRS was approved against. When
+    # present, C2's uml_version must equal it (UML_VERSION_MISMATCH).
+    design_uml_version_ref: Identifier | None = None
     requirements: Annotated[tuple[C1Requirement, ...], Field(min_length=1)]
 
 
@@ -78,6 +84,7 @@ class C2UmlElement(ProvisionalContractModel):
     uml_id: Identifier
     element_type: NonEmptyText
     name: NonEmptyText
+    plantuml_source: str | None = None
 
 
 class C2UiArtifact(ProvisionalContractModel):
@@ -94,6 +101,14 @@ class RequirementUmlAnchor(ProvisionalContractModel):
     anchor_id: Identifier
     requirement_id: Identifier
     uml_id: Identifier
+    uml_element: NonEmptyText | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_uml_element(self, handler: SerializerFunctionWrapHandler) -> dict:
+        data = handler(self)
+        if self.uml_element is None:
+            data.pop("uml_element", None)
+        return data
 
 
 class C2DesignRelease(ProvisionalContractModel):

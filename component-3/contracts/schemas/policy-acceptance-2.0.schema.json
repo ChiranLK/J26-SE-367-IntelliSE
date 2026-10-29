@@ -1,0 +1,52 @@
+{
+  "additionalProperties": false,
+  "description": "Explicit acceptance of a KB domain policy, bound to its exact version and digest.",
+  "properties": {
+    "acceptance_reference": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Acceptance Reference",
+      "type": "string"
+    },
+    "accepted_by": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Accepted By",
+      "type": "string"
+    },
+    "acknowledges_sample_status": {
+      "title": "Acknowledges Sample Status",
+      "type": "boolean"
+    },
+    "policy_digest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Policy Digest Sha256",
+      "type": "string"
+    },
+    "policy_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "policy_version": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Policy Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_id",
+    "policy_version",
+    "policy_digest_sha256",
+    "accepted_by",
+    "acceptance_reference",
+    "acknowledges_sample_status"
+  ],
+  "title": "PolicyAcceptance",
+  "type": "object"
+}

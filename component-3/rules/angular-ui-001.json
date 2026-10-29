@@ -1,0 +1,10 @@
+{
+  "id": "angular-ui-001",
+  "stack": "angular",
+  "layer": "ui",
+  "category": "separation",
+  "priority": 2,
+  "rule": "Components must not use HttpClient directly. Put HTTP calls in an injectable service.",
+  "bad_example": "constructor(private http: HttpClient) {} // inside the component",
+  "good_example": "constructor(private gpaApi: GpaApiService) {} // service wraps HttpClient"
+}

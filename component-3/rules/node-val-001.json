@@ -1,0 +1,24 @@
+{
+  "id": "node-val-001",
+  "stack": "node",
+  "layer": "api",
+  "category": "input-validation",
+  "priority": 3,
+  "rule": "Validate and normalize the whole request body at the API boundary with an allow-list of fields, types and ranges before it reaches business logic; report every field error.",
+  "bad_example": "service.calculate(req.body.modules) // trusts any shape",
+  "good_example": "const { value, errors } = validateGpaRequest(req.body); if (errors.length) return sendError(res, 400, 'INVALID_INPUT', errors);",
+  "document_id": "DOC-SECURE-INPUT",
+  "artifact_types": [
+    "VALIDATION",
+    "CONTROLLER"
+  ],
+  "modules": [
+    "be.validation",
+    "be.controller"
+  ],
+  "task_types": [
+    "GENERATE",
+    "REPAIR"
+  ],
+  "provenance": "C3 research team reviewed card (2026-10-20); paraphrases OWASP Input Validation Cheat Sheet"
+}
