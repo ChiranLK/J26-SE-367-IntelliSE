@@ -22,6 +22,7 @@ Pygments==2.21.0
 pymongo==4.18.3
 pytest==8.4.2
 python-dotenv==1.2.4
+python-multipart==0.0.32
 setuptools==80.9.0
 starlette==1.7.0
 typing-inspection==0.4.4

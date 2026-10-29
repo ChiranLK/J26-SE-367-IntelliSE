@@ -6,10 +6,19 @@ from intelise_c1.api.schemas import HealthResponse
 from intelise_c1.api.projects import projects_router
 
 from intelise_c1.api.extractions import extractions_router
+from intelise_c1.api.classifications import classifications_router
+from intelise_c1.api.reviews import reviews_router
+from intelise_c1.api.srs import srs_router
+
+from intelise_c1.api.transcriptions import transcriptions_router
 
 api_router = APIRouter(prefix="/api/v1/component-1")
 api_router.include_router(projects_router)
 api_router.include_router(extractions_router)
+api_router.include_router(classifications_router)
+api_router.include_router(reviews_router)
+api_router.include_router(srs_router)
+api_router.include_router(transcriptions_router)
 
 
 @api_router.get("/health", response_model=HealthResponse, tags=["health"])

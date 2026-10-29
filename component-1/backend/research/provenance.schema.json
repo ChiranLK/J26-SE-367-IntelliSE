@@ -1,0 +1,57 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "annotation_protocol": {
+      "title": "Annotation Protocol",
+      "type": "string"
+    },
+    "annotators": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Annotators",
+      "type": "array"
+    },
+    "dataset_name": {
+      "title": "Dataset Name",
+      "type": "string"
+    },
+    "dataset_version": {
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "label_review": {
+      "title": "Label Review",
+      "type": "string"
+    },
+    "license_or_permission": {
+      "title": "License Or Permission",
+      "type": "string"
+    },
+    "purpose": {
+      "enum": [
+        "research",
+        "test"
+      ],
+      "title": "Purpose",
+      "type": "string"
+    },
+    "source_description": {
+      "title": "Source Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "purpose",
+    "dataset_name",
+    "dataset_version",
+    "source_description",
+    "license_or_permission",
+    "annotation_protocol",
+    "annotators",
+    "label_review"
+  ],
+  "title": "Provenance",
+  "type": "object"
+}

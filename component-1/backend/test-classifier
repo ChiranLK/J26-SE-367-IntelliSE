@@ -1,0 +1,16 @@
+#!/bin/sh
+# Local experimental tester only: no service startup or application model switch.
+set -eu
+C1_TEST_BACKEND_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+C1_TEST_PYTHON="$C1_TEST_BACKEND_DIR/.venv/bin/python"
+C1_TEST_ARTIFACT="$C1_TEST_BACKEND_DIR/research/models/dcai-behaviour-ai-v2/lr-c30"
+if [ ! -x "$C1_TEST_PYTHON" ]; then
+    echo "Backend Python environment is missing. See research/behaviour-revision-verification.md." >&2
+    exit 1
+fi
+if [ ! -f "$C1_TEST_ARTIFACT/pipeline.skops" ]; then
+    echo "Experimental model is missing. See research/behaviour-revision-verification.md for reproduction commands." >&2
+    exit 1
+fi
+echo "Loading the experimental FR/NFR classifier. This may take a few seconds."
+exec "$C1_TEST_PYTHON" -u "$C1_TEST_BACKEND_DIR/scripts/check_requirement.py" --model-dir "$C1_TEST_ARTIFACT" "$@"

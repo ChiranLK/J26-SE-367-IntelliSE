@@ -128,3 +128,87 @@ def test_extraction_runs_persist_across_restart(database_settings):
     with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
         records = list(mongo[database_settings.mongodb_database].extraction_runs.find({"project_id": project["id"]}))
         assert {record["run_id"] for record in records} == {a.json()["run_id"], b.json()["run_id"]}
+
+
+def test_classification_runs_survive_restart_without_model(database_settings):
+    """Real MongoDB, mocked extraction/classifier; not live-model evaluation."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+    from intelise_c1.api.extraction_schemas import ExtractionOutput
+
+    source = 'Members can export reports.'
+    output = ExtractionOutput.model_validate({'candidates': [{
+        'requirement_text': source, 'actor': 'Members', 'action': 'export',
+        'evidence': [{'quote': source, 'start': 0, 'end': len(source)}],
+    }]})
+    with TestClient(create_app(database_settings)) as first:
+        first.app.state.extraction_provider = SimpleNamespace(model_identifier='mock-extractor', extract=AsyncMock(return_value=output))
+        first.app.state.classifier = SimpleNamespace(predict=Mock(return_value=(['FR'], 'mock-baseline', 'a' * 64)))
+        project_response = first.post(PROJECTS, json={'name': 'Classification restart', 'discussion_text': source})
+        assert project_response.status_code == 201
+        project = project_response.json()
+        extracted = first.post(f"{PROJECTS}/{project['id']}/extractions")
+        assert extracted.status_code == 201
+        extraction = extracted.json()
+        url = f"{PROJECTS}/{project['id']}/extractions/{extraction['run_id']}/classifications"
+        a, b = first.post(url), first.post(url)
+        assert a.status_code == b.status_code == 201
+        assert a.json()['classification_id'] != b.json()['classification_id']
+    with TestClient(create_app(database_settings)) as restarted:
+        assert restarted.get(url + '/latest').json() == b.json()
+        assert restarted.get(f"{PROJECTS}/{project['id']}/extractions/latest").json() == extraction
+        assert restarted.get(f"{PROJECTS}/{project['id']}").json() == project
+        assert restarted.post(url).status_code == 503  # No trained classifier configured.
+    with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
+        records = list(mongo[database_settings.mongodb_database].classification_runs.find({'extraction_run_id': extraction['run_id']}))
+        assert {record['classification_id'] for record in records} == {a.json()['classification_id'], b.json()['classification_id']}
+
+
+def test_label_reviews_survive_restart_and_preserve_originals(database_settings):
+    """Actual MongoDB; valid API extraction and classifier outputs are mocked."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+    from intelise_c1.api.extraction_schemas import ExtractionOutput
+
+    source = 'Users shall be able to reset their passwords.'
+    output = ExtractionOutput.model_validate({'candidates': [{
+        'requirement_text': source, 'actor': None, 'action': None,
+        'evidence': [{'quote': source, 'start': 0, 'end': len(source)}],
+    }]})
+    with TestClient(create_app(database_settings)) as first:
+        first.app.state.extraction_provider = SimpleNamespace(model_identifier='mock-extractor', extract=AsyncMock(return_value=output))
+        first.app.state.classifier = SimpleNamespace(predict=Mock(return_value=(['NFR'], 'mock-baseline', 'a' * 64)))
+        response = first.post(PROJECTS, json={'name': 'Disposable label review', 'discussion_text': source})
+        assert response.status_code == 201
+        project = response.json()
+        extracted = first.post(f"{PROJECTS}/{project['id']}/extractions")
+        assert extracted.status_code == 201
+        extraction = extracted.json()
+        class_url = f"{PROJECTS}/{project['id']}/extractions/{extraction['run_id']}/classifications"
+        response = first.post(class_url)
+        assert response.status_code == 201
+        classification = response.json()
+        root = f"{class_url}/{classification['classification_id']}"
+        payload = {'submission_id': str(uuid4()), 'reviewed_label': 'FR', 'reviewer_id': 'Integration reviewer', 'note': 'User action; reviewed manually.'}
+        save_url = f"{root}/requirements/{extraction['candidates'][0]['requirement_id']}/reviews"
+        response = first.post(save_url, json=payload)
+        assert response.status_code == 201, response.text
+        saved = response.json()
+        assert saved['original_prediction'] == 'NFR' and saved['reviewed_label'] == 'FR'
+        assert first.post(save_url, json=payload).json() == saved
+        assert first.get(root + '/reviews').json()['reviews'] == [saved]
+        newer = first.post(class_url).json()
+        assert first.get(f"{class_url}/{newer['classification_id']}/reviews").json()['reviews'] == []
+    with TestClient(create_app(database_settings)) as restarted:
+        assert restarted.get(root + '/reviews').json()['reviews'] == [saved]
+        assert restarted.get(f"{PROJECTS}/{project['id']}").json() == project
+        assert restarted.get(f"{PROJECTS}/{project['id']}/extractions/latest").json() == extraction
+        assert restarted.get(class_url + '/latest').json() == newer
+        response = restarted.post(save_url, json=payload)
+        assert response.status_code == 200 and response.json() == saved
+        assert restarted.get('/api/v1/component-1/health').status_code == 200
+    with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
+        db = mongo[database_settings.mongodb_database]
+        assert db.classification_reviews.count_documents({}) == 1
+        assert db.classification_runs.count_documents({}) == 2
+        assert db.extraction_runs.count_documents({}) == 1

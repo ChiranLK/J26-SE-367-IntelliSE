@@ -1,0 +1,12 @@
+{
+  "annotation_protocol": "Fixed test labels for code verification; no scientific annotation process claimed.",
+  "annotators": [
+    "test-fixture-author"
+  ],
+  "dataset_name": "Tiny synthetic mechanics fixture; NOT research data",
+  "dataset_version": "test-fixture-v1",
+  "label_review": "Test fixture labels only; not research adjudication.",
+  "license_or_permission": "Repository-owned test fixture only; not a research corpus.",
+  "purpose": "test",
+  "source_description": "Twelve hand-written fictional examples in six fictional documents, for tests only."
+}
