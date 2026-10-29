@@ -1,0 +1,152 @@
+{
+  "schema_version": "c1-local-baseline-summary-v1",
+  "dataset": "DCAI24 user-supplied export",
+  "redistribution_status": "Not established; dataset, row metadata and learned model binaries retained locally only.",
+  "raw_sha256": "b39a229a62c3c28186d5deb945b175da41f3f4ac7dbfddb787e8fd3e4abea49b",
+  "raw_rows": 3482,
+  "disposition_counts": {
+    "conflicting_labels": 36,
+    "included": 2572,
+    "invalid_label": 517,
+    "same_label_duplicate": 357
+  },
+  "usable_rows": 2572,
+  "class_counts": {
+    "FR": 866,
+    "NFR": 1706
+  },
+  "dataset_version": "c96758ce53f4579de4214a3652720d8a0e9f55e8b09f449ea136bcd3ad806874",
+  "split_id": "3e37a23a255cb1985f57ed3a7e389d2c2b6426e8e2b46fd9b6fa385de1fb2efd",
+  "seed": 42,
+  "evaluation_method": "stratified_normalized_text_holdout",
+  "genuine_project_count": 0,
+  "grouping_limitation": "Within-corpus normalized-text holdout, not project-separated; Dataset_Name is not a project ID.",
+  "normalized_text_cross_split_overlap": 0,
+  "splits": {
+    "test": {
+      "class_counts": {
+        "FR": 174,
+        "NFR": 342
+      },
+      "examples": 516
+    },
+    "train": {
+      "class_counts": {
+        "FR": 518,
+        "NFR": 1022
+      },
+      "examples": 1540
+    },
+    "validation": {
+      "class_counts": {
+        "FR": 174,
+        "NFR": 342
+      },
+      "examples": 516
+    }
+  },
+  "selection_protocol": {
+    "c_grid": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "selection_metric": "validation macro_f1",
+    "tie_break": "smallest C",
+    "seed": 42,
+    "fit_data": "training only",
+    "test_policy": "evaluate the selected frozen artifact exactly once; no test-driven tuning",
+    "evaluation_method": "stratified normalized-text holdout; NOT project-separated",
+    "refit_on_validation": false
+  },
+  "selected": {
+    "directory": "lr-c10",
+    "c": 10.0,
+    "validation_macro_f1": 0.8925053747312635,
+    "validation_per_class": {
+      "FR": {
+        "f1-score": 0.8587570621468926,
+        "precision": 0.8444444444444444,
+        "recall": 0.8735632183908046,
+        "support": 174.0
+      },
+      "NFR": {
+        "f1-score": 0.9262536873156342,
+        "precision": 0.9345238095238095,
+        "recall": 0.9181286549707602,
+        "support": 342.0
+      }
+    },
+    "model_version": "b48d2a3a87e3669957a1c5374c8879cd84fc1fe232e002a1c50c9821cb693823"
+  },
+  "validation_macro_f1_by_c": {
+    "0.1": 0.8340562381462852,
+    "1": 0.8684279792064223,
+    "10": 0.8925053747312635
+  },
+  "test": {
+    "evaluation_split": "test",
+    "examples": 516,
+    "class_counts": {
+      "FR": 174,
+      "NFR": 342
+    },
+    "macro_f1": 0.9040697674418605,
+    "per_class": {
+      "FR": {
+        "f1-score": 0.872093023255814,
+        "precision": 0.8823529411764706,
+        "recall": 0.8620689655172413,
+        "support": 174.0
+      },
+      "NFR": {
+        "f1-score": 0.936046511627907,
+        "precision": 0.930635838150289,
+        "recall": 0.9415204678362573,
+        "support": 342.0
+      }
+    },
+    "confusion_matrix": {
+      "columns": "predicted",
+      "label_order": [
+        "FR",
+        "NFR"
+      ],
+      "rows": "true",
+      "values": [
+        [
+          150,
+          24
+        ],
+        [
+          20,
+          322
+        ]
+      ]
+    }
+  },
+  "model_identifier": "tfidf-logistic-regression",
+  "model_version": "b48d2a3a87e3669957a1c5374c8879cd84fc1fe232e002a1c50c9821cb693823",
+  "configuration": {
+    "c": 10.0,
+    "max_features": 20000,
+    "max_iter": 1000,
+    "seed": 42
+  },
+  "python_version": "3.12.8",
+  "dependencies": {
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1",
+    "skops": "0.16.0"
+  },
+  "source_file_sha256": {
+    "raw/dcai-v1/exclusion_report.json": "11df2e117cd5a94073bed9b6fa918404e4dad5b440fe3ffbeb6ca6483d22582f",
+    "prepared/dcai-v1/manifest.json": "61893d800bccbd8e59f6dafe6f2a62cd256aeb11ea0867c6b92149f3bf34369a",
+    "models/dcai-v1/selection.json": "3e5d79155319b77e79cd5cf7c737fdb36935215a15fe269199b907458eee5f35",
+    "models/dcai-v1/selection_protocol.json": "4d3e971ef73629bfa371c4924cc861605d50fd7d78c7f13073a5f41c107659cc",
+    "models/dcai-v1/lr-c10/metadata.json": "c660a97d5473e57f552e783075f1444f268ab8f9e3d181b332b3bb03da06619d",
+    "models/dcai-v1/lr-c10/validation_metrics.json": "ee7425f0408cea6228912061cf3538be57585358ca1a7112eefb29d9bb86c597",
+    "models/dcai-v1/lr-c10/test_metrics.json": "02bb9421b0c5c2416e3763929b03961a3b1d052452e7119865f8d29a9521eb68"
+  }
+}

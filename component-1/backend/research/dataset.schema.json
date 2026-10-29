@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "example_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Example Id",
+      "type": "string"
+    },
+    "label": {
+      "enum": [
+        "FR",
+        "NFR"
+      ],
+      "title": "Label",
+      "type": "string"
+    },
+    "source_project_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Project Id"
+    },
+    "source_reference": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Source Reference",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "example_id",
+    "text",
+    "label",
+    "source_project_id",
+    "source_reference"
+  ],
+  "title": "Example",
+  "type": "object"
+}

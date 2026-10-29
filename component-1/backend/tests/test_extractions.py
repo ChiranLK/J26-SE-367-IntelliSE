@@ -31,6 +31,15 @@ def candidate(quote, text, actor, action):
             "evidence": [{"quote": quote, "start": start, "end": start + len(quote)}]}
 
 
+def wire_json(data):
+    data = deepcopy(data)
+    for item in data["candidates"]:
+        for span in item["evidence"]:
+            span.pop("start", None)
+            span.pop("end", None)
+    return json.dumps(data)
+
+
 def output():
     return ExtractionOutput.model_validate({"candidates": [
         candidate("Only admins may export reports if approved.",
@@ -70,7 +79,7 @@ def test_atomic_structure_permissions_negation_and_separate_runs(client):
     a, b = first.json(), second.json()
     assert a["run_id"] != b["run_id"]
     assert a["source_discussion_hash"] == sha256(SOURCE.encode()).hexdigest()
-    assert a["model_identifier"] == "mock-model" and a["prompt_version"] == "c1-atomic-evidence-v1"
+    assert a["model_identifier"] == "mock-model" and a["prompt_version"] == "c1-exact-source-v2"
     assert a["created_at"].endswith("Z")
     assert len(a["candidates"]) == 2
     assert a["candidates"][0]["requirement_text"] == "Only admins may export reports if approved."
@@ -211,13 +220,13 @@ def test_real_adapter_with_mock_http(monkeypatch, case, error):
             return httpx.Response(401, text="secret discussion")
         if case == "malformed":
             return httpx.Response(200, text="not json")
-        text = output().model_dump_json()
+        text = wire_json(output().model_dump())
         if case == "schema":
             text = '{"candidates":[{}]}'
         if case == "evidence":
             data = output().model_dump()
             data["candidates"][0]["evidence"][0]["quote"] = "invented"
-            text = json.dumps(data)
+            text = wire_json(data)
         message = {"stop_reason": "max_tokens" if case == "truncated" else "end_turn",
                    "content": [{"type": "text", "text": text}]}
         if case == "refusal":
@@ -269,7 +278,7 @@ def test_context_spans_repeated_quotes_unicode_and_original_line_endings():
         start = source.rindex(quote)
         evidence.append({"quote": quote, "start": start, "end": start + len(quote)})
     result = ExtractionOutput.model_validate({"candidates": [{
-        "requirement_text": "Only admins may export reports after approval.",
+        "requirement_text": "Export reports.",
         "actor": "admins", "action": "Export reports", "evidence": evidence,
     }]})
     run = build_run(source, result, ID, "mock-model")
@@ -284,8 +293,8 @@ def test_context_spans_repeated_quotes_unicode_and_original_line_endings():
         build_run(source, ExtractionOutput.model_validate(data), ID, "mock-model")
 
 
-def test_atomic_obligations_can_share_evidence(client):
-    """Fixture handling only: the mock, not a live model, splits the obligations."""
+def test_rewritten_splits_rejected_even_with_shared_real_evidence(client):
+    """The exact-source policy rejects rewritten atomic splits."""
     source = "Members may view reports and download them only after approval."
     evidence = [{"quote": source, "start": 0, "end": len(source)}]
     result = ExtractionOutput.model_validate({"candidates": [
@@ -297,11 +306,8 @@ def test_atomic_obligations_can_share_evidence(client):
     client.app.state.projects.get.return_value.discussion_text = source
     client.app.state.extraction_provider.extract.return_value = result
     response = client.post(URL)
-    assert response.status_code == 201
-    candidates = response.json()["candidates"]
-    assert [item["requirement_text"] for item in candidates] == [item.requirement_text for item in result.candidates]
-    assert candidates[0]["requirement_id"] != candidates[1]["requirement_id"]
-    assert all(item["evidence"] == evidence for item in candidates)
+    assert response.status_code == 502
+    assert client.app.state.extractions.collection.documents == []
 
 
 @pytest.mark.parametrize("key, model", [(None, "model"), ("", "model"), ("  ", "model"), ("key", ""), ("key", "  ")])
@@ -355,8 +361,8 @@ def test_embedded_instructions_are_sent_as_data(monkeypatch):
 def test_provider_schema_and_local_validation_limits():
     schema = provider_schema()
     assert schema["additionalProperties"] is False
-    assert schema["$defs"]["CandidateInput"]["additionalProperties"] is False
-    quote = schema["$defs"]["EvidenceSpan"]["properties"]["quote"]
+    assert schema["$defs"]["GeneratedCandidate"]["additionalProperties"] is False
+    quote = schema["$defs"]["QuoteEvidence"]["properties"]["quote"]
     assert "maxLength" not in quote
     assert "4000" in quote["description"]
     data = output().model_dump()

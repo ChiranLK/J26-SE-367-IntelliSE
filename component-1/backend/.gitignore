@@ -19,6 +19,14 @@ htmlcov/
 coverage.xml
 .ruff_cache/
 generated/
+research/raw/
+research/prepared/
+research/models/
 tmp/
 *.log
 .DS_Store
+
+# Pretrained audio weights and isolated ASR environment; audio uses generated temp paths.
+models/
+.venv-whisper/
+audio-uploads/
