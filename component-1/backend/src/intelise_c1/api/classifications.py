@@ -27,7 +27,7 @@ async def context(project_id: str, run_id: UUID, request: Request):
         raise HTTPException(404, "Extraction run not found for this project.")
     return extraction, repository
 
-
+#Classifies a specific saved extraction and persists the result
 @classifications_router.post("/{project_id}/extractions/{run_id}/classifications", response_model=ClassificationRun, status_code=201)
 async def classify(project_id: ProjectId, run_id: UUID, request: Request):
     extraction, repository = await context(project_id, run_id, request)

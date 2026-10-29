@@ -19,7 +19,7 @@ class LocalClassifier:
         self.directory = directory
         self._loaded = None
         self._lock = Lock()
-
+#Runs inference using the saved pipeline
     def predict(self, texts: list[str]):
         if self.directory is None:
             raise ClassifierUnavailable()

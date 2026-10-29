@@ -16,7 +16,7 @@ PRODUCER = "intelise-c1-tfidf-logistic-v1"
 LABEL_MAPPING = {"FR": "Functional Requirement", "NFR": "Non-Functional Requirement"}
 DEPENDENCIES = ("scikit-learn", "numpy", "scipy", "skops")
 
-
+#Defines and trains TF-IDF + logistic regression
 class BaselineConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     c: float = Field(default=1.0, gt=0, le=1000, allow_inf_nan=False)
@@ -45,7 +45,7 @@ class ArtifactMetadata(BaseModel):
 def dependency_versions():
     return {name: version(name) for name in DEPENDENCIES}
 
-
+#Defines and trains TF-IDF + logistic regression
 def fit_pipeline(examples, config: BaselineConfig):
     """Low-level fit used by research training and test-only mechanical checks."""
     from sklearn.exceptions import ConvergenceWarning
@@ -101,7 +101,7 @@ def save_artifact(pipeline, directory: Path, manifest: dict, config: BaselineCon
     write_json(directory / "split_manifest.json", manifest)
     return metadata
 
-
+#Validates and loads the saved model
 def load_artifact(directory: Path, *, allow_test=False):
     """Only the operator-configured local directory; never accept request paths.
 
