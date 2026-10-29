@@ -133,6 +133,7 @@ export async function getLatestClassification(projectId, extraction, options) {
   classificationLabels(data, extraction, projectId)
   return data
 }
+//Sends the project classification request
 
 export async function classifyExtraction(projectId, extraction, options) {
   const path = classificationPath(projectId, extraction.run_id)
