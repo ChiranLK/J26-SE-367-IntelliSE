@@ -1,0 +1,46 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-STACK-001",
+      "version": "1.0.0",
+      "category": "STACK_SELECTION",
+      "priority": 100,
+      "description": "React + Node.js + PostgreSQL is the only stack with an implemented hybrid template set.",
+      "target_kind": "STACK",
+      "conditions": {
+        "all": [
+          {
+            "fact": "stack_id",
+            "equals": "react-nodejs"
+          },
+          {
+            "fact": "generator_status",
+            "equals": "IMPLEMENTED"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "fe.app-shell",
+          "be.app",
+          "docs"
+        ],
+        "artifact_types": [
+          "CONFIGURATION",
+          "FRONTEND",
+          "COMPOSITION_ROOT",
+          "DOCUMENTATION"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-STACK-REACT-NODEJS",
+        "KB-API-CONVENTIONS"
+      ],
+      "validation_requirements": [],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "UNSUPPORTED"
+    }
+  ]
+}

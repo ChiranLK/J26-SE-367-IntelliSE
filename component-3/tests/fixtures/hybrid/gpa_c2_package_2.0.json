@@ -1,0 +1,152 @@
+{
+  "contract_version": "2.0",
+  "evidence_class": "SIMULATED_FIXTURE",
+  "project_id": "PROJECT-GPA-HYBRID-001",
+  "srs_version": "SRS-GPA-2.0",
+  "uml_version": "UML-GPA-2.0",
+  "release_status": "VALIDATED",
+  "released_at_utc": "2026-10-02T09:00:00Z",
+  "validation_reports": {
+    "semantic_report_ref": "SIMULATED-C2-GPA-SEMANTIC-2.0",
+    "syntax_report_ref": "SIMULATED-C2-GPA-SYNTAX-2.0",
+    "ui_report_ref": "SIMULATED-C2-GPA-UI-2.0"
+  },
+  "uml_artifacts": [
+    {
+      "uml_id": "UML-GPA-CLASS-201",
+      "diagram_type": "CLASS",
+      "name": "GpaCalculatorClassDiagram",
+      "plantuml_source": "@startuml\nclass ModuleResult {\n  +moduleCode: String\n  +credits: Integer\n  +grade: String\n  +countsTowardGpa: Boolean\n}\nclass GpaCalculation {\n  +id: String\n  +policyId: String\n  +policyVersion: String\n  +totalCredits: Integer\n  +gpa: Number\n  +createdAt: DateTime\n}\nclass GradingPolicy {\n  +gradePoint(grade: String): Number\n}\nclass GpaCalculationService {\n  +calculate(modules: ModuleResult[]): GpaCalculation\n  +listHistory(): GpaCalculation[]\n}\nclass GpaCalculationRepository {\n  +save(calculation: GpaCalculation): GpaCalculation\n  +list(): GpaCalculation[]\n}\nGpaCalculation \"1\" *-- \"1..*\" ModuleResult : contains\nGpaCalculationService --> GradingPolicy : uses\nGpaCalculationService --> GpaCalculationRepository : uses\nGpaCalculationRepository --> GpaCalculation : persists\n@enduml"
+    },
+    {
+      "uml_id": "UML-GPA-USECASE-201",
+      "diagram_type": "USE_CASE",
+      "name": "GpaCalculatorUseCases",
+      "plantuml_source": "@startuml\nactor Student\nStudent --> (Enter module results)\nStudent --> (Calculate GPA)\nStudent --> (View calculation history)\n@enduml"
+    }
+  ],
+  "ui_specification": [
+    {
+      "screen_id": "UI-GPA-SCREEN-201",
+      "title": "GPA Calculator",
+      "requirement_ids": [
+        "REQ-GPA-101",
+        "REQ-GPA-102",
+        "REQ-GPA-103",
+        "REQ-GPA-104",
+        "REQ-GPA-105"
+      ],
+      "components": [
+        {
+          "component_id": "UI-GPA-ROWS",
+          "kind": "DYNAMIC_ROWS",
+          "label": "Module results",
+          "binds_to": "ModuleResult"
+        },
+        {
+          "component_id": "UI-GPA-CODE",
+          "kind": "TEXT_INPUT",
+          "label": "Module code",
+          "binds_to": "ModuleResult.moduleCode"
+        },
+        {
+          "component_id": "UI-GPA-CREDITS",
+          "kind": "NUMBER_INPUT",
+          "label": "Credits",
+          "binds_to": "ModuleResult.credits"
+        },
+        {
+          "component_id": "UI-GPA-GRADE",
+          "kind": "SELECT",
+          "label": "Grade",
+          "binds_to": "ModuleResult.grade"
+        },
+        {
+          "component_id": "UI-GPA-COUNTS",
+          "kind": "CHECKBOX",
+          "label": "Counts toward GPA",
+          "binds_to": "ModuleResult.countsTowardGpa"
+        },
+        {
+          "component_id": "UI-GPA-CALCULATE",
+          "kind": "BUTTON",
+          "label": "Calculate GPA",
+          "binds_to": "GpaCalculationService.calculate"
+        },
+        {
+          "component_id": "UI-GPA-RESULT",
+          "kind": "RESULT_PANEL",
+          "label": "GPA result",
+          "binds_to": "GpaCalculation.gpa"
+        },
+        {
+          "component_id": "UI-GPA-POLICY",
+          "kind": "DISCLOSURE",
+          "label": "Grading policy",
+          "binds_to": "GpaCalculation.policyVersion"
+        },
+        {
+          "component_id": "UI-GPA-HISTORY",
+          "kind": "LIST",
+          "label": "Calculation history",
+          "binds_to": "GpaCalculationService.listHistory"
+        },
+        {
+          "component_id": "UI-GPA-ERRORS",
+          "kind": "ERROR_SUMMARY",
+          "label": "Validation errors"
+        }
+      ]
+    }
+  ],
+  "requirement_uml_anchors": [
+    {
+      "anchor_id": "ANC-GPA-101-A",
+      "requirement_id": "REQ-GPA-101",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "ModuleResult"
+    },
+    {
+      "anchor_id": "ANC-GPA-102-A",
+      "requirement_id": "REQ-GPA-102",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GpaCalculationService"
+    },
+    {
+      "anchor_id": "ANC-GPA-102-B",
+      "requirement_id": "REQ-GPA-102",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GradingPolicy"
+    },
+    {
+      "anchor_id": "ANC-GPA-102-C",
+      "requirement_id": "REQ-GPA-102",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GpaCalculation"
+    },
+    {
+      "anchor_id": "ANC-GPA-103-A",
+      "requirement_id": "REQ-GPA-103",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "ModuleResult"
+    },
+    {
+      "anchor_id": "ANC-GPA-104-A",
+      "requirement_id": "REQ-GPA-104",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GpaCalculationRepository"
+    },
+    {
+      "anchor_id": "ANC-GPA-104-B",
+      "requirement_id": "REQ-GPA-104",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GpaCalculation"
+    },
+    {
+      "anchor_id": "ANC-GPA-105-A",
+      "requirement_id": "REQ-GPA-105",
+      "uml_id": "UML-GPA-CLASS-201",
+      "uml_element": "GpaCalculation"
+    }
+  ]
+}

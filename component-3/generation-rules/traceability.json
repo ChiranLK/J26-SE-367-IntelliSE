@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-TRACE-001",
+      "version": "1.0.0",
+      "category": "TRACEABILITY",
+      "priority": 100,
+      "description": "Every accepted artifact carries requirement IDs, SRS/UML versions, rule IDs, template version, digest and run ID; orphans are rejected.",
+      "target_kind": "CROSS_CUTTING",
+      "conditions": {
+        "all": [
+          {
+            "fact": "concern",
+            "equals": "TRACEABILITY"
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [],
+        "artifact_types": []
+      },
+      "requires_knowledge": [
+        "KB-TRACE-SCHEMA"
+      ],
+      "validation_requirements": [
+        "V-TRACE-NO-ORPHANS"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "FAILED"
+    }
+  ]
+}

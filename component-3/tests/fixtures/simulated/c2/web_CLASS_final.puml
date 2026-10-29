@@ -1,0 +1,59 @@
+@startuml
+skinparam classAttributeIconSize 0
+abstract class Operation {
+  - symbol : String
+}
+
+class Addition {
+  + calculate(firstNumber : double, secondNumber : double) : double
+}
+
+class Subtraction {
+  + calculate(firstNumber : double, secondNumber : double) : double
+}
+
+class Multiplication {
+  + calculate(firstNumber : double, secondNumber : double) : double
+}
+
+class Division {
+  + calculate(firstNumber : double, secondNumber : double) : double
+}
+
+class Calculation {
+  - firstNumber : double
+  - secondNumber : double
+  - result : double
+  - status : String
+  + calculate() : void
+}
+
+enum CalculationStatus {
+  SUCCESS
+  ERROR
+}
+
+class History {
+  - totalCount : int
+  + addCalculation(calculation : Calculation) : void
+}
+
+class Calculator {
+  - displayValue : double
+  - history : History
+  + enterNumber(number : double) : void
+  + selectOperation(operation : Operation) : void
+  + calculateResult() : void
+  + clearHistory() : void
+}
+
+Operation <|-- Addition
+Operation <|-- Subtraction
+Operation <|-- Multiplication
+Operation <|-- Division
+Calculation "1" -- "1" Operation : uses
+History "1" *-- "0..*" Calculation : contains
+Calculator "1" -- "1" History : has
+Calculation "1" -- "1" CalculationStatus : has
+
+@enduml

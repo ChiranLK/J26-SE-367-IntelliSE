@@ -234,6 +234,15 @@
       "expected_status": 409,
       "expected_code": "CONTRACT_VERSION_MISMATCH",
       "expected_field": "c2.contract_version"
+    },
+    {
+      "name": "uml_version_mismatch",
+      "mutations": [
+        {"operation": "set", "path": ["c1", "design_uml_version_ref"], "value": "UML-0.9"}
+      ],
+      "expected_status": 409,
+      "expected_code": "UML_VERSION_MISMATCH",
+      "expected_field": "c2.uml_version"
     }
   ]
 }

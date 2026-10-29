@@ -1,0 +1,10 @@
+{
+  "id": "node-svc-001",
+  "stack": "node",
+  "layer": "service",
+  "category": "dependency-injection",
+  "priority": 3,
+  "rule": "Create services with their dependencies passed in (factory or constructor) so tests can supply fakes.",
+  "bad_example": "const repo = require('./gpaRecordRepository'); // hard-wired import used inside functions",
+  "good_example": "function createGpaRecordService({ repository }) { return { list: () => repository.list() }; }"
+}

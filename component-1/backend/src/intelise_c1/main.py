@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 
 from intelise_c1.api.router import api_router
+from intelise_c1.services.provider import AnthropicProvider
 from intelise_c1.core.config import Settings
 from intelise_c1.core.database import UNAVAILABLE_DETAIL, database_lifespan
 
@@ -18,6 +19,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description="Backend foundation. Health reports application availability only.",
         lifespan=database_lifespan(settings),
     )
+    application.state.settings = settings
+    application.state.extraction_provider = AnthropicProvider(settings)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

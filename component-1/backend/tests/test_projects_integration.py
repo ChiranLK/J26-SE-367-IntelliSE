@@ -100,3 +100,31 @@ def test_persistence_across_application_restart(database_settings):
         response = restarted.get(f"{PROJECTS}/{saved['id']}")
         assert response.status_code == 200
         assert response.json() == saved
+
+
+def test_extraction_runs_persist_across_restart(database_settings):
+    """Real MongoDB persistence with mocked extraction; no live-model accuracy claim."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from intelise_c1.api.extraction_schemas import ExtractionOutput
+
+    source = "Guests must not delete reports."
+    output = ExtractionOutput.model_validate({"candidates": [{
+        "requirement_text": source, "actor": "Guests", "action": "delete",
+        "evidence": [{"quote": source, "start": 0, "end": len(source)}],
+    }]})
+    with TestClient(create_app(database_settings)) as first:
+        first.app.state.extraction_provider = SimpleNamespace(
+            model_identifier="mock-model", extract=AsyncMock(return_value=output)
+        )
+        project = first.post(PROJECTS, json={"name": "Extraction restart", "discussion_text": source}).json()
+        url = f"{PROJECTS}/{project['id']}/extractions"
+        a, b = first.post(url), first.post(url)
+        assert a.status_code == b.status_code == 201
+        assert a.json()["run_id"] != b.json()["run_id"]
+    with TestClient(create_app(database_settings)) as restarted:
+        assert restarted.get(url + "/latest").json() == b.json()
+        assert restarted.get(f"{PROJECTS}/{project['id']}").json() == project
+    with MongoClient(database_settings.mongodb_uri.get_secret_value()) as mongo:
+        records = list(mongo[database_settings.mongodb_database].extraction_runs.find({"project_id": project["id"]}))
+        assert {record["run_id"] for record in records} == {a.json()["run_id"], b.json()["run_id"]}

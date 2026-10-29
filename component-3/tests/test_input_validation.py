@@ -155,3 +155,57 @@ def test_health_endpoint_regression(client: TestClient) -> None:
         "status": "healthy",
         "api_version": "v1",
     }
+
+
+def test_matching_design_uml_version_ref_is_accepted(client: TestClient) -> None:
+    payload = _load_json("valid_input_package.json")
+    payload["c1"]["design_uml_version_ref"] = payload["c2"]["uml_version"]
+
+    response = client.post("/api/v1/validate-input", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["uml_version"] == payload["c2"]["uml_version"]
+
+
+def test_uml_version_mismatch_does_not_mask_other_errors(client: TestClient) -> None:
+    payload = _load_json("valid_input_package.json")
+    payload["c1"]["design_uml_version_ref"] = "UML-0.9"
+    payload["c1"]["approval_status"] = "DRAFT"
+
+    response = client.post("/api/v1/validate-input", json=payload)
+
+    assert response.status_code == 409
+    codes = {error["code"] for error in response.json()["errors"]}
+    assert {"UML_VERSION_MISMATCH", "C1_PACKAGE_NOT_APPROVED"} <= codes
+
+
+def test_blank_uml_version_is_rejected_by_the_service_with_409_code() -> None:
+    from intelise_c3.core.errors import ApplicationError
+
+    package = ProvisionalInputPackage.model_validate(
+        _load_json("valid_input_package.json")
+    )
+    # model_copy skips schema validation, so this exercises the service-level
+    # guard independently of the schema's own min_length/pattern checks.
+    blank = package.model_copy(
+        update={"c2": package.c2.model_copy(update={"uml_version": "  "})}
+    )
+
+    with pytest.raises(ApplicationError) as captured:
+        InputValidationService().validate(blank)
+
+    assert captured.value.status_code == 409
+    assert captured.value.errors[0].code == "UML_VERSION_MISMATCH"
+    assert captured.value.errors[0].field == "c2.uml_version"
+
+
+@pytest.mark.parametrize("blank", ["", " "])
+def test_schema_still_rejects_blank_uml_version_with_422(
+    client: TestClient, blank: str
+) -> None:
+    payload = _load_json("valid_input_package.json")
+    payload["c2"]["uml_version"] = blank
+
+    response = client.post("/api/v1/validate-input", json=payload)
+
+    assert response.status_code == 422

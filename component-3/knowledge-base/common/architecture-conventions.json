@@ -1,0 +1,43 @@
+{
+  "file_id": "KB-COMMON-ARCHITECTURE-CONVENTIONS",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item_id": "KB-ARCH-NODE-LAYERED",
+      "description": "Node.js Express layered architecture: Route -> Controller -> Service -> Repository -> Database.",
+      "layer_by_directory": {
+        "backend/src/routes": "ROUTE",
+        "backend/src/controllers": "CONTROLLER",
+        "backend/src/services": "SERVICE",
+        "backend/src/policy": "POLICY",
+        "backend/src/validation": "VALIDATION",
+        "backend/src/repositories": "REPOSITORY",
+        "backend/src/db": "DATABASE",
+        "backend/src/errors.js": "SHARED",
+        "backend/src/app.js": "COMPOSITION_ROOT",
+        "backend/src/server.js": "COMPOSITION_ROOT",
+        "frontend/src": "FRONTEND"
+      },
+      "allowed_dependencies": {
+        "ROUTE": ["CONTROLLER", "SHARED"],
+        "CONTROLLER": ["SERVICE", "VALIDATION", "SHARED"],
+        "SERVICE": ["POLICY", "SHARED"],
+        "POLICY": ["SHARED"],
+        "VALIDATION": ["POLICY", "SHARED"],
+        "REPOSITORY": ["DATABASE", "SHARED"],
+        "DATABASE": ["SHARED"],
+        "SHARED": [],
+        "COMPOSITION_ROOT": ["ROUTE", "CONTROLLER", "SERVICE", "POLICY", "VALIDATION", "REPOSITORY", "DATABASE", "SHARED", "COMPOSITION_ROOT"],
+        "FRONTEND": ["FRONTEND"]
+      },
+      "forbidden_examples": [
+        "ROUTE -> REPOSITORY",
+        "ROUTE -> DATABASE",
+        "CONTROLLER -> REPOSITORY",
+        "CONTROLLER -> DATABASE",
+        "FRONTEND -> DATABASE"
+      ],
+      "service_repository_binding": "Services receive repositories through constructor injection; they do not import repository modules."
+    }
+  ]
+}

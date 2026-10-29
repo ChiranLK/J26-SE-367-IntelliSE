@@ -1,0 +1,30 @@
+{
+  "rule_set_id": "C3-HYBRID-RULES",
+  "rule_set_version": "1.0.0",
+  "schema_version": "1.0",
+  "purpose": "Deterministic, versioned generation rules. Facts live in knowledge-base/; best-practice RAG cards live in rules/.",
+  "matching": "Within one target and category the highest priority wins; equal top priority between different rules is AMBIGUOUS and returns REVIEW_REQUIRED. No match is UNSUPPORTED; C3 never fabricates an implementation for it.",
+  "outcomes": [
+    "MATCHED",
+    "UNSUPPORTED",
+    "AMBIGUOUS",
+    "REVIEW_REQUIRED",
+    "FAILED"
+  ],
+  "files": [
+    "input-validation.json",
+    "stack-selection.json",
+    "uml-mapping.json",
+    "gpa-calculation.json",
+    "crud.json",
+    "api.json",
+    "database.json",
+    "validation.json",
+    "frontend.json",
+    "test-seams.json",
+    "architecture.json",
+    "traceability.json",
+    "deployment.json",
+    "llm-assisted.json"
+  ]
+}

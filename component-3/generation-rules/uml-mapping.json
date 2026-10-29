@@ -1,0 +1,54 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-UML-ENTITY-001",
+      "version": "1.0.0",
+      "category": "UML_MAPPING",
+      "priority": 80,
+      "description": "GPA entity classes become OpenAPI schemas and PostgreSQL entities with KB type mapping.",
+      "target_kind": "UML_CLASS",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "class_role",
+            "equals": "ENTITY"
+          },
+          {
+            "fact": "class_name",
+            "in": [
+              "ModuleResult",
+              "GpaCalculation"
+            ]
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "api.openapi",
+          "db.schema"
+        ],
+        "artifact_types": [
+          "API",
+          "DATABASE"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-TYPE-MAP",
+        "KB-DB-CONVENTIONS",
+        "KB-UML-RELATIONSHIPS"
+      ],
+      "validation_requirements": [
+        "V-D2C-FIELDS",
+        "V-D2C-TYPES"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}

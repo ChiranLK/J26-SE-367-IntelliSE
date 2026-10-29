@@ -1,0 +1,271 @@
+{
+  "$defs": {
+    "C1ApprovalStatusV2": {
+      "enum": [
+        "CLIENT_APPROVED",
+        "PENDING_CLIENT_APPROVAL",
+        "REJECTED",
+        "NEEDS_HUMAN_REVIEW"
+      ],
+      "title": "C1ApprovalStatusV2",
+      "type": "string"
+    },
+    "C1Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "classification_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Classification Report Ref",
+          "type": "string"
+        },
+        "quality_report_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Quality Report Ref",
+          "type": "string"
+        },
+        "source_document_ref": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Source Document Ref",
+          "type": "string"
+        },
+        "source_system": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Source System",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_system",
+        "source_document_ref",
+        "quality_report_ref",
+        "classification_report_ref"
+      ],
+      "title": "C1Provenance",
+      "type": "object"
+    },
+    "C1RequirementV2": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/C1ApprovalStatusV2"
+        },
+        "constraints": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RequirementConstraint"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "requirement_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "requirement_type": {
+          "enum": [
+            "FR",
+            "NFR"
+          ],
+          "title": "Requirement Type",
+          "type": "string"
+        },
+        "requirement_version": {
+          "minimum": 1,
+          "title": "Requirement Version",
+          "type": "integer"
+        },
+        "statement": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requirement_id",
+        "requirement_version",
+        "requirement_type",
+        "title",
+        "statement",
+        "approval_status"
+      ],
+      "title": "C1RequirementV2",
+      "type": "object"
+    },
+    "ConstraintKind": {
+      "enum": [
+        "REQUIRED",
+        "RANGE",
+        "PATTERN",
+        "ENUM_FROM_POLICY",
+        "UNIQUE_WITHIN_REQUEST"
+      ],
+      "title": "ConstraintKind",
+      "type": "string"
+    },
+    "EvidenceClass": {
+      "description": "Where an upstream/downstream document really came from.",
+      "enum": [
+        "SIMULATED_FIXTURE",
+        "UPSTREAM_COMPONENT_OUTPUT"
+      ],
+      "title": "EvidenceClass",
+      "type": "string"
+    },
+    "RequirementConstraint": {
+      "additionalProperties": false,
+      "description": "Structured acceptance constraint supplied by C1 (proposed field, pending C1 confirmation).",
+      "properties": {
+        "constraint_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ConstraintKind"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "target": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "target",
+        "kind"
+      ],
+      "title": "RequirementConstraint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "approval_reference": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Approval Reference",
+      "type": "string"
+    },
+    "approval_status": {
+      "$ref": "#/$defs/C1ApprovalStatusV2"
+    },
+    "approved_at_utc": {
+      "maxLength": 40,
+      "minLength": 10,
+      "title": "Approved At Utc",
+      "type": "string"
+    },
+    "approved_by": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Approved By",
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "2.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "evidence_class": {
+      "$ref": "#/$defs/EvidenceClass"
+    },
+    "project_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/C1Provenance"
+    },
+    "requirements": {
+      "items": {
+        "$ref": "#/$defs/C1RequirementV2"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Requirements",
+      "type": "array"
+    },
+    "srs_version": {
+      "maxLength": 120,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:#-]*$",
+      "title": "Srs Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "evidence_class",
+    "project_id",
+    "srs_version",
+    "approval_status",
+    "approval_reference",
+    "approved_by",
+    "approved_at_utc",
+    "provenance",
+    "requirements"
+  ],
+  "title": "C1PackageV2",
+  "type": "object"
+}

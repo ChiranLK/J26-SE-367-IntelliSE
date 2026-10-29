@@ -1,0 +1,51 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-CRUD-HISTORY-001",
+      "version": "1.0.0",
+      "category": "CRUD",
+      "priority": 80,
+      "description": "Append-and-list repository for calculation history behind an injectable interface (PostgreSQL + in-memory seam).",
+      "target_kind": "UML_CLASS",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "class_role",
+            "equals": "REPOSITORY"
+          },
+          {
+            "fact": "methods",
+            "contains_all": [
+              "save",
+              "list"
+            ]
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "be.repository"
+        ],
+        "artifact_types": [
+          "REPOSITORY"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-DB-CONVENTIONS",
+        "KB-TEST-SEAMS"
+      ],
+      "validation_requirements": [
+        "V-ARCH-NODE-LAYERING",
+        "V-D2C-METHODS"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}

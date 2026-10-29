@@ -1,0 +1,2 @@
+# keep real upstream C2 fixtures byte-for-byte (CRLF)
+tests/fixtures/simulated/c2/*.puml -text

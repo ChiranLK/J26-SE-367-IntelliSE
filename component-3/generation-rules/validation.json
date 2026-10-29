@@ -1,0 +1,57 @@
+{
+  "rules": [
+    {
+      "rule_id": "R-VALIDATION-001",
+      "version": "1.0.0",
+      "category": "VALIDATION",
+      "priority": 80,
+      "description": "Approved structured requirement constraints become backend validators, frontend validators and OpenAPI keywords.",
+      "target_kind": "REQUIREMENT",
+      "conditions": {
+        "all": [
+          {
+            "fact": "domain",
+            "equals": "gpa"
+          },
+          {
+            "fact": "has_constraints",
+            "equals": true
+          },
+          {
+            "fact": "constraint_kinds",
+            "subset_of": [
+              "REQUIRED",
+              "RANGE",
+              "PATTERN",
+              "ENUM_FROM_POLICY",
+              "UNIQUE_WITHIN_REQUEST"
+            ]
+          }
+        ]
+      },
+      "produces": {
+        "module_ids": [
+          "be.validation",
+          "fe.validation",
+          "api.openapi"
+        ],
+        "artifact_types": [
+          "VALIDATION",
+          "FRONTEND",
+          "API"
+        ]
+      },
+      "requires_knowledge": [
+        "KB-VALIDATION-CONSTRAINT-KINDS",
+        "KB-GPA-VALIDATION-DEFAULTS"
+      ],
+      "validation_requirements": [
+        "V-D2C-TYPES"
+      ],
+      "traceability": {
+        "behavior": "LINK_PRODUCED_FILES_TO_RULE_AND_ANCHORED_REQUIREMENTS"
+      },
+      "on_failure": "REVIEW_REQUIRED"
+    }
+  ]
+}
