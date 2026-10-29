@@ -1,5 +1,10 @@
-const HEALTH_PATH = '/api/v1/component-1/health'
-const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
+import { MAX_OFFSET, validExtraction, validProject, validProjectId, validProjectPage } from './contracts.js'
+import { validJobAccepted, validTranscription, validTranscriptionId, validateAudioFile } from './transcriptionContracts.js'
+import { supportsProjectProvenance, verifyProjectProvenance } from './projectProvenance.js'
+
+const PREFIX = '/api/v1/component-1'
+export const DEFAULT_BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8001'
+export const EXTRACTION_TIMEOUT_MS = 200000 // Backend provider permits up to 180 seconds, plus persistence.
 
 export class BackendConnectionError extends Error {
   constructor(message) {
@@ -8,65 +13,167 @@ export class BackendConnectionError extends Error {
   }
 }
 
-export async function checkBackendHealth({
-  baseUrl = DEFAULT_BASE_URL,
-  signal,
-  timeoutMs = 5000,
+export class ApiError extends BackendConnectionError {
+  constructor(message, { status = null, detail = null, code = 'http', uncertain = false } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    Object.assign(this, { status, detail, code, uncertain })
+  }
+}
+
+function errorDetail(detail) {
+  if (typeof detail === 'string') return detail.slice(0, 600)
+  if (Array.isArray(detail)) return detail.slice(0, 5).map((item) => {
+    const field = Array.isArray(item?.loc) ? item.loc.filter((part) => part !== 'body').join('.') : ''
+    return `${field ? `${field}: ` : ''}${typeof item?.msg === 'string' ? item.msg.slice(0, 160) : 'Invalid input.'}`
+  }).join(' ')
+  return ''
+}
+
+export async function request(path, {
+  baseUrl = DEFAULT_BASE_URL, signal, timeoutMs = 15000, method = 'GET', body,
+  validate = () => true, query = {}, componentPath = true,
 } = {}) {
   const controller = new AbortController()
   let timedOut = false
   const cancel = () => controller.abort(signal.reason)
   if (signal?.aborted) cancel()
   else signal?.addEventListener('abort', cancel, { once: true })
-
-  const timeout = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, timeoutMs)
-
+  const timeout = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
+  const writing = !['GET', 'HEAD'].includes(method)
   try {
     let url
-    try {
-      url = new URL(baseUrl)
-    } catch {
-      throw new BackendConnectionError('The backend URL is not configured correctly.')
-    }
+    try { url = new URL(baseUrl) } catch { throw new ApiError('The backend URL is not configured correctly.', { code: 'config' }) }
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
-      throw new BackendConnectionError('The backend URL is not configured correctly.')
+      throw new ApiError('The backend URL is not configured correctly.', { code: 'config' })
     }
-    url.pathname = `${url.pathname.replace(/\/+$/, '')}${HEALTH_PATH}`
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}${componentPath ? PREFIX : ''}${path}`
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
+    const multipart = body instanceof FormData
     const response = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-      credentials: 'omit',
-      cache: 'no-store',
+      method, signal: controller.signal, credentials: 'omit', cache: 'no-store',
+      headers: { Accept: 'application/json', ...(body === undefined || multipart ? {} : { 'Content-Type': 'application/json' }) },
+      ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     })
-    if (!response.ok) {
-      throw new BackendConnectionError(`The backend returned HTTP ${response.status}.`)
+    if (response.status === 204) {
+      if (!await validate(null, response)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
+      return null
     }
     let data
-    try {
-      data = await response.json()
-    } catch (error) {
+    try { data = await response.json() } catch (error) {
       if (controller.signal.aborted) throw error
-      throw new BackendConnectionError('The backend returned an invalid response.')
+      if (!response.ok) throw new ApiError(`The backend returned HTTP ${response.status}.`, {
+        status: response.status, uncertain: writing && response.status >= 500,
+      })
+      throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
     }
-    if (
-      !data ||
-      data.status !== 'ok' ||
-      data.component !== 'component-1' ||
-      data.service !== 'requirement-engineering'
-    ) {
-      throw new BackendConnectionError('The response does not match the Component 01 health contract.')
+    if (!response.ok) {
+      const detail = errorDetail(data?.detail)
+      throw new ApiError(`The backend returned HTTP ${response.status}.${detail ? ` ${detail}` : ''}`, {
+        status: response.status, detail: data?.detail,
+        uncertain: writing && response.status >= 500 && response.status !== 502,
+      })
     }
+    if (!await validate(data, response)) throw new ApiError('The backend returned an invalid response.', { code: 'invalid-response', uncertain: writing })
     return data
   } catch (error) {
     if (signal?.aborted) throw error
-    if (timedOut) throw new BackendConnectionError('The backend request timed out. Please retry.')
+    if (timedOut) throw new ApiError('The backend request timed out.', { code: 'timeout', uncertain: writing })
     if (error instanceof BackendConnectionError) throw error
-    throw new BackendConnectionError('Could not reach the backend. It may be offline or blocked by CORS.')
+    throw new ApiError('Could not reach the backend. It may be offline or blocked by CORS.', { code: 'network', uncertain: writing })
   } finally {
     clearTimeout(timeout)
     signal?.removeEventListener('abort', cancel)
   }
+}
+
+export async function checkBackendHealth(options = {}) {
+  const data = await request('/health', { timeoutMs: 5000, ...options })
+  if (!data || data.status !== 'ok' || data.component !== 'component-1' || data.service !== 'requirement-engineering') {
+    throw new BackendConnectionError('The response does not match the Component 01 health contract.')
+  }
+  return data
+}
+
+function projectPath(id) {
+  if (!validProjectId(id)) throw new ApiError('The project ID must contain 24 hexadecimal characters.', { status: 422 })
+  return `/projects/${id.toLowerCase()}`
+}
+
+export async function checkProjectProvenanceContract(options = {}) {
+  const schema = await request('/openapi.json', { ...options, componentPath: false })
+  return supportsProjectProvenance(schema)
+}
+
+export async function createProject(input, options = {}) {
+  if (input.transcription_id != null) {
+    if (!validTranscriptionId(input.transcription_id)) throw new ApiError('Invalid transcription job ID.', { status: 422 })
+    if (!await checkProjectProvenanceContract(options)) throw new ApiError('This backend cannot save transcription provenance. Your discussion and source reference are retained.', { code: 'provenance-unavailable' })
+  }
+  return request('/projects', { ...options, method: 'POST', body: input, validate: async (data) =>
+    validProject(data) && await verifyProjectProvenance(data)
+    && (input.transcription_id == null || (data.transcription_provenance?.transcription_id === input.transcription_id
+      && data.discussion_text === input.discussion_text)) })
+}
+
+export function listProjects({ limit = 10, offset = 0, ...options } = {}) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) {
+    throw new ApiError('Invalid project pagination.', { status: 422 })
+  }
+  return request('/projects', { ...options, query: { limit, offset }, validate: (data) => validProjectPage(data, limit, offset) })
+}
+
+export const getProject = (id, options = {}) => request(projectPath(id), { ...options, validate: async (data) => validProject(data) && data.id === id.toLowerCase() && await verifyProjectProvenance(data) })
+export const extractRequirements = (id, discussion, options = {}) => request(`${projectPath(id)}/extractions`, {
+  timeoutMs: EXTRACTION_TIMEOUT_MS, ...options, method: 'POST', validate: (data) => validExtraction(data, id, discussion),
+}).catch((error) => {
+  // This exact application response is raised before repository.create(). A proxy
+  // 504 or a lost connection remains uncertain and still requires retrieval.
+  if (error.status === 504 && error.detail === 'Requirement extraction provider timed out. Check server performance, model load time and C1_LLM_TIMEOUT_SECONDS. No automatic retry was attempted.') {
+    throw new ApiError('Extraction timed out before a run was saved. You can try again explicitly after checking the local extraction service. No automatic retry was attempted.', {
+      status: 504, detail: error.detail, code: 'extraction-timeout', uncertain: false,
+    })
+  }
+  throw error
+})
+export const getLatestExtraction = (id, discussion, options = {}) => request(`${projectPath(id)}/extractions/latest`, {
+  ...options, validate: (data) => validExtraction(data, id, discussion),
+})
+
+// Only this exact 404 detail means "no extraction yet"; missing projects remain errors.
+export const isNoExtraction = (error) => error instanceof ApiError && error.status === 404
+  && error.detail === 'No extraction found for this project.'
+
+export function transcribeAudio(file, options = {}) {
+  const invalid = validateAudioFile(file)
+  if (invalid) throw new ApiError(invalid, { code: 'audio-input' })
+  const body = new FormData()
+  body.append('audio', file, file.name)
+  return request('/transcriptions', { timeoutMs: 60000, ...options, method: 'POST', body, validate: validJobAccepted })
+}
+
+export function getTranscription(id, options = {}) {
+  if (!validTranscriptionId(id)) throw new ApiError('Invalid transcription job ID.', { status: 422 })
+  return request(`/transcriptions/${id}`, { ...options, validate: (data) => validTranscription(data, id) })
+}
+
+// Development-only Vite adapter. Deliberately independent of VITE_API_BASE_URL:
+// the project API accepts saved extractions, not arbitrary unsaved sentences.
+export function classifyRequirement(text, options = {}) {
+  if (typeof text !== 'string' || !text.trim() || Array.from(text).length > 5000) {
+    throw new ApiError('Enter one requirement, between 1 and 5,000 characters.', { status: 422 })
+  }
+  return request('/__local_model/classify', {
+    timeoutMs: 65000, ...options, baseUrl: options.baseUrl ?? window.location.origin,
+    componentPath: false, method: 'POST', body: { requirement_text: text },
+    validate: (data) => data?.requirement_text === text && ['FR', 'NFR'].includes(data.label)
+      && data.model_identifier === 'tfidf-logistic-regression' && /^[a-f0-9]{64}$/.test(data.model_version)
+      && typeof data.classified_at === 'string' && Number.isFinite(Date.parse(data.classified_at))
+      && typeof data.processing_seconds === 'number' && Number.isFinite(data.processing_seconds) && data.processing_seconds >= 0,
+  })
+}
+
+
+export function deleteProject(id, options = {}) {
+  return request(projectPath(id), { ...options, method: 'DELETE', validate: (data, response) => response.status === 204 && data === null })
 }
